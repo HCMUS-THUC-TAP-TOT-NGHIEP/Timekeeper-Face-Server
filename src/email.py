@@ -5,8 +5,6 @@ from threading import Thread
 from pprint import pprint
  
 def send_async_email(app, msg):
-    pprint(app, indent=2, depth=2)
-    pprint(msg, indent=2, depth=2)
     with app.app_context():
         with mail.connect() as cnn:
             cnn.send(msg)

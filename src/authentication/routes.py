@@ -5,8 +5,9 @@ from urllib.parse import urljoin
 from datetime import datetime
 from src.authentication.model import UserModel, UserSchema
 from src.db import db
-from src import bcrypt
+from src.jwt import jwt, create_access_token
 import re
+# from flask_jwt_extended import JWTManager, jwt_required, create_access_token
 
 Authentication = Blueprint("auth", __name__)
 
@@ -79,7 +80,7 @@ def request_reset_password():
         exist = UserModel.query.filter(UserModel.EmailAddress == email).first()
         if not exist:
             raise Exception(f"Email {email} has been not register yet.")
-        reset_link = urljoin(clientUrl, "/reset-password") + f"?token={uuid.uuid4()}"
+        reset_link = urljoin(clientUrl, "/reset-password") + f"?token={create_access_token(identity=email)}"
         send_email(
             subject="Reset password",
             html_body=render_template(

@@ -12,3 +12,4 @@ flask-sqlalchemy
 flask-bcrypt
 marshmallow
 marshmallow-sqlalchemy
+flask_jwt_extended

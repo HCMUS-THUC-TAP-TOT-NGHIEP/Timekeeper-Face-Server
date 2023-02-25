@@ -5,6 +5,7 @@ from src.config import Config
 from flask_migrate import Migrate
 from flask_bcrypt import Bcrypt
 from src.db import db
+from src.jwt import jwt
 from logging.config import dictConfig
 import logging
 from logging.handlers import RotatingFileHandler
@@ -48,6 +49,7 @@ def create_app(config_class=Config):
     db.init_app(app)
     migrate.init_app(app, db)
     bcrypt.init_app(app)
+    jwt.init_app(app)
 
     @app.before_request
     def log_request_info():
