@@ -1,0 +1,177 @@
+[2023-02-26 00:37:40,448] 127.0.0.1 requested http://localhost:5000/api/auth/request/reset-password?email=nguyentuankhnhcqtagmail.com
+ERROR in routes: Email nguyentuankhnhcqtagmail.com is not an valid email.
+Traceback (most recent call last):
+  File "D:\Thuc_Tap_TN\Timekeeper-Face-Server\src\authentication\routes.py", line 75, in request_reset_password
+    raise Exception(f'Email {email} is not an valid email.')
+Exception: Email nguyentuankhnhcqtagmail.com is not an valid email.
+[2023-02-26 00:37:40,468] None requested None
+INFO in _internal: 127.0.0.1 - - [26/Feb/2023 00:37:40] "GET /api/auth/request/reset-password?email=nguyentuankhnhcqtagmail.com HTTP/1.1" 200 -
+[2023-02-26 00:38:31,513] None requested None
+INFO in _internal:  * Detected change in 'D:\\Thuc_Tap_TN\\Timekeeper-Face-Server\\src\\__init__.py', reloading
+[2023-02-26 00:38:31,514] None requested None
+INFO in _internal:  * Detected change in 'D:\\Thuc_Tap_TN\\Timekeeper-Face-Server\\src\\__init__.py', reloading
+[2023-02-26 00:38:33,306] None requested None
+WARNING in _internal:  * Debugger is active!
+[2023-02-26 00:38:33,311] None requested None
+INFO in _internal:  * Debugger PIN: 112-426-457
+[2023-02-26 00:39:35,565] None requested None
+INFO in _internal: [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+[2023-02-26 00:39:35,565] None requested None
+INFO in _internal: [33mPress CTRL+C to quit[0m
+[2023-02-26 00:39:35,577] None requested None
+INFO in _internal:  * Restarting with watchdog (windowsapi)
+[2023-02-26 00:39:36,301] None requested None
+WARNING in _internal:  * Debugger is active!
+[2023-02-26 00:39:36,304] None requested None
+INFO in _internal:  * Debugger PIN: 112-426-457
+[2023-02-26 00:40:03,290] 127.0.0.1 requested http://localhost:5000/api/auth/request/reset-password?email=nguyentuankhnhcqtagmail.com
+ERROR in routes: Email nguyentuankhnhcqtagmail.com is not an valid email.
+Traceback (most recent call last):
+  File "D:\Thuc_Tap_TN\Timekeeper-Face-Server\src\authentication\routes.py", line 75, in request_reset_password
+    raise Exception(f'Email {email} is not an valid email.')
+Exception: Email nguyentuankhnhcqtagmail.com is not an valid email.
+[2023-02-26 00:40:03,293] None requested None
+INFO in _internal: 127.0.0.1 - - [26/Feb/2023 00:40:03] "GET /api/auth/request/reset-password?email=nguyentuankhnhcqtagmail.com HTTP/1.1" 200 -
+[2023-02-26 00:40:09,631] 127.0.0.1 requested http://localhost:5000/api/auth/request/reset-password?email=nguyentuankhnhcqtagmail.com
+ERROR in routes: Email nguyentuankhnhcqtagmail.com is not an valid email.
+Traceback (most recent call last):
+  File "D:\Thuc_Tap_TN\Timekeeper-Face-Server\src\authentication\routes.py", line 75, in request_reset_password
+    raise Exception(f'Email {email} is not an valid email.')
+Exception: Email nguyentuankhnhcqtagmail.com is not an valid email.
+[2023-02-26 00:40:09,634] None requested None
+INFO in _internal: 127.0.0.1 - - [26/Feb/2023 00:40:09] "GET /api/auth/request/reset-password?email=nguyentuankhnhcqtagmail.com HTTP/1.1" 200 -
+[2023-02-26 00:40:13,771] 127.0.0.1 requested http://localhost:5000/api/auth/request/reset-password?email=nguyentuankhnhcqtagmail.com
+ERROR in routes: Email nguyentuankhnhcqtagmail.com is not an valid email.
+Traceback (most recent call last):
+  File "D:\Thuc_Tap_TN\Timekeeper-Face-Server\src\authentication\routes.py", line 75, in request_reset_password
+    raise Exception(f'Email {email} is not an valid email.')
+Exception: Email nguyentuankhnhcqtagmail.com is not an valid email.
+[2023-02-26 00:40:13,772] None requested None
+INFO in _internal: 127.0.0.1 - - [26/Feb/2023 00:40:13] "GET /api/auth/request/reset-password?email=nguyentuankhnhcqtagmail.com HTTP/1.1" 200 -
+[2023-02-26 00:40:14,722] 127.0.0.1 requested http://localhost:5000/api/auth/request/reset-password?email=nguyentuankhnhcqtagmail.com
+ERROR in routes: Email nguyentuankhnhcqtagmail.com is not an valid email.
+Traceback (most recent call last):
+  File "D:\Thuc_Tap_TN\Timekeeper-Face-Server\src\authentication\routes.py", line 75, in request_reset_password
+    raise Exception(f'Email {email} is not an valid email.')
+Exception: Email nguyentuankhnhcqtagmail.com is not an valid email.
+[2023-02-26 00:40:14,724] None requested None
+INFO in _internal: 127.0.0.1 - - [26/Feb/2023 00:40:14] "GET /api/auth/request/reset-password?email=nguyentuankhnhcqtagmail.com HTTP/1.1" 200 -
+[2023-02-26 00:40:15,327] 127.0.0.1 requested http://localhost:5000/api/auth/request/reset-password?email=nguyentuankhnhcqtagmail.com
+ERROR in routes: Email nguyentuankhnhcqtagmail.com is not an valid email.
+Traceback (most recent call last):
+  File "D:\Thuc_Tap_TN\Timekeeper-Face-Server\src\authentication\routes.py", line 75, in request_reset_password
+    raise Exception(f'Email {email} is not an valid email.')
+Exception: Email nguyentuankhnhcqtagmail.com is not an valid email.
+[2023-02-26 00:40:15,329] None requested None
+INFO in _internal: 127.0.0.1 - - [26/Feb/2023 00:40:15] "GET /api/auth/request/reset-password?email=nguyentuankhnhcqtagmail.com HTTP/1.1" 200 -
+[2023-02-26 00:40:15,995] 127.0.0.1 requested http://localhost:5000/api/auth/request/reset-password?email=nguyentuankhnhcqtagmail.com
+ERROR in routes: Email nguyentuankhnhcqtagmail.com is not an valid email.
+Traceback (most recent call last):
+  File "D:\Thuc_Tap_TN\Timekeeper-Face-Server\src\authentication\routes.py", line 75, in request_reset_password
+    raise Exception(f'Email {email} is not an valid email.')
+Exception: Email nguyentuankhnhcqtagmail.com is not an valid email.
+[2023-02-26 00:40:15,997] None requested None
+INFO in _internal: 127.0.0.1 - - [26/Feb/2023 00:40:15] "GET /api/auth/request/reset-password?email=nguyentuankhnhcqtagmail.com HTTP/1.1" 200 -
+[2023-02-26 00:40:16,657] 127.0.0.1 requested http://localhost:5000/api/auth/request/reset-password?email=nguyentuankhnhcqtagmail.com
+ERROR in routes: Email nguyentuankhnhcqtagmail.com is not an valid email.
+Traceback (most recent call last):
+  File "D:\Thuc_Tap_TN\Timekeeper-Face-Server\src\authentication\routes.py", line 75, in request_reset_password
+    raise Exception(f'Email {email} is not an valid email.')
+Exception: Email nguyentuankhnhcqtagmail.com is not an valid email.
+[2023-02-26 00:40:16,660] None requested None
+INFO in _internal: 127.0.0.1 - - [26/Feb/2023 00:40:16] "GET /api/auth/request/reset-password?email=nguyentuankhnhcqtagmail.com HTTP/1.1" 200 -
+[2023-02-26 00:40:17,384] 127.0.0.1 requested http://localhost:5000/api/auth/request/reset-password?email=nguyentuankhnhcqtagmail.com
+ERROR in routes: Email nguyentuankhnhcqtagmail.com is not an valid email.
+Traceback (most recent call last):
+  File "D:\Thuc_Tap_TN\Timekeeper-Face-Server\src\authentication\routes.py", line 75, in request_reset_password
+    raise Exception(f'Email {email} is not an valid email.')
+Exception: Email nguyentuankhnhcqtagmail.com is not an valid email.
+[2023-02-26 00:40:17,386] None requested None
+INFO in _internal: 127.0.0.1 - - [26/Feb/2023 00:40:17] "GET /api/auth/request/reset-password?email=nguyentuankhnhcqtagmail.com HTTP/1.1" 200 -
+[2023-02-26 00:40:17,985] 127.0.0.1 requested http://localhost:5000/api/auth/request/reset-password?email=nguyentuankhnhcqtagmail.com
+ERROR in routes: Email nguyentuankhnhcqtagmail.com is not an valid email.
+Traceback (most recent call last):
+  File "D:\Thuc_Tap_TN\Timekeeper-Face-Server\src\authentication\routes.py", line 75, in request_reset_password
+    raise Exception(f'Email {email} is not an valid email.')
+Exception: Email nguyentuankhnhcqtagmail.com is not an valid email.
+[2023-02-26 00:40:17,987] None requested None
+INFO in _internal: 127.0.0.1 - - [26/Feb/2023 00:40:17] "GET /api/auth/request/reset-password?email=nguyentuankhnhcqtagmail.com HTTP/1.1" 200 -
+[2023-02-26 00:40:18,598] 127.0.0.1 requested http://localhost:5000/api/auth/request/reset-password?email=nguyentuankhnhcqtagmail.com
+ERROR in routes: Email nguyentuankhnhcqtagmail.com is not an valid email.
+Traceback (most recent call last):
+  File "D:\Thuc_Tap_TN\Timekeeper-Face-Server\src\authentication\routes.py", line 75, in request_reset_password
+    raise Exception(f'Email {email} is not an valid email.')
+Exception: Email nguyentuankhnhcqtagmail.com is not an valid email.
+[2023-02-26 00:40:18,599] None requested None
+INFO in _internal: 127.0.0.1 - - [26/Feb/2023 00:40:18] "GET /api/auth/request/reset-password?email=nguyentuankhnhcqtagmail.com HTTP/1.1" 200 -
+[2023-02-26 00:40:19,223] 127.0.0.1 requested http://localhost:5000/api/auth/request/reset-password?email=nguyentuankhnhcqtagmail.com
+ERROR in routes: Email nguyentuankhnhcqtagmail.com is not an valid email.
+Traceback (most recent call last):
+  File "D:\Thuc_Tap_TN\Timekeeper-Face-Server\src\authentication\routes.py", line 75, in request_reset_password
+    raise Exception(f'Email {email} is not an valid email.')
+Exception: Email nguyentuankhnhcqtagmail.com is not an valid email.
+[2023-02-26 00:40:19,225] None requested None
+INFO in _internal: 127.0.0.1 - - [26/Feb/2023 00:40:19] "GET /api/auth/request/reset-password?email=nguyentuankhnhcqtagmail.com HTTP/1.1" 200 -
+[2023-02-26 00:40:38,593] None requested None
+INFO in _internal:  * Detected change in 'D:\\Thuc_Tap_TN\\Timekeeper-Face-Server\\src\\__init__.py', reloading
+[2023-02-26 00:40:38,595] None requested None
+INFO in _internal:  * Detected change in 'D:\\Thuc_Tap_TN\\Timekeeper-Face-Server\\src\\__init__.py', reloading
+[2023-02-26 00:40:38,598] None requested None
+INFO in _internal:  * Detected change in 'D:\\Thuc_Tap_TN\\Timekeeper-Face-Server\\src\\__init__.py', reloading
+[2023-02-26 00:40:39,612] None requested None
+INFO in _internal:  * Restarting with watchdog (windowsapi)
+[2023-02-26 00:40:45,739] None requested None
+INFO in _internal:  * Restarting with watchdog (windowsapi)
+[2023-02-26 00:41:03,100] None requested None
+INFO in _internal:  * Restarting with watchdog (windowsapi)
+[2023-02-26 00:41:13,099] None requested None
+INFO in _internal:  * Restarting with watchdog (windowsapi)
+[2023-02-26 00:41:17,363] None requested None
+INFO in _internal:  * Restarting with watchdog (windowsapi)
+[2023-02-26 00:42:51,206] None requested None
+INFO in _internal:  * Restarting with watchdog (windowsapi)
+[2023-02-26 00:42:56,179] None requested None
+INFO in _internal:  * Restarting with watchdog (windowsapi)
+[2023-02-26 00:44:02,745] None requested None
+INFO in _internal:  * Restarting with watchdog (windowsapi)
+[2023-02-26 00:44:06,866] None requested None
+INFO in _internal:  * Restarting with watchdog (windowsapi)
+[2023-02-26 00:44:10,393] None requested None
+INFO in _internal:  * Restarting with watchdog (windowsapi)
+[2023-02-26 00:44:53,629] None requested None
+INFO in _internal:  * Restarting with watchdog (windowsapi)
+[2023-02-26 00:44:56,836] None requested None
+INFO in _internal:  * Restarting with watchdog (windowsapi)
+[2023-02-26 00:45:29,806] None requested None
+INFO in _internal:  * Restarting with watchdog (windowsapi)
+[2023-02-26 00:46:16,623] None requested None
+INFO in _internal:  * Restarting with watchdog (windowsapi)
+[2023-02-26 00:48:01,753] None requested None
+INFO in _internal:  * Restarting with watchdog (windowsapi)
+[2023-02-26 00:48:38,530] None requested None
+INFO in _internal:  * Restarting with watchdog (windowsapi)
+[2023-02-26 00:49:01,980] None requested None
+INFO in _internal:  * Restarting with watchdog (windowsapi)
+[2023-02-26 00:51:38,799] None requested None
+INFO in _internal:  * Restarting with watchdog (windowsapi)
+[2023-02-26 00:51:58,407] None requested None
+INFO in _internal:  * Restarting with watchdog (windowsapi)
+[2023-02-26 00:52:27,243] None requested None
+INFO in _internal:  * Restarting with watchdog (windowsapi)
+[2023-02-26 00:52:48,568] None requested None
+INFO in _internal:  * Restarting with watchdog (windowsapi)
+[2023-02-26 00:52:57,754] None requested None
+INFO in _internal:  * Restarting with watchdog (windowsapi)
+[2023-02-26 00:53:58,501] None requested None
+INFO in _internal:  * Restarting with watchdog (windowsapi)
+[2023-02-26 00:54:14,926] None requested None
+INFO in _internal:  * Restarting with watchdog (windowsapi)
+[2023-02-26 00:56:20,923] None requested None
+INFO in _internal:  * Restarting with watchdog (windowsapi)
+[2023-02-26 00:57:03,029] None requested None
+INFO in _internal:  * Restarting with watchdog (windowsapi)
+[2023-02-26 00:57:34,870] None requested None
+INFO in _internal:  * Restarting with watchdog (windowsapi)
+[2023-02-26 00:57:45,158] None requested None
+INFO in _internal:  * Restarting with watchdog (windowsapi)

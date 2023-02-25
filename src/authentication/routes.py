@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, render_template, request, current_app
+from flask import Blueprint, jsonify, render_template, request, current_app as app
 from src.email import send_email
 import uuid
 from urllib.parse import urljoin
@@ -6,6 +6,8 @@ from datetime import datetime
 from src.authentication.model import UserModel, UserSchema
 from src.db import db
 from src import bcrypt
+import re
+
 Authentication = Blueprint("auth", __name__)
 
 userSchema = UserSchema()
@@ -32,9 +34,7 @@ def register():
         try:
             role = int(jsonRequestData["role"])
             hashedPassword = bcrypt.generate_password_hash(password)
-            new_user = UserModel(
-                email, hashedPassword, "", 1, status=1, role=role
-            )
+            new_user = UserModel(email, hashedPassword, "", 1, status=1, role=role)
             new_user.CreatedAt = datetime.now()
             new_user.CreatedBy = adminId
             new_user.ModifiedBy = adminId
@@ -44,7 +44,11 @@ def register():
             return {"Status": 1, "Description": None, "ResponseData": None}
         except Exception as ex:
             db.session.rollback()
-            return {"Status": 0, "Description": f'Đăng ký tài khoản không thành công. Có lỗi {ex.args}/{ex.__str__()}', "ResponseData": None}
+            return {
+                "Status": 0,
+                "Description": f"Đăng ký tài khoản không thành công. Có lỗi {ex.args}/{ex.__str__()}",
+                "ResponseData": None,
+            }
     return {
         "Status": 0,
         "Description": f"Đăng ký tài khoản không thành công. Tài khoản {email} đã tồn tại",
@@ -60,21 +64,47 @@ def login():
 
 @Authentication.route("/request/reset-password", methods=["GET"])
 def request_reset_password():
-    receiver = request.args.get("email")
-    reset_link = (
-        urljoin(current_app.config["FE_URL"], "/reset-password")
-        + f"?token={uuid.uuid4()}"
-    )
-    send_email(
-        subject="Reset password",
-        html_body=render_template(
-            "test_email.html", receiver=receiver, reset_link=reset_link
-        ),
-        recipients=[receiver],
-        sender="admin@gmail.com",
-        text_body="",
-    )
-    return reset_link
+    try:
+        clientUrl = app.config["FE_URL"]
+        email = request.args.get("email")
+
+        # region validate
+
+        emailRegex = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b"
+        if not re.fullmatch(emailRegex, email):
+            raise Exception(f"Email {email} is not an valid email.")
+            # endregion
+
+        exist = UserModel.query.filter(UserModel.EmailAddress == email).first()
+        if not exist:
+            raise Exception(f"Email {email} has been not register yet.")
+        
+        reset_link = urljoin(clientUrl, "/reset-password") + f"?token={uuid.uuid4()}"
+        send_email(
+            subject="Reset password",
+            html_body=render_template(
+                "test_email.html", receiver=email, reset_link=reset_link
+            ),
+            recipients=[email],
+            sender="admin@gmail.com",
+            text_body="",
+        )
+        return {
+            "Status": 1,
+            "Description": f"Check mail",
+            "ResponseData": None,
+        }
+    except Exception as ex:
+        app.logger.exception(ex)
+        print("Failed to reset password")
+        print(f"Ex: {ex.args}")
+        return {
+            "Status": 0,
+            "Description": f"Failed to reset password.",
+            "ResponseData": None,
+        }
+    finally:
+        pass
 
 
 @Authentication.route("/reset_password", methods=["GET"])

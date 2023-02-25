@@ -2,13 +2,16 @@ from src import mail
 from flask import current_app
 from flask_mail import Message
 from threading import Thread
+from pprint import pprint
  
 def send_async_email(app, msg):
-        with app.app_context():
-            with mail.connect() as cnn:
-                cnn.send(msg)
-                print("Sent...")
- 
+    pprint(app, indent=2, depth=2)
+    pprint(msg, indent=2, depth=2)
+    with app.app_context():
+        with mail.connect() as cnn:
+            cnn.send(msg)
+            print("Sent...")
+
 def send_email(subject, sender, recipients, text_body, html_body):
     msg = Message(subject, sender=sender, recipients=recipients)
     msg.body = text_body
