@@ -15,3 +15,4 @@ class Config:
     MAIL_USE_SSL = os.getenv("MAIL_USE_SSL").lower() in ('true', '1', 't')
     FE_URL = os.getenv("FE_URL")
     SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+    TIME_TOKEN = int(os.getenv("TIME_TOKEN"))

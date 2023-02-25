@@ -5,9 +5,11 @@ from urllib.parse import urljoin
 from datetime import datetime
 from src.authentication.model import UserModel, UserSchema
 from src.db import db
-from src.jwt import jwt, create_access_token
+from src.jwt import jwt, create_access_token, jwt_required, get_jwt_identity, verify_jwt_in_request
 import re
-# from flask_jwt_extended import JWTManager, jwt_required, create_access_token
+from datetime import timedelta
+from src import bcrypt
+
 
 Authentication = Blueprint("auth", __name__)
 
@@ -80,7 +82,10 @@ def request_reset_password():
         exist = UserModel.query.filter(UserModel.EmailAddress == email).first()
         if not exist:
             raise Exception(f"Email {email} has been not register yet.")
-        reset_link = urljoin(clientUrl, "/reset-password") + f"?token={create_access_token(identity=email)}"
+        reset_link = (
+            urljoin(clientUrl, "/reset-password")
+            + f"?token={create_access_token(identity=email, expires_delta=timedelta(hours=app.config.get('TIME_TOKEN')))}"
+        )
         send_email(
             subject="Reset password",
             html_body=render_template(
@@ -108,7 +113,38 @@ def request_reset_password():
         pass
 
 
-@Authentication.route("/reset_password", methods=["GET"])
+@Authentication.route("/reset_password", methods=["POST"])
+@jwt_required(locations="json")
 def reset_password():
-    token = request.args.get("token")
+    jsonRequestData = request.get_json()
+    token = jsonRequestData["access_token"]
+    new_password = jsonRequestData["new_password"]
+    try:
+        email = get_jwt_identity()
+        existUser = UserModel.query.filter(UserModel.EmailAddress == email).first()
+        if not existUser:
+            raise Exception(f"Could not find user {email}")
+        existUser.PasswordHash = bcrypt.generate_password_hash(new_password)
+        existUser.ModifiedAt = datetime.now()
+        existUser.ModifiedBy = existUser.Id
+        db.session
+        return { 
+            "Status": 1,
+            "Description": None,
+            "ResponseData": None,
+        }
+        pass
+    except Exception as ex:
+        app.logger.exception(ex)
+        print("Failed to reset password")
+        print(f"Ex: {ex.args}")
+        return {
+            "Status": 0,
+            "Description": f"Failed to reset password.",
+            "ResponseData": None,
+        }
+        pass
+    finally:
+        pass
+
     return token
