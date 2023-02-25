@@ -17,7 +17,6 @@ def create_app(config_class=Config):
 
     mail.init_app(app)
     db.init_app(app)
-    print(db)
     migrate.init_app(app, db)
     bcrypt.init_app(app)
     app.app_context().push()

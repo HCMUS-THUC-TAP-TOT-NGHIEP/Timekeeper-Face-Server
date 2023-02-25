@@ -1,14 +1,11 @@
 from flask import Blueprint, jsonify, render_template, request, current_app
 from src.email import send_email
 import uuid
-import os
 from urllib.parse import urljoin
 from datetime import datetime
 from src.authentication.model import UserModel, UserSchema
 from src.db import db
 from src import bcrypt
-import json
-from pprint import pprint
 Authentication = Blueprint("auth", __name__)
 
 userSchema = UserSchema()
@@ -20,7 +17,7 @@ def register():
     jsonRequestData = request.get_json()
     email = jsonRequestData["email"]
     password = jsonRequestData["password"]
-    adminId = jsonRequestData["adminId"]
+    adminId = int(jsonRequestData["adminId"])
     users = UserModel.query.all()
     if len(users) == 0:
         hashedPassword = bcrypt.generate_password_hash(password)
@@ -33,7 +30,7 @@ def register():
     exist = UserModel.query.filter(UserModel.EmailAddress == email).first()
     if not exist:
         try:
-            role = password = jsonRequestData["role"]
+            role = int(jsonRequestData["role"])
             hashedPassword = bcrypt.generate_password_hash(password)
             new_user = UserModel(
                 email, hashedPassword, "", 1, status=1, role=role

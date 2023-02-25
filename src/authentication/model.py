@@ -1,7 +1,7 @@
 from src.db import db
 from sqlalchemy import Column, Integer, String, SmallInteger, DateTime
 from datetime import datetime
-from marshmallow import Schema, fields, ValidationError, pre_load
+from marshmallow import Schema, fields
 from marshmallow_sqlalchemy import SQLAlchemySchema, auto_field
 
 # MODELS
@@ -39,14 +39,14 @@ class UserModel(db.Model):
 class UserSchema(Schema):
     Id: fields.Int()
     EmailAddress: fields.Str()
-    # UserName: fields.Str()
-    # EmployeeId: fields.Str()
-    # Status: fields.Int()
-    # Role: fields.Int()
-    # CreatedBy: fields.Int()
-    # CreatedAt: fields.DateTime()
-    # ModifiedBy: fields.Int()
-    # ModifiedAt: fields.DateTime()
+    UserName: fields.Str()
+    EmployeeId: fields.Str()
+    Status: fields.Int()
+    Role: fields.Int()
+    CreatedBy: fields.Int()
+    CreatedAt: fields.DateTime()
+    ModifiedBy: fields.Int()
+    ModifiedAt: fields.DateTime()
 
 class UserSchema_(SQLAlchemySchema):
     class Meta:
