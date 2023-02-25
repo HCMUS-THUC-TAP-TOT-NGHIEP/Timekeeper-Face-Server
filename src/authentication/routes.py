@@ -73,17 +73,17 @@ def request_reset_password():
         emailRegex = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b"
         if not re.fullmatch(emailRegex, email):
             raise Exception(f"Email {email} is not an valid email.")
-            # endregion
+
+        # endregion
 
         exist = UserModel.query.filter(UserModel.EmailAddress == email).first()
         if not exist:
             raise Exception(f"Email {email} has been not register yet.")
-        
         reset_link = urljoin(clientUrl, "/reset-password") + f"?token={uuid.uuid4()}"
         send_email(
             subject="Reset password",
             html_body=render_template(
-                "test_email.html", receiver=email, reset_link=reset_link
+                "reset_password.html", receiver=email, reset_link=reset_link
             ),
             recipients=[email],
             sender="admin@gmail.com",
