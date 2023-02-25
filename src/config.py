@@ -6,3 +6,4 @@ class Config:
     MAIL_PASSWORD = "kklbaxxqdhhoxgld"
     MAIL_USE_TLS = False
     MAIL_USE_SSL = True
+    FE_URL = "http://localhost:8080"
