@@ -9,11 +9,13 @@ from src.jwt import jwt
 from logging.config import dictConfig
 import logging
 from logging.handlers import RotatingFileHandler
+from flask_cors import CORS, cross_origin
 
 
 mail = Mail()
 migrate = Migrate()
 bcrypt = Bcrypt()
+cors = CORS()
 logger = logging.getLogger()
 # create a formatter object
 class LogFormatter(logging.Formatter):
@@ -44,6 +46,7 @@ def create_app(config_class=Config):
     migrate.init_app(app, db)
     bcrypt.init_app(app)
     jwt.init_app(app)
+    cors.init_app(app)
 
     @app.before_request
     def log_request_info():

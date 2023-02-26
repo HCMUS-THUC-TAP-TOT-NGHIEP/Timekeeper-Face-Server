@@ -5,7 +5,13 @@ from urllib.parse import urljoin
 from datetime import datetime
 from src.authentication.model import UserModel, UserSchema
 from src.db import db
-from src.jwt import jwt, create_access_token, jwt_required, get_jwt_identity, verify_jwt_in_request
+from src.jwt import (
+    jwt,
+    create_access_token,
+    jwt_required,
+    get_jwt_identity,
+    verify_jwt_in_request,
+)
 import re
 from datetime import timedelta
 from src import bcrypt
@@ -19,22 +25,35 @@ userSchema = UserSchema()
 # GET api/auth/register
 @Authentication.route("/register", methods=["POST"])
 def register():
-    jsonRequestData = request.get_json()
-    email = jsonRequestData["email"]
-    password = jsonRequestData["password"]
-    adminId = int(jsonRequestData["adminId"])
-    users = UserModel.query.all()
-    if len(users) == 0:
-        hashedPassword = bcrypt.generate_password_hash(password)
-        new_user = UserModel(
-            email, hashedPassword, "", 1, status=1, role=1
-        )  # role = 1 => admin
-        db.session.add(new_user)
-        db.session.commit()
-        return {"Status": 1, "Description": None, "ResponseData": None}
-    exist = UserModel.query.filter(UserModel.EmailAddress == email).first()
-    if not exist:
-        try:
+    try:
+        jsonRequestData = request.get_json()
+        email = jsonRequestData["email"]
+        password = jsonRequestData["password"]
+        adminId = int(jsonRequestData["adminId"])
+
+        # region validate
+
+        if not isinstance(email, str) or not email or not email.strip():
+            raise Exception("Invalid email. Email is empty or blank or not string")
+        emailRegex = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b"
+        if not re.fullmatch(emailRegex, email):
+            raise Exception(f"Email {email} is not an valid email.")
+        if not isinstance(password, str) or not password or not password.strip():
+            raise Exception("Invalid password. Password empty or blank or not string")
+        
+        # endregion
+
+        users = UserModel.query.all()
+        if len(users) == 0:
+            hashedPassword = bcrypt.generate_password_hash(password)
+            new_user = UserModel(
+                email, hashedPassword, "", 1, status=1, role=1
+            )  # role = 1 => admin
+            db.session.add(new_user)
+            db.session.commit()
+            return {"Status": 1, "Description": None, "ResponseData": None}
+        exist = UserModel.query.filter(UserModel.EmailAddress == email).first()
+        if not exist:
             role = int(jsonRequestData["role"])
             hashedPassword = bcrypt.generate_password_hash(password)
             new_user = UserModel(email, hashedPassword, "", 1, status=1, role=role)
@@ -42,21 +61,28 @@ def register():
             new_user.CreatedBy = adminId
             new_user.ModifiedBy = adminId
             new_user.ModifiedAt = datetime.now()
-            db.session.add(new_user)
-            db.session.commit()
-            return {"Status": 1, "Description": None, "ResponseData": None}
-        except Exception as ex:
-            db.session.rollback()
-            return {
-                "Status": 0,
-                "Description": f"Đăng ký tài khoản không thành công. Có lỗi {ex.args}/{ex.__str__()}",
-                "ResponseData": None,
-            }
-    return {
-        "Status": 0,
-        "Description": f"Đăng ký tài khoản không thành công. Tài khoản {email} đã tồn tại",
-        "ResponseData": None,
-    }
+            try:
+                db.session.add(new_user)
+                db.session.commit()
+                return {"Status": 1, "Description": None, "ResponseData": None}
+            except Exception as ex:
+                db.session.rollback()
+                raise Exception(
+                    f"DB cant finish process. Exception{ex.args}/{ex.__str__()}"
+                )
+        return {
+            "Status": 0,
+            "Description": f"Đăng ký tài khoản không thành công. Tài khoản {email} đã tồn tại",
+            "ResponseData": None,
+        }
+    except Exception as ex:
+        return {
+            "Status": 0,
+            "Description": f"Đăng ký tài khoản không thành công. Có lỗi {ex.args}/{ex.__str__()}",
+            "ResponseData": None,
+        }
+    finally:
+        pass
 
 
 # GET api/auth/login
@@ -68,11 +94,13 @@ def login():
 @Authentication.route("/request/reset-password", methods=["GET"])
 def request_reset_password():
     try:
-        clientUrl = app.config["FE_URL"]
+        clientUrl = app.config["Client_Url"]
         email = request.args.get("email")
 
         # region validate
-
+        
+        if not isinstance(email, str) or not email or not email.strip():
+            raise Exception("Invalid email. Email is empty or blank or not string")
         emailRegex = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b"
         if not re.fullmatch(emailRegex, email):
             raise Exception(f"Email {email} is not an valid email.")
@@ -128,7 +156,7 @@ def reset_password():
         existUser.ModifiedAt = datetime.now()
         existUser.ModifiedBy = existUser.Id
         db.session
-        return { 
+        return {
             "Status": 1,
             "Description": None,
             "ResponseData": None,

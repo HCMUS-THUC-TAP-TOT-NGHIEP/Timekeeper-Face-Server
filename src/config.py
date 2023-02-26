@@ -13,6 +13,6 @@ class Config:
     MAIL_PASSWORD = os.getenv("MAIL_PASSWORD")
     MAIL_USE_TLS = os.getenv("MAIL_USE_TLS").lower() in ('true', '1', 't')
     MAIL_USE_SSL = os.getenv("MAIL_USE_SSL").lower() in ('true', '1', 't')
-    FE_URL = os.getenv("FE_URL")
+    Client_Url = os.getenv("Client_Url")
     SECRET_KEY = os.getenv("JWT_SECRET_KEY")
     TIME_TOKEN = int(os.getenv("TIME_TOKEN"))
