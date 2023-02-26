@@ -10,15 +10,11 @@ from logging.config import dictConfig
 import logging
 from logging.handlers import RotatingFileHandler
 
-logging.basicConfig(filename="record.log", level=logging.ERROR)
 
 mail = Mail()
 migrate = Migrate()
 bcrypt = Bcrypt()
-
 logger = logging.getLogger()
-
-
 # create a formatter object
 class LogFormatter(logging.Formatter):
     def format(self, record):
@@ -29,19 +25,17 @@ class LogFormatter(logging.Formatter):
             record.url = None
             record.remote_addr = None
         return super().format(record)
-
-
 logFormatter = LogFormatter(
     "[%(asctime)s] %(remote_addr)s requested %(url)s\n"
     "%(levelname)s in %(module)s: %(message)s \n"
     "---------------------------------------------------------------\n"
 )
-
 # add file handler to the root logger
 fileHandler = RotatingFileHandler("log.log", backupCount=100, maxBytes=1024 * 1024)
 fileHandler.setFormatter(logFormatter)
 logger.addHandler(fileHandler)
 
+# init application
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(Config)
