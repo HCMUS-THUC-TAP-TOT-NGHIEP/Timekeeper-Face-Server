@@ -88,8 +88,47 @@ def register():
 # GET api/auth/login
 @Authentication.route("/login", methods=["POST"])
 def login():
-    return jsonify({"data": "login"})
+    try:
+        jsonRequestData = request.get_json()
+        email = jsonRequestData["email"]
+        password = jsonRequestData["password"]
 
+        # region validate
+
+        if not isinstance(email, str) or not email or not email.strip():
+            raise Exception("Invalid email. Email is empty or blank or not string")
+        emailRegex = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b"
+        if not re.fullmatch(emailRegex, email):
+            raise Exception(f"Email {email} is not an valid email.")
+        if not isinstance(password, str) or not password or not password.strip():
+            raise Exception("Invalid password. Password empty or blank or not string")
+        
+        # endregion
+        existUser = UserModel.query.filter(UserModel.EmailAddress == email).first()
+        if existUser:
+            if bcrypt.check_password_hash(existUser.PasswordHash.decode("utf-8"), password):
+                access_token = create_access_token(identity=email, expires_delta=timedelta(hours=app.config.get('TIME_TOKEN')))
+                return {
+                    "Status": 1,
+                    "Description": None,
+                    "ResponseData": {"access_token": access_token},
+                }
+        else:
+            return {
+                "Status": 0,
+                "Description": f"Tài khoản chưa đăng ký!",
+                "ResponseData": None,
+            }
+        
+    except Exception as ex:
+        return {
+            "Status": 0,
+            "Description": f"Đăng nhập không thành công. Có lỗi {ex.args}/{ex.__str__()}",
+            "ResponseData": None,
+        }
+    finally:
+        pass
+        
 
 @Authentication.route("/request/reset-password", methods=["GET"])
 def request_reset_password():
@@ -152,7 +191,7 @@ def reset_password():
         existUser = UserModel.query.filter(UserModel.EmailAddress == email).first()
         if not existUser:
             raise Exception(f"Could not find user {email}")
-        existUser.PasswordHash = bcrypt.generate_password_hash(new_password)
+        existUser.PasswordHash = bcrypt.generate_password_hash(new_password).decode("utf-8")
         existUser.ModifiedAt = datetime.now()
         existUser.ModifiedBy = existUser.Id
         db.session.add(TokenBlocklist(jti=jti, created_at=datetime.now()))
