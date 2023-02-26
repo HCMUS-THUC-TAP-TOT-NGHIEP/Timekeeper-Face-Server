@@ -14,3 +14,4 @@ marshmallow
 marshmallow-sqlalchemy
 flask_jwt_extended
 flask-cors
+redis

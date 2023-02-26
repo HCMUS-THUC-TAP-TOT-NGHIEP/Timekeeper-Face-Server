@@ -11,12 +11,13 @@ import logging
 from logging.handlers import RotatingFileHandler
 from flask_cors import CORS, cross_origin
 
-
 mail = Mail()
 migrate = Migrate()
 bcrypt = Bcrypt()
 cors = CORS()
 logger = logging.getLogger()
+
+
 # create a formatter object
 class LogFormatter(logging.Formatter):
     def format(self, record):
@@ -27,6 +28,8 @@ class LogFormatter(logging.Formatter):
             record.url = None
             record.remote_addr = None
         return super().format(record)
+
+
 logFormatter = LogFormatter(
     "[%(asctime)s] %(remote_addr)s requested %(url)s\n"
     "%(levelname)s in %(module)s: %(message)s \n"
@@ -36,6 +39,7 @@ logFormatter = LogFormatter(
 fileHandler = RotatingFileHandler("log.log", backupCount=100, maxBytes=1024 * 1024)
 fileHandler.setFormatter(logFormatter)
 logger.addHandler(fileHandler)
+
 
 # init application
 def create_app(config_class=Config):
@@ -59,6 +63,7 @@ def create_app(config_class=Config):
         app.logger.debug(
             "\nHeaders: %s\nParams: %s\nBodyData: %s", request.headers, args, data
         )
+
     app.app_context().push()
 
     # region Đăng ký blueprints/ routes

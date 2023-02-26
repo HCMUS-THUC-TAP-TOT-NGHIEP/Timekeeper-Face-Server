@@ -9,7 +9,7 @@ from marshmallow_sqlalchemy import SQLAlchemySchema, auto_field
 class UserModel(db.Model):
     __tablename__ = 'User'
     
-    Id = Column(Integer, primary_key=True)
+    Id = Column(Integer(), primary_key=True)
     EmailAddress = Column(String(), unique=True, nullable=False)
     PasswordHash = Column(String(), nullable=False)
     PasswordSalt = Column(String())

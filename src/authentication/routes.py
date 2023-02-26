@@ -1,26 +1,23 @@
 from flask import Blueprint, jsonify, render_template, request, current_app as app
 from src.email import send_email
-import uuid
 from urllib.parse import urljoin
 from datetime import datetime
 from src.authentication.model import UserModel, UserSchema
 from src.db import db
 from src.jwt import (
-    jwt,
     create_access_token,
     jwt_required,
     get_jwt_identity,
-    verify_jwt_in_request,
+    get_jwt,
+    TokenBlocklist,
 )
 import re
 from datetime import timedelta
 from src import bcrypt
 
-
 Authentication = Blueprint("auth", __name__)
 
 userSchema = UserSchema()
-
 
 # GET api/auth/register
 @Authentication.route("/register", methods=["POST"])
@@ -148,8 +145,8 @@ def request_reset_password():
 @jwt_required(locations="json")
 def reset_password():
     jsonRequestData = request.get_json()
-    token = jsonRequestData["access_token"]
     new_password = jsonRequestData["new_password"]
+    jti = get_jwt()["jti"]
     try:
         email = get_jwt_identity()
         existUser = UserModel.query.filter(UserModel.EmailAddress == email).first()
@@ -158,13 +155,13 @@ def reset_password():
         existUser.PasswordHash = bcrypt.generate_password_hash(new_password)
         existUser.ModifiedAt = datetime.now()
         existUser.ModifiedBy = existUser.Id
-        db.session
+        db.session.add(TokenBlocklist(jti=jti, created_at=datetime.now()))
+        db.session.commit()
         return {
             "Status": 1,
             "Description": None,
             "ResponseData": None,
         }
-        pass
     except Exception as ex:
         app.logger.exception(ex)
         print("Failed to reset password")
@@ -174,6 +171,5 @@ def reset_password():
             "Description": f"Failed to reset password.",
             "ResponseData": None,
         }
-        pass
     finally:
         pass
