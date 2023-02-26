@@ -30,7 +30,7 @@ class LogFormatter(logging.Formatter):
 logFormatter = LogFormatter(
     "[%(asctime)s] %(remote_addr)s requested %(url)s\n"
     "%(levelname)s in %(module)s: %(message)s \n"
-    "---------------------------------------------------------------\n"
+    "---------------------------------------------------------------\n\n"
 )
 # add file handler to the root logger
 fileHandler = RotatingFileHandler("log.log", backupCount=100, maxBytes=1024 * 1024)

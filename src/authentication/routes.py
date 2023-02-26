@@ -29,8 +29,6 @@ def register():
         jsonRequestData = request.get_json()
         email = jsonRequestData["email"]
         password = jsonRequestData["password"]
-        adminId = int(jsonRequestData["adminId"])
-
         # region validate
 
         if not isinstance(email, str) or not email or not email.strip():
@@ -40,7 +38,7 @@ def register():
             raise Exception(f"Email {email} is not an valid email.")
         if not isinstance(password, str) or not password or not password.strip():
             raise Exception("Invalid password. Password empty or blank or not string")
-        
+
         # endregion
 
         users = UserModel.query.all()
@@ -54,7 +52,12 @@ def register():
             return {"Status": 1, "Description": None, "ResponseData": None}
         exist = UserModel.query.filter(UserModel.EmailAddress == email).first()
         if not exist:
+            if not isinstance(jsonRequestData["adminId"], str):
+                raise Exception("Admin ID is not valid")
+            if not isinstance(jsonRequestData["role"], str):
+                raise Exception("Role is not valid")
             role = int(jsonRequestData["role"])
+            adminId = int(jsonRequestData["adminId"])
             hashedPassword = bcrypt.generate_password_hash(password)
             new_user = UserModel(email, hashedPassword, "", 1, status=1, role=role)
             new_user.CreatedAt = datetime.now()
@@ -78,7 +81,7 @@ def register():
     except Exception as ex:
         return {
             "Status": 0,
-            "Description": f"Đăng ký tài khoản không thành công. Có lỗi {ex.args}/{ex.__str__()}",
+            "Description": f"Đăng ký tài khoản không thành công. Có lỗi {ex.args}/{ex}",
             "ResponseData": None,
         }
     finally:
@@ -94,11 +97,11 @@ def login():
 @Authentication.route("/request/reset-password", methods=["GET"])
 def request_reset_password():
     try:
-        clientUrl = app.config["Client_Url"]
+        clientUrl = app.config["CLIENT_URL"]
         email = request.args.get("email")
 
         # region validate
-        
+
         if not isinstance(email, str) or not email or not email.strip():
             raise Exception("Invalid email. Email is empty or blank or not string")
         emailRegex = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b"
@@ -110,9 +113,9 @@ def request_reset_password():
         exist = UserModel.query.filter(UserModel.EmailAddress == email).first()
         if not exist:
             raise Exception(f"Email {email} has been not register yet.")
-        reset_link = (
-            urljoin(clientUrl, "/reset-password")
-            + f"?token={create_access_token(identity=email, expires_delta=timedelta(hours=app.config.get('TIME_TOKEN')))}"
+        reset_link = urljoin(
+            clientUrl,
+            f"/reset-password/{create_access_token(identity=email, expires_delta=timedelta(hours=app.config.get('TIME_TOKEN')))}",
         )
         send_email(
             subject="Reset password",
@@ -174,5 +177,3 @@ def reset_password():
         pass
     finally:
         pass
-
-    return token
