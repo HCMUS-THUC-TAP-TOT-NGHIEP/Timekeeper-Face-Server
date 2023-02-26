@@ -10,7 +10,7 @@ from logging.config import dictConfig
 import logging
 from logging.handlers import RotatingFileHandler
 
-logging.basicConfig(filename="record.log", level=logging.DEBUG)
+logging.basicConfig(filename="record.log", level=logging.ERROR)
 
 mail = Mail()
 migrate = Migrate()
@@ -33,14 +33,14 @@ class LogFormatter(logging.Formatter):
 
 logFormatter = LogFormatter(
     "[%(asctime)s] %(remote_addr)s requested %(url)s\n"
-    "%(levelname)s in %(module)s: %(message)s"
+    "%(levelname)s in %(module)s: %(message)s \n"
+    "---------------------------------------------------------------\n"
 )
 
 # add file handler to the root logger
-fileHandler = RotatingFileHandler("log.log", backupCount=100, maxBytes=5 * 1024 * 1024)
+fileHandler = RotatingFileHandler("log.log", backupCount=100, maxBytes=1024 * 1024)
 fileHandler.setFormatter(logFormatter)
 logger.addHandler(fileHandler)
-
 
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -59,8 +59,9 @@ def create_app(config_class=Config):
             data = {}
         else:
             data = json.dumps(json.loads(bodyData), indent=2)
-        app.logger.debug("\nHeaders: %s\nParams: %s\nBodyData: %s", request.headers, args, data)
-
+        app.logger.debug(
+            "\nHeaders: %s\nParams: %s\nBodyData: %s", request.headers, args, data
+        )
     app.app_context().push()
 
     # region Đăng ký blueprints/ routes
