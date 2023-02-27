@@ -40,7 +40,7 @@ def register():
 
         users = UserModel.query.all()
         if len(users) == 0:
-            hashedPassword = bcrypt.generate_password_hash(password)
+            hashedPassword = bcrypt.generate_password_hash(password).decode('utf-8')
             new_user = UserModel(
                 email, hashedPassword, "", 1, status=1, role=1
             )  # role = 1 => admin
@@ -55,7 +55,7 @@ def register():
                 raise Exception("Role is not valid")
             role = int(jsonRequestData["role"])
             adminId = int(jsonRequestData["adminId"])
-            hashedPassword = bcrypt.generate_password_hash(password)
+            hashedPassword = bcrypt.generate_password_hash(password).decode('utf-8')
             new_user = UserModel(email, hashedPassword, "", 1, status=1, role=role)
             new_user.CreatedAt = datetime.now()
             new_user.CreatedBy = adminId
@@ -76,6 +76,7 @@ def register():
             "ResponseData": None,
         }
     except Exception as ex:
+        app.logger.exception(ex)
         return {
             "Status": 0,
             "Description": f"Đăng ký tài khoản không thành công. Có lỗi {ex.args}/{ex}",
@@ -104,9 +105,10 @@ def login():
             raise Exception("Invalid password. Password empty or blank or not string")
         
         # endregion
-        existUser = UserModel.query.filter(UserModel.EmailAddress == email).first()
-        if existUser:
-            if bcrypt.check_password_hash(existUser.PasswordHash.decode("utf-8"), password):
+        exist = UserModel.query.filter_by(EmailAddress=email).first()
+        print('exist', exist)
+        if exist:
+            if bcrypt.check_password_hash(exist.PasswordHash, password):
                 access_token = create_access_token(identity=email, expires_delta=timedelta(hours=app.config.get('TIME_TOKEN')))
                 return {
                     "Status": 1,
@@ -119,7 +121,6 @@ def login():
                 "Description": f"Tài khoản chưa đăng ký!",
                 "ResponseData": None,
             }
-        
     except Exception as ex:
         return {
             "Status": 0,
@@ -210,5 +211,22 @@ def reset_password():
             "Description": f"Failed to reset password.",
             "ResponseData": None,
         }
+    finally:
+        pass
+
+@Authentication.route("/logout", methods=["POST"])
+@jwt_required() # require Header of req Authorization: Bearer <access_token>
+def logout():
+    try:
+        jti = get_jwt()["jti"]
+        db.session.add(TokenBlocklist(jti=jti, created_at=datetime.now()))
+        db.session.commit()
+        return {
+            "Status": 1,
+            "Description": "Logged out",
+            "ResponseData": None,
+        }
+    except Exception as ex:
+        app.logger.exception(ex)
     finally:
         pass
