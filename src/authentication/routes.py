@@ -106,7 +106,6 @@ def login():
         
         # endregion
         exist = UserModel.query.filter_by(EmailAddress=email).first()
-        print('exist', exist)
         if exist:
             if bcrypt.check_password_hash(exist.PasswordHash, password):
                 access_token = create_access_token(identity=email, expires_delta=timedelta(hours=app.config.get('TIME_TOKEN')))
@@ -204,8 +203,6 @@ def reset_password():
         }
     except Exception as ex:
         app.logger.exception(ex)
-        print("Failed to reset password")
-        print(f"Ex: {ex.args}")
         return {
             "Status": 0,
             "Description": f"Failed to reset password.",

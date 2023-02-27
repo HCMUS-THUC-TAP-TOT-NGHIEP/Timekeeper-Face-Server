@@ -10,6 +10,7 @@ from logging.config import dictConfig
 import logging
 from logging.handlers import RotatingFileHandler
 from flask_cors import CORS, cross_origin
+from threading import Thread
 
 mail = Mail()
 migrate = Migrate()
@@ -51,7 +52,7 @@ def create_app(config_class=Config):
     bcrypt.init_app(app)
     jwt.init_app(app)
     cors.init_app(app)
-
+    
     @app.before_request
     def log_request_info():
         args = request.args.to_dict()
@@ -60,9 +61,21 @@ def create_app(config_class=Config):
             data = {}
         else:
             data = json.dumps(json.loads(bodyData), indent=2)
-        app.logger.debug(
-            "\nHeaders: %s\nParams: %s\nBodyData: %s", request.headers, args, data
-        )
+        Thread(
+            app.logger.debug(
+                "\nHeaders: %s\nParams: %s\RequestData: %s", request.headers, args, data
+            )
+        ).start()
+
+    @app.after_request
+    def after_request(response):
+        response.status_code = 200
+        Thread(
+            app.logger.debug(
+                "\nHeaders: %s\nResponseData: %s", response.headers, response.data
+            )
+        ).start()
+        return response
 
     app.app_context().push()
 
