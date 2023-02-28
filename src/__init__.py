@@ -63,7 +63,7 @@ def create_app(config_class=Config):
             data = json.dumps(json.loads(bodyData), indent=2)
         Thread(
             app.logger.debug(
-                "\nHeaders: %s\nParams: %s\RequestData: %s", request.headers, args, data
+                "\nHeaders: %s\nParams: %s\nRequestData: %s", request.headers, args, data
             )
         ).start()
 
