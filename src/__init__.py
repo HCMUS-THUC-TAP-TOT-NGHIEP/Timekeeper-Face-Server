@@ -11,11 +11,13 @@ import logging
 from logging.handlers import RotatingFileHandler
 from flask_cors import CORS, cross_origin
 from threading import Thread
+from flask_marshmallow import Marshmallow
 
 mail = Mail()
 migrate = Migrate()
 bcrypt = Bcrypt()
 cors = CORS()
+marshmallow = Marshmallow()
 logger = logging.getLogger()
 
 
@@ -37,7 +39,7 @@ logFormatter = LogFormatter(
     "---------------------------------------------------------------\n\n"
 )
 # add file handler to the root logger
-fileHandler = RotatingFileHandler("log.log", backupCount=100, maxBytes=1024 * 1024)
+fileHandler = RotatingFileHandler("log.log", backupCount=100, maxBytes=1024 * 1024, encoding = "UTF-8")
 fileHandler.setFormatter(logFormatter)
 logger.addHandler(fileHandler)
 
@@ -52,7 +54,8 @@ def create_app(config_class=Config):
     bcrypt.init_app(app)
     jwt.init_app(app)
     cors.init_app(app)
-    
+    marshmallow.init_app(app)
+
     @app.before_request
     def log_request_info():
         args = request.args.to_dict()
@@ -62,8 +65,11 @@ def create_app(config_class=Config):
         else:
             data = json.dumps(json.loads(bodyData), indent=2)
         Thread(
-            app.logger.debug(
-                "\nHeaders: %s\nParams: %s\nRequestData: %s", request.headers, args, data
+            app.logger.info(
+                "\nHeaders: %s\nParams: %s\nRequestData: %s",
+                request.headers,
+                args,
+                data,
             )
         ).start()
 
@@ -71,7 +77,7 @@ def create_app(config_class=Config):
     def after_request(response):
         response.status_code = 200
         Thread(
-            app.logger.debug(
+            app.logger.info(
                 "\nHeaders: %s\nResponseData: %s", response.headers, response.data
             )
         ).start()
@@ -88,6 +94,10 @@ def create_app(config_class=Config):
     from src.user.routes import User as user_bp
 
     app.register_blueprint(user_bp, url_prefix="/api/user")
+
+    from src.employee.routes import Employee as employee_bp
+
+    app.register_blueprint(employee_bp, url_prefix="/api/employee")
 
     # endregion
 

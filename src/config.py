@@ -5,7 +5,7 @@ load_dotenv()
 
 
 class Config:
-    DEBUG = bool(os.environ.get("DEBUG"))
+    FLASK_DEBUG = bool(os.environ.get("DEBUG"))
     SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URI")
     MAIL_SERVER = os.getenv("MAIL_SERVER")
     MAIL_PORT = int(os.getenv("MAIL_PORT"))
@@ -16,4 +16,3 @@ class Config:
     CLIENT_URL = os.getenv("CLIENT_URL")
     SECRET_KEY = os.getenv("JWT_SECRET_KEY")
     TIME_TOKEN = int(os.getenv("TIME_TOKEN"))
-    # CORS_HEADERS = 'Content-Type'

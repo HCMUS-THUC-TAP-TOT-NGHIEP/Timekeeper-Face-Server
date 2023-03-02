@@ -10,8 +10,6 @@ google-auth-oauthlib
 Flask-Mail
 flask-sqlalchemy
 flask-bcrypt
-marshmallow
-marshmallow-sqlalchemy
 flask_jwt_extended
 flask-cors
-redis
+flask-marshmallow

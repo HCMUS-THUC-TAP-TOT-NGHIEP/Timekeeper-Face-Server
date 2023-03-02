@@ -1,9 +1,7 @@
 from src.db import db
 from sqlalchemy import Column, Integer, String, SmallInteger, DateTime
 from datetime import datetime
-from marshmallow import Schema, fields
-from marshmallow_sqlalchemy import SQLAlchemySchema, auto_field
-
+from src import marshmallow
 # MODELS
 
 class UserModel(db.Model):
@@ -36,23 +34,9 @@ class UserModel(db.Model):
 
 #SCHEMA
 
-class UserSchema(Schema):
-    Id: fields.Int()
-    EmailAddress: fields.Str()
-    UserName: fields.Str()
-    EmployeeId: fields.Str()
-    Status: fields.Int()
-    Role: fields.Int()
-    CreatedBy: fields.Int()
-    CreatedAt: fields.DateTime()
-    ModifiedBy: fields.Int()
-    ModifiedAt: fields.DateTime()
-
-class UserSchema_(SQLAlchemySchema):
+class UserSchema(marshmallow.Schema):
     class Meta:
-        model = UserModel
-        load_instance = True
+        fields=("Id", "EmailAddress", "UserName", "EmployeeId", "Status", "Role")
 
-    EmailAddress: auto_field()
-    UserName: auto_field()
-    EmployeeId: auto_field()
+user_schema = UserSchema()
+userList_schema = UserSchema(many=True)
