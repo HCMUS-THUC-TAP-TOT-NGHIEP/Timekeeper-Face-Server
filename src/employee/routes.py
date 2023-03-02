@@ -7,6 +7,7 @@ from src.employee.model import EmployeeModel, employeeInfoListSchema, employeeIn
 from src.authentication.model import UserModel
 from src.db import db
 from datetime import datetime
+from src.extension import object_as_dict
 
 Employee = Blueprint("employee", __name__)
 
@@ -127,62 +128,24 @@ def UpdateEmployeeInfo():
         ).scalar_one_or_none()
         if not employeeInfo:
             raise Exception(f"Can not find employee id[{EmployeeId}]")
-        firstName = jsonRequestData["FirstName"] if jsonRequestData["FirstName"] else None
-        lastName = jsonRequestData["LastName"]
-        dateOfBirthStr = jsonRequestData["DateOfBirth"]
-        genderStr = jsonRequestData["Gender"]
-        address = jsonRequestData["Address"]
-        joinDateStr = jsonRequestData["JoinDate"]
-        leaveDateStr = jsonRequestData["LeaveDate"]
-        departmentId = jsonRequestData["DepartmentId"]
-        hasChange = False
-        if (
-            not isinstance(firstName, str)
-            or not firstName
-            or not firstName.strip()
-            or employeeInfo.FirstName == firstName
-        ):
-            employeeInfo.FirstName = firstName
-            hasChange = True
-        if (
-            not isinstance(lastName, str)
-            or not lastName
-            or not lastName.strip()
-            or employeeInfo.LastName == lastName
-        ):
-            employeeInfo.LastName = lastName
-            hasChange = True
-        if not dateOfBirthStr or employeeInfo.DateOfBirth == dateOfBirthStr:
-            employeeInfo.DateOfBirthStr = dateOfBirthStr
-            hasChange = True
-        if not genderStr or employeeInfo.Gender == genderStr:
-            employeeInfo.Gender = bool(genderStr)
-            hasChange = True
-        if not address or employeeInfo.Address == address:
-            employeeInfo.Address = address
-            hasChange = True
-        if not joinDateStr or employeeInfo.JoinDate == joinDateStr:
-            employeeInfo.JoinDate = joinDateStr
-            hasChange = True
-        if not leaveDateStr or employeeInfo.LeaveDate == leaveDateStr:
-            employeeInfo.LeaveDate = leaveDateStr
-            hasChange = True
-        if not departmentId or employeeInfo.DepartmentId == departmentId:
-            employeeInfo.DepartmentId = departmentId
-            hasChange = True
-        if not hasChange:
-            app.logger.info(
-                f"UpdateEmployeeInfo Id[{EmployeeId}] thất bại. Không có thông tin thay đổi."
-            )
+        employeeInfoDict = object_as_dict(employeeInfo)
+        hasSomeChanges = False
+        for key in jsonRequestData:
+            if key not in employeeInfoDict:
+                raise Exception(f"Cannot found key {key} in {employeeInfoDict}")
+            if employeeInfoDict[key] != jsonRequestData[key]:
+                hasSomeChanges = True
+                employeeInfoDict[key] = jsonRequestData[key]
+        if not hasSomeChanges:
             return {
-                "Status": 0,
-                "Description": f"Không chỉnh sửa thông tin do không có sự thay đổi nào.",
+                "Status": 1,
+                "Description": f"Không có sự thay đổi nào trong dữ liệu của Nhân viên {employeeInfo.Id}",
                 "ResponseData": None,
             }
-        employeeInfo.ModifiedBy = user.Id
+        employeeInfo = EmployeeModel(**employeeInfoDict)
         employeeInfo.ModifiedAt = datetime.now()
+        employeeInfo.ModifiedBy = user.Id
         db.session.commit()
-        app.logger.info(f"UpdateEmployeeInfo Id[{EmployeeId}] thành công.")
         return {
             "Status": 1,
             "Description": None,
