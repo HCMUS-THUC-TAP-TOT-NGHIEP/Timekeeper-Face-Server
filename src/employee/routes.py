@@ -1,13 +1,10 @@
-from flask import Blueprint, request, current_app as app
-from src.jwt import (
-    jwt_required,
-    get_jwt_identity,
-)
-from src.employee.model import EmployeeModel, employeeInfoSchema, employeeInfoListSchema
+from datetime import datetime
+from flask import Blueprint,current_app as app, request
 from src.authentication.model import UserModel
 from src.db import db
-from datetime import datetime
-from src.extension import object_as_dict
+from src.employee.model import (EmployeeModel, employeeInfoListSchema,
+                                employeeInfoSchema)
+from src.jwt import get_jwt_identity, jwt_required
 
 Employee = Blueprint("employee", __name__)
 
@@ -93,6 +90,7 @@ def CreateEmployee():
             raise Exception("Invalid address. Address is empty or blank or not string")
 
         # endregion
+
         newEmployee = EmployeeModel()
         newEmployee.FirstName = firstName
         newEmployee.LastName = lastName
@@ -113,7 +111,7 @@ def CreateEmployee():
         newEmployee.ModifiedAt = datetime.now()
         db.session.add(newEmployee)
         db.session.commit()
-        print(newEmployee)
+        app.logger.info(f"CreateEmployee thành công.")
         return {
             "Status": 1,
             "Description": f"Thêm nhân viên mới thành công.",
@@ -121,10 +119,10 @@ def CreateEmployee():
         }
     except Exception as ex:
         db.session.rollback()
-        app.logger.exception(ex)
+        app.logger.exception(f"CreateEmployee thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Thêm nhân viên mới không thành công. Có lỗi {str(ex)}",
+            "Description": f"Thêm nhân viên mới không thành công.",
             "ResponseData": None,
         }
 
@@ -194,14 +192,19 @@ def UpdateEmployeeInfo():
 def DeleteEmployee():
     try:
         jsonRequestData = request.get_json()
-        employeeId = jsonRequestData["EmployeeId"]
 
         # region validate
-
-        if not employeeId:
+        email = get_jwt_identity()
+        user = db.session.execute(
+            db.select(UserModel).filter_by(EmailAddress=email)
+        ).scalar_one_or_none()
+        if not user:
+            raise Exception(f"No account found for email address[{email}]")
+        if ("EmployeeId" not in jsonRequestData) or (not jsonRequestData["EmployeeId"]):
             raise Exception("Employee Id is empty or invalid.")
 
         # endregion
+        employeeId = jsonRequestData["EmployeeId"]
         employee = db.session.execute(
             db.select(EmployeeModel).filter_by(Id=employeeId)
         ).scalar_one()

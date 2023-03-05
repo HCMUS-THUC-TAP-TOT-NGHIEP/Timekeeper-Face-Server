@@ -99,6 +99,9 @@ def create_app(config_class=Config):
 
     app.register_blueprint(employee_bp, url_prefix="/api/employee")
 
+    from src.department.routes import Department as department_bp
+    app.register_blueprint(department_bp, url_prefix="/api/department")
+
     # endregion
 
     return app

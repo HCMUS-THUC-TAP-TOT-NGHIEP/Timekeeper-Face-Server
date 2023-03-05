@@ -1,9 +1,8 @@
-from flask import Blueprint, jsonify, current_app as app
+from flask import Blueprint, current_app as app
 from src.jwt import (
     jwt_required,
     get_jwt_identity,
 )
-from src import cross_origin
 
 User = Blueprint("user", __name__)
 

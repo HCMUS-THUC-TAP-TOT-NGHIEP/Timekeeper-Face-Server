@@ -1,19 +1,17 @@
-from flask import Blueprint, jsonify, render_template, request, current_app as app
-from src.email import send_email
+import re
+from datetime import datetime, timedelta
 from urllib.parse import urljoin
-from datetime import datetime
+
+from flask import Blueprint
+from flask import current_app as app
+from flask import render_template, request
+
+from src import bcrypt
 from src.authentication.model import UserModel, UserSchema
 from src.db import db
-from src.jwt import (
-    create_access_token,
-    jwt_required,
-    get_jwt_identity,
-    get_jwt,
-    TokenBlocklist,
-)
-import re
-from datetime import timedelta
-from src import bcrypt
+from src.email import send_email
+from src.jwt import (TokenBlocklist, create_access_token, get_jwt,
+                     get_jwt_identity, jwt_required)
 
 Authentication = Blueprint("auth", __name__)
 
