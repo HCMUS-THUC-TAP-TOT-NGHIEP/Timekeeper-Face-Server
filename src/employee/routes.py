@@ -1,9 +1,9 @@
-from flask import Blueprint, request, jsonify, current_app as app
+from flask import Blueprint, request, current_app as app
 from src.jwt import (
     jwt_required,
     get_jwt_identity,
 )
-from src.employee.model import EmployeeModel, employeeInfoListSchema, employeeInfoSchema
+from src.employee.model import EmployeeModel, employeeInfoSchema, employeeInfoListSchema
 from src.authentication.model import UserModel
 from src.db import db
 from datetime import datetime
@@ -19,7 +19,6 @@ def GetEmployeeInfo():
     try:
         email = get_jwt_identity()
         employeeId = request.args.get("Id")
-        print(type(employeeId))
         employee = db.session.execute(
             db.select(EmployeeModel).filter_by(Id=employeeId)
         ).scalar_one()
@@ -48,15 +47,39 @@ def GetEmployeeInfo():
 def CreateEmployee():
     try:
         jsonRequestData = request.get_json()
+        email = get_jwt_identity()
+
+        # region validate
+
+        if "FirstName" not in jsonRequestData:
+            raise Exception("Invalid first name. First name is not found.")
+        if "LastName" not in jsonRequestData:
+            raise Exception("Invalid Last name. Last name is not found.")
+        if "DateOfBirth" not in jsonRequestData:
+            raise Exception("Invalid Date Of Birth. Date Of Birth is not found.")
+        if "Gender" not in jsonRequestData:
+            raise Exception("Invalid Gender. Gender is not found.")
+        if "Address" not in jsonRequestData:
+            raise Exception("Invalid Address. Address is not found.")
+        if "JoinDate" not in jsonRequestData:
+            raise Exception("Invalid Gender. JoinDate is not found.")
+        if "Email" not in jsonRequestData:
+            raise Exception("Invalid Email. Email is not found.")
+        if "MobilePhone" not in jsonRequestData:
+            raise Exception("Invalid MobilePhone. MobilePhone is not found.")
+        if "DepartmentId" not in jsonRequestData:
+            raise Exception("Invalid DepartmentId. DepartmentId is not found.")
+
         firstName = jsonRequestData["FirstName"]
         lastName = jsonRequestData["LastName"]
         dateOfBirthStr = jsonRequestData["DateOfBirth"]
         genderStr = jsonRequestData["Gender"]
         address = jsonRequestData["Address"]
         joinDateStr = jsonRequestData["JoinDate"]
-        email = get_jwt_identity()
-
-        # region validate
+        Position = jsonRequestData["Position"]
+        Email = jsonRequestData["Email"]
+        MobilePhone = jsonRequestData["MobilePhone"]
+        DepartmentId = jsonRequestData["DepartmentId"]
 
         if not isinstance(firstName, str) or not firstName or not firstName.strip():
             raise Exception(
@@ -70,7 +93,6 @@ def CreateEmployee():
             raise Exception("Invalid address. Address is empty or blank or not string")
 
         # endregion
-
         newEmployee = EmployeeModel()
         newEmployee.FirstName = firstName
         newEmployee.LastName = lastName
@@ -78,6 +100,10 @@ def CreateEmployee():
         newEmployee.Gender = genderStr
         newEmployee.JoinDate = joinDateStr
         newEmployee.DateOfBirth = dateOfBirthStr
+        newEmployee.Position = Position
+        newEmployee.Email = Email
+        newEmployee.MobilePhone = MobilePhone
+        newEmployee.DepartmentId = DepartmentId
         user = db.session.execute(
             db.select(UserModel).filter_by(EmailAddress=email)
         ).scalar_one()
@@ -110,7 +136,7 @@ def UpdateEmployeeInfo():
     try:
         email = get_jwt_identity()
         jsonRequestData = request.get_json()
-        EmployeeId = jsonRequestData["Id"]
+
         # region validate
 
         user = db.session.execute(
@@ -118,31 +144,30 @@ def UpdateEmployeeInfo():
         ).scalar_one_or_none()
         if not user:
             raise Exception(f"No account found for email address[{email}]")
-        if not EmployeeId:
+        if ("Id" not in jsonRequestData) or (not jsonRequestData["Id"]):
             raise Exception("Employee Id is empty or invalid.")
 
         # endregion
+
+        EmployeeId = jsonRequestData["Id"]
 
         employeeInfo = db.session.execute(
             db.select(EmployeeModel).filter_by(Id=EmployeeId)
         ).scalar_one_or_none()
         if not employeeInfo:
             raise Exception(f"Can not find employee id[{EmployeeId}]")
-        employeeInfoDict = object_as_dict(employeeInfo)
         hasSomeChanges = False
+
         for key in jsonRequestData:
-            if key not in employeeInfoDict:
-                raise Exception(f"Cannot found key {key} in {employeeInfoDict}")
-            if employeeInfoDict[key] != jsonRequestData[key]:
+            if getattr(employeeInfo, key) != jsonRequestData[key]:
                 hasSomeChanges = True
-                employeeInfoDict[key] = jsonRequestData[key]
+                setattr(employeeInfo, key, jsonRequestData[key])
         if not hasSomeChanges:
             return {
                 "Status": 1,
                 "Description": f"Không có sự thay đổi nào trong dữ liệu của Nhân viên {employeeInfo.Id}",
                 "ResponseData": None,
             }
-        employeeInfo = EmployeeModel(**employeeInfoDict)
         employeeInfo.ModifiedAt = datetime.now()
         employeeInfo.ModifiedBy = user.Id
         db.session.commit()
@@ -196,5 +221,44 @@ def DeleteEmployee():
         return {
             "Status": 0,
             "Description": f"Delete Unsucessfully. Có lỗi {str(ex)}",
+            "ResponseData": None,
+        }
+
+
+# GET api/employee/many
+@Employee.route("/many", methods=["GET"])
+@jwt_required()
+def GetManyEMployee():
+    try:
+        email = get_jwt_identity()
+        args = request.args.to_dict()
+        page = 1
+        perPage = 10
+        # region validate
+
+        user = db.session.execute(
+            db.select(UserModel).filter_by(EmailAddress=email)
+        ).scalar_one_or_none()
+        if not user:
+            raise Exception(f"No account found for email address[{email}]")
+        # endregion
+
+        if "Page" in args:
+            page = args["Page"]
+        if "PerPage" in args:
+            perPage = args["PerPage"]
+        employees = db.paginate(
+            db.select(EmployeeModel).order_by(EmployeeModel.Id, EmployeeModel.JoinDate)
+        )
+        return {
+            "Status": 1,
+            "Description": None,
+            "ResponseData": employeeInfoListSchema.dump(employees),
+        }
+    except Exception as ex:
+        app.logger.info(f"GetManyEMployee thất bại. Có exception[{str(ex)}]")
+        return {
+            "Status": 0,
+            "Description": f"Truy vấn danh sách nhân viên không thành công.",
             "ResponseData": None,
         }

@@ -5,8 +5,9 @@ from datetime import datetime
 
 # MODELS
 
+
 class EmployeeModel(db.Model):
-    __tablename__ = 'EmployeeInfo'
+    __tablename__ = "EmployeeInfo"
 
     Id = Column(Integer(), primary_key=True)
     FirstName = Column(String(), nullable=False)
@@ -17,14 +18,32 @@ class EmployeeModel(db.Model):
     JoinDate = Column(DateTime(), nullable=False)
     LeaveDate = Column(DateTime())
     DepartmentId = Column(Integer())
+    Position = Column(String())
+    Email = Column(String())
+    MobilePhone = Column(String())
     CreatedBy = Column(Integer(), nullable=False)
     CreatedAt = Column(DateTime(), nullable=False)
     ModifiedBy = Column(Integer(), nullable=False)
     ModifiedAt = Column(DateTime(), nullable=False)
 
+
 class EmployeeInfoSchema(marshmallow.Schema):
     class Meta:
-        fields = ("Id", "FirstName", "LastName", "DateOfBirth", "Gender", "Address", "JoinDate", "LeaveDate", "DepartmentId")
+        fields = (
+            "Id",
+            "FirstName",
+            "LastName",
+            "DateOfBirth",
+            "Gender",
+            "Address",
+            "JoinDate",
+            "LeaveDate",
+            "DepartmentId",
+            "Position",
+            "Email",
+            "MobilePhone",
+        )
+
 
 employeeInfoSchema = EmployeeInfoSchema()
 employeeInfoListSchema = EmployeeInfoSchema(many=True)
