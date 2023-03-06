@@ -1,7 +1,7 @@
 from flask import Blueprint, request, current_app as app
 from src.db import db
 from src.department.model import DepartmentModel, departmentSchema, departmentListSchema
-from src.jwt import get_jwt_identity, jwt_required
+from src.jwt import get_jwt_identity, jwt_required, admin_required
 from src.authentication.model import UserModel
 from datetime import datetime
 
@@ -9,6 +9,7 @@ Department = Blueprint("department", __name__)
 
 
 @Department.route("/list", methods=["GET"])
+@admin_required()
 def GetDepartmentList():
     try:
         args = request.args.to_dict()
@@ -39,7 +40,7 @@ def GetDepartmentList():
 
 
 @Department.route("/create", methods=["POST"])
-@jwt_required()
+@admin_required()
 def AddNewDepartment():
     try:
         jsonRequestData = request.get_json()
@@ -96,7 +97,7 @@ def AddNewDepartment():
 
 
 @Department.route("/update", methods=["PUT"])
-@jwt_required()
+@admin_required()
 def UpdateDepartment():
     try:
         jsonRequestData = request.get_json()

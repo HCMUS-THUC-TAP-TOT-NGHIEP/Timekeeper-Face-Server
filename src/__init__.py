@@ -75,7 +75,7 @@ def create_app(config_class=Config):
 
     @app.after_request
     def after_request(response):
-        response.status_code = 200
+        # response.status_code = 200
         Thread(
             app.logger.info(
                 "\nHeaders: %s\nResponseData: %s", response.headers, response.data

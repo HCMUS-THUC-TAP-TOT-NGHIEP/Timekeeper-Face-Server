@@ -26,7 +26,7 @@ def GetEmployeeInfo():
             "Status": 1,
             "Description": None,
             "ResponseData": employeeInfoSchema.dump(employee),
-        }
+        }, 200
     except Exception as ex:
         app.logger.exception(
             f"GetEmployeeInfo Id[{employeeId}] thất bại. Có exception[{str(ex)}]"
@@ -35,7 +35,7 @@ def GetEmployeeInfo():
             "Status": 0,
             "Description": f"Try vấn thông tin nhân viên không thành công.",
             "ResponseData": None,
-        }
+        }, 400
 
 
 # POST api/employee/create
@@ -116,7 +116,7 @@ def CreateEmployee():
             "Status": 1,
             "Description": f"Thêm nhân viên mới thành công.",
             "ResponseData": {"Id": newEmployee.Id},
-        }
+        }, 200
     except Exception as ex:
         db.session.rollback()
         app.logger.exception(f"CreateEmployee thất bại. Có exception[{str(ex)}]")
@@ -124,7 +124,7 @@ def CreateEmployee():
             "Status": 0,
             "Description": f"Thêm nhân viên mới không thành công.",
             "ResponseData": None,
-        }
+        }, 200
 
 
 # PUT api/employee/update
@@ -173,7 +173,7 @@ def UpdateEmployeeInfo():
             "Status": 1,
             "Description": None,
             "ResponseData": None,
-        }
+        }, 200
     except Exception as ex:
         db.session.rollback()
         app.logger.info(
@@ -183,7 +183,7 @@ def UpdateEmployeeInfo():
             "Status": 0,
             "Description": f"Chỉnh sửa thông tin nhân viên không thành công.",
             "ResponseData": None,
-        }
+        }, 200
 
 
 # DELETE api/employee/
@@ -217,7 +217,7 @@ def DeleteEmployee():
             "Status": 1,
             "Description": None,
             "ResponseData": None,
-        }
+        }, 200
     except Exception as ex:
         db.session.rollback()
         app.logger.exception(ex)
@@ -225,7 +225,7 @@ def DeleteEmployee():
             "Status": 0,
             "Description": f"Delete Unsucessfully. Có lỗi {str(ex)}",
             "ResponseData": None,
-        }
+        }, 200
 
 
 # GET api/employee/many
@@ -257,11 +257,11 @@ def GetManyEMployee():
             "Status": 1,
             "Description": None,
             "ResponseData": employeeInfoListSchema.dump(employees),
-        }
+        }, 200
     except Exception as ex:
         app.logger.info(f"GetManyEMployee thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
             "Description": f"Truy vấn danh sách nhân viên không thành công.",
             "ResponseData": None,
-        }
+        }, 200
