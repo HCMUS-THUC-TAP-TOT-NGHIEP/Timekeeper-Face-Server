@@ -3,7 +3,11 @@ from src.db import db
 from src.department.model import DepartmentModel, departmentSchema, departmentListSchema
 from src.jwt import get_jwt_identity, jwt_required, admin_required
 from src.authentication.model import UserModel
+from src.employee.model import EmployeeModel, employeeInfoListSchema
 from datetime import datetime
+import json
+from src.extension import object_as_dict
+from sqlalchemy import select, func
 
 Department = Blueprint("department", __name__)
 
@@ -19,24 +23,54 @@ def GetDepartmentList():
             page = int(args["Page"])
         if "PerPage" in args:
             perPage = int(args["PerPage"])
-        departmentList = db.paginate(
-            db.select(DepartmentModel).order_by(DepartmentModel.Id),
-            page=page,
-            per_page=perPage,
+        print(
+            select(
+                DepartmentModel.Id,
+                DepartmentModel.Name,
+                DepartmentModel.ManagerId,
+                func.concat(EmployeeModel.FirstName, " ", EmployeeModel.LastName).label(
+                    "ManagerName"
+                ),
+            )
+            .select_from(DepartmentModel)
+            .join(
+                EmployeeModel,
+                DepartmentModel.ManagerId == EmployeeModel.Id,
+                isouter=True,
+            )
+            .where(DepartmentModel.Status == "1")
         )
+        departmentList = db.session.execute(
+            select(
+                DepartmentModel.Id,
+                DepartmentModel.Name,
+                DepartmentModel.ManagerId,
+                func.concat(EmployeeModel.FirstName, " ", EmployeeModel.LastName).label(
+                    "ManagerName"
+                ),
+            )
+            .select_from(DepartmentModel)
+            .join(
+                EmployeeModel,
+                DepartmentModel.ManagerId == EmployeeModel.Id,
+                isouter=True,
+            )
+            .where(DepartmentModel.Status == "1")
+        ).all()
+
         app.logger.info("GetDepartmentList successfully.")
         return {
             "Status": 1,
             "Description": None,
-            "ResponseData": departmentListSchema.dump(departmentList),
-        }
+            "ResponseData": [dict(r) for r in departmentList],
+        }, 200
     except Exception as ex:
         app.logger.info(f"GetDepartmentList thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
             "Description": f"Truy vấn danh sách phòng ban không thành công.",
             "ResponseData": None,
-        }
+        }, 200
 
 
 @Department.route("/create", methods=["POST"])

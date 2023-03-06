@@ -226,6 +226,7 @@ def reset_password():
 @jwt_required()  # require Header of req Authorization: Bearer <access_token>
 def logout():
     try:
+        print(get_jwt_identity())
         jti = get_jwt()["jti"]
         db.session.add(TokenBlocklist(jti=jti, created_at=datetime.now()))
         db.session.commit()

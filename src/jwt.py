@@ -39,7 +39,6 @@ def admin_required():
         def decorator(*args, **kwargs):
             verify_jwt_in_request()
             claims = get_jwt()
-            print(claims)
             # if claims["is_administrator"]:
             #     return fn(*args, **kwargs)
             if claims["email"]:

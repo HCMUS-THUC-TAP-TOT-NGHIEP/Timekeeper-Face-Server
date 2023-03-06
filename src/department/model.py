@@ -26,8 +26,11 @@ class DepartmentSchema(marshmallow.Schema):
         fields = (
             "Id",
             "Name",
+            "ManagerId",
+            # "ManagerName",
             "Status",
         )
+
 
 departmentSchema = DepartmentSchema()
 departmentListSchema = DepartmentSchema(many=True)
