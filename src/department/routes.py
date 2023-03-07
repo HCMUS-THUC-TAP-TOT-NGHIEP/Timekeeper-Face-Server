@@ -23,23 +23,6 @@ def GetDepartmentList():
             page = int(args["Page"])
         if "PerPage" in args:
             perPage = int(args["PerPage"])
-        print(
-            select(
-                DepartmentModel.Id,
-                DepartmentModel.Name,
-                DepartmentModel.ManagerId,
-                func.concat(EmployeeModel.FirstName, " ", EmployeeModel.LastName).label(
-                    "ManagerName"
-                ),
-            )
-            .select_from(DepartmentModel)
-            .join(
-                EmployeeModel,
-                DepartmentModel.ManagerId == EmployeeModel.Id,
-                isouter=True,
-            )
-            .where(DepartmentModel.Status == "1")
-        )
         departmentList = db.session.execute(
             select(
                 DepartmentModel.Id,
@@ -48,6 +31,7 @@ def GetDepartmentList():
                 func.concat(EmployeeModel.FirstName, " ", EmployeeModel.LastName).label(
                     "ManagerName"
                 ),
+                DepartmentModel.Status,
             )
             .select_from(DepartmentModel)
             .join(
@@ -56,6 +40,7 @@ def GetDepartmentList():
                 isouter=True,
             )
             .where(DepartmentModel.Status == "1")
+            .order_by(DepartmentModel.Id)
         ).all()
 
         app.logger.info("GetDepartmentList successfully.")
@@ -92,11 +77,11 @@ def AddNewDepartment():
             raise Exception("Invalid Name. Name is not found.")
 
         departmentName = jsonRequestData["Name"]
-        user = db.session.execute(
+        department = db.session.execute(
             db.select(DepartmentModel).filter_by(Name=departmentName)
         ).scalar_one_or_none()
 
-        if user:
+        if department:
             raise Exception(f"Phòng ban {departmentName} đã tồn tại.")
 
         # endregion
@@ -118,8 +103,8 @@ def AddNewDepartment():
         return {
             "Status": 1,
             "Description": None,
-            "ResponseData": None,
-        }
+            "ResponseData": {"Id": newDepartment.Id},
+        }, 200
     except Exception as ex:
         db.session.rollback()
         app.logger.exception(f"AddNewDepartment thất bại. Có exception[{str(ex)}]")
