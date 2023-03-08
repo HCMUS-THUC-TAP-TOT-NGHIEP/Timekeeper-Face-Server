@@ -112,7 +112,7 @@ def AddNewDepartment():
             "Status": 0,
             "Description": f"Thêm phòng ban mới không thành công. {str(ex)}",
             "ResponseData": None,
-        }
+        }, 200
 
 
 @Department.route("/update", methods=["PUT"])
@@ -154,7 +154,6 @@ def UpdateDepartment():
         department.ModifiedAt = datetime.now()
         department.ModifiedBy = user.Id
         db.session.commit()
-        db.session.commit()
         return {
             "Status": 1,
             "Description": None,
@@ -168,3 +167,70 @@ def UpdateDepartment():
             "Description": f"Cập nhật phòng ban mới không thành công. {str(ex)}",
             "ResponseData": None,
         }
+
+
+@Department.route("/", methods=["DELETE"])
+@admin_required()
+def DeleteOneDepartment():
+    try:
+        jsonRequestData = request.get_json()
+
+        # region validate
+
+        email = get_jwt_identity()
+        user = db.session.execute(
+            db.select(UserModel).filter_by(EmailAddress=email)
+        ).scalar_one_or_none()
+        if not user:
+            app.logger.error(
+                "DeleteOneDepartment thất bại. Không tìm thấy user có email [{email}]."
+            )
+            return {
+                "Status": 0,
+                "Description": f"User [{email}] không tồn tại",
+                "ResponseData": None,
+            }, 401
+        if "Id" not in jsonRequestData or not isinstance(jsonRequestData["Id"], int):
+            app.logger.error(
+                "DeleteOneDepartment thất bại. Không tìm mã phòng ban trong request body data."
+            )
+            return {
+                "Status": 0,
+                "Description": f"Không tìm thấy mã phòng ban trong request.",
+                "ResponseData": None,
+            }, 400
+
+        # endregion
+
+        departmentId = jsonRequestData["Id"]
+        department = db.session.execute(
+            db.select(DepartmentModel).filter_by(Id=departmentId)
+        ).scalar_one_or_none()
+        if not department:
+            app.logger.error(
+                "DeleteOneDepartment thất bại. Không tìm thấy phòng ban có mã {departmentId}."
+            )
+            return {
+                "Status": 0,
+                "Description": f"Không tìm thấy phòng ban có mã {departmentId}.",
+                "ResponseData": None,
+            }, 400
+        print(departmentSchema.dump(department))
+        db.session.delete(department)
+        db.session.commit()
+        app.logger.info(
+            f"DeleteOneDepartment Id[{departmentId}] thành công."
+        )
+        return {
+            "Status": 1,
+            "Description": None,
+            "ResponseData": None,
+        }, 200
+    except Exception as ex:
+        db.session.rollback()
+        app.logger.error(f"DeleteOneDepartment thất bại. {ex}")
+        return {
+            "Status": 0,
+            "Description": f"Có lỗi ở server.",
+            "ResponseData": None,
+        }, 400
