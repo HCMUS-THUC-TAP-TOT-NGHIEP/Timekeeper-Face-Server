@@ -39,7 +39,9 @@ logFormatter = LogFormatter(
     "---------------------------------------------------------------\n\n"
 )
 # add file handler to the root logger
-fileHandler = RotatingFileHandler("log.log", backupCount=100, maxBytes=1024 * 1024, encoding = "UTF-8")
+fileHandler = RotatingFileHandler(
+    "log.log", backupCount=100, maxBytes=1024 * 1024, encoding="UTF-8"
+)
 fileHandler.setFormatter(logFormatter)
 logger.addHandler(fileHandler)
 
@@ -100,7 +102,12 @@ def create_app(config_class=Config):
     app.register_blueprint(employee_bp, url_prefix="/api/employee")
 
     from src.department.routes import Department as department_bp
+
     app.register_blueprint(department_bp, url_prefix="/api/department")
+
+    from src.shift.routes import Shift as shift_bp
+
+    app.register_blueprint(shift_bp, url_prefix="/api/shift")
 
     # endregion
 
