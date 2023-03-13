@@ -16,3 +16,4 @@ class Config:
     CLIENT_URL = os.getenv("CLIENT_URL")
     SECRET_KEY = os.getenv("JWT_SECRET_KEY")
     TIME_TOKEN = int(os.getenv("TIME_TOKEN"))
+    JSON_AS_ASCII = False

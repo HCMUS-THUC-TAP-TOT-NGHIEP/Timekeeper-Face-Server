@@ -39,9 +39,7 @@ logFormatter = LogFormatter(
     "---------------------------------------------------------------\n\n"
 )
 # add file handler to the root logger
-fileHandler = RotatingFileHandler(
-    "log.log", backupCount=100, maxBytes=1024 * 1024, encoding="UTF-8"
-)
+fileHandler = RotatingFileHandler("log.log", backupCount=100, maxBytes=1024 * 1024)
 fileHandler.setFormatter(logFormatter)
 logger.addHandler(fileHandler)
 
@@ -68,7 +66,7 @@ def create_app(config_class=Config):
             data = json.dumps(json.loads(bodyData), indent=2)
         Thread(
             app.logger.info(
-                "\nHeaders: %s\nParams: %s\nRequestData: %s",
+                "\nHeaders: %s\nParams: %s\nRequest Body: %s",
                 request.headers,
                 args,
                 data,
@@ -77,10 +75,12 @@ def create_app(config_class=Config):
 
     @app.after_request
     def after_request(response):
-        # response.status_code = 200
+        text_response = response.data
+        if response.data:
+            text_response = json.dumps(json.loads(response.data), indent=4)
         Thread(
             app.logger.info(
-                "\nHeaders: %s\nResponseData: %s", response.headers, response.data
+                "\nHeaders: %s\nResponse Body: %s", response.headers, text_response
             )
         ).start()
         return response

@@ -114,7 +114,7 @@ def login():
             if bcrypt.check_password_hash(exist.PasswordHash, password):
                 access_token = create_access_token(
                     identity=email,
-                    additional_claims={"email": email},
+                    additional_claims={"email": email, "IsAdmin" : True if exist.Role == 1 else False},
                     expires_delta=timedelta(hours=app.config.get("TIME_TOKEN")),
                 )
                 return {
@@ -122,12 +122,11 @@ def login():
                     "Description": None,
                     "ResponseData": {"access_token": access_token},
                 }, 200
-        else:
-            return {
-                "Status": 0,
-                "Description": f"Tài khoản chưa đăng ký!",
-                "ResponseData": None,
-            }, 200
+        return {
+            "Status": 0,
+            "Description": f"Tài khoản chưa đăng ký!",
+            "ResponseData": None,
+        }, 200
     except Exception as ex:
         return {
             "Status": 0,

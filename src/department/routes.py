@@ -42,7 +42,6 @@ def GetDepartmentList():
             .where(DepartmentModel.Status == "1")
             .order_by(DepartmentModel.Id)
         ).all()
-
         app.logger.info("GetDepartmentList successfully.")
         return {
             "Status": 1,
@@ -218,9 +217,7 @@ def DeleteOneDepartment():
         print(departmentSchema.dump(department))
         db.session.delete(department)
         db.session.commit()
-        app.logger.info(
-            f"DeleteOneDepartment Id[{departmentId}] thành công."
-        )
+        app.logger.info(f"DeleteOneDepartment Id[{departmentId}] thành công.")
         return {
             "Status": 1,
             "Description": None,
