@@ -108,6 +108,9 @@ def create_app(config_class=Config):
     from src.shift.routes import Shift as shift_bp
 
     app.register_blueprint(shift_bp, url_prefix="/api/shift")
+    from src.designation.routes import Designation as designation_bp
+
+    app.register_blueprint(designation_bp, url_prefix="/api/designation")
 
     # endregion
 

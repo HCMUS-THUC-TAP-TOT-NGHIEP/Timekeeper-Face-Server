@@ -1,6 +1,7 @@
 from src.db import db
 from src import marshmallow
-from sqlalchemy import Column, Integer, String, DateTime, Time
+from sqlalchemy import Column, Integer, String, DateTime, Time, ARRAY
+from enum import Enum
 
 # MODELS
 
@@ -31,7 +32,9 @@ class ShiftTypeModel(db.Model):
 
     Id = Column(Integer(), primary_key=True)
     Description = Column(String())
-    CreatedBy = Column(Integer(), )
+    CreatedBy = Column(
+        Integer(),
+    )
     CreatedAt = Column(DateTime(), nullable=False)
     ModifiedBy = Column(Integer())
     ModifiedAt = Column(DateTime(), nullable=False)
@@ -74,6 +77,63 @@ class ShiftTypeModelSchema(marshmallow.Schema):
         fields = ("Id", "Description")
 
 
+class ShiftAssignment(db.Model):
+    __tablename__ = "ShiftAssignment"
+
+    Id = Column(Integer(), primary_key=True)
+    ShiftId = Column(Integer(), nullable=False)
+    StartDate = Column(DateTime(), nullable=False)
+    EndDate = Column(DateTime(), nullable=True)
+    AssignType = Column(Integer(), nullable=True)
+    Description = Column(String())
+    Note = Column(String())
+    Status = Column(String())
+    CreatedBy = Column(Integer())
+    ModifiedBy = Column(Integer())
+    CreatedAt = Column(DateTime())
+    ModifiedAt = Column(DateTime())
+
+
+class ShiftAssignmentSchema(marshmallow.Schema):
+    class Meta:
+        fields = (
+            "Id",
+            "ShiftId",
+            "StartDate",
+            "EndDate",
+            "AssignType",
+            # "DepartmentId",
+            # "Designation",
+            # "EmployeeId",
+            "Status",
+        )
+
+
+class ShiftAssignmentDetail(db.Model):
+    __tablename__ = "ShiftAssignmentDetail"
+
+    Id = Column(Integer(), primary_key=True)
+    Target = Column(Integer(), primary_key=True)
+    TargetType = Column(Integer(), primary_key=True)
+    Status = Column(String())
+    CreatedBy = Column(Integer())
+    ModifiedBy = Column(Integer())
+    CreatedAt = Column(DateTime())
+    ModifiedAt = Column(DateTime())
+
+
 shiftSchema = ShiftSchema()
 shiftListSchema = ShiftSchema(many=True)
 shiftListResponseSchema = ShiftListResponseSchema(many=True)
+
+Status = Enum("Status", ["Active", "Inactive"])
+TargetType = Enum("TargetType", ["Department","Designation", "Employee"])
+
+class Status(Enum):
+    Active = 1
+    Inactive = 2
+
+class TargetType(Enum):
+    Department = 1
+    Designation = 2
+    Employee = 3

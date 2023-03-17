@@ -10,7 +10,6 @@ class UserModel(db.Model):
     Id = Column(Integer(), primary_key=True)
     EmailAddress = Column(String(), unique=True, nullable=False)
     PasswordHash = Column(String(), nullable=False)
-    PasswordSalt = Column(String())
     UserName = Column(String())
     EmployeeId = Column(Integer())
     Status = Column(SmallInteger())
