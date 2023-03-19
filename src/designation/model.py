@@ -23,3 +23,7 @@ class DesignationSchema(marshmallow.Schema):
 
 designationSchema = DesignationSchema()
 designationListSchema = DesignationSchema(many=True)
+
+class Status:
+    Active = "1"
+    Inactive = "2"

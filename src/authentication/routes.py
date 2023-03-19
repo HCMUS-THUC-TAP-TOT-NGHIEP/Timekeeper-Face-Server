@@ -17,6 +17,7 @@ from src.jwt import (
     get_jwt_identity,
     jwt_required,
 )
+from src.extension import ProjectException
 
 Authentication = Blueprint("auth", __name__)
 
@@ -33,12 +34,16 @@ def register():
         # region validate
 
         if not isinstance(email, str) or not email or not email.strip():
-            raise Exception("Invalid email. Email is empty or blank or not string")
+            raise ProjectException(
+                "Invalid email. Email is empty or blank or not string"
+            )
         emailRegex = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b"
         if not re.fullmatch(emailRegex, email):
-            raise Exception(f"Email {email} is not an valid email.")
+            raise ProjectException(f"Email {email} is not an valid email.")
         if not isinstance(password, str) or not password or not password.strip():
-            raise Exception("Invalid password. Password empty or blank or not string")
+            raise ProjectException(
+                "Invalid password. Password empty or blank or not string"
+            )
 
         # endregion
 
@@ -71,21 +76,31 @@ def register():
                 return {"Status": 1, "Description": None, "ResponseData": None}
             except Exception as ex:
                 db.session.rollback()
-                raise Exception(
+                raise ProjectException(
                     f"DB cant finish process. Exception{ex.args}/{ex.__str__()}"
                 )
+        app.logger.error(
+            f"Đăng ký tài khoản không thành công. Tài khoản {email} đã tồn tại"
+        )
         return {
             "Status": 0,
             "Description": f"Đăng ký tài khoản không thành công. Tài khoản {email} đã tồn tại",
             "ResponseData": None,
         }
-    except Exception as ex:
-        app.logger.exception(ex)
+    except ProjectException as pEx:
+        app.logger.exception(f"register thất bại. Có exception[{str(pEx)}]")
         return {
             "Status": 0,
-            "Description": f"Đăng ký tài khoản không thành công. Có lỗi {ex.args}/{ex}",
+            "Description": f"Đăng ký không thành công",
             "ResponseData": None,
-        }
+        }, 200
+    except Exception as ex:
+        app.logger.exception(f"register thất bại. Có exception[{str(ex)}]")
+        return {
+            "Status": 0,
+            "Description": f"Có lỗi ở máy chủ. Đăng ký tài khoản không thành công",
+            "ResponseData": None,
+        }, 200
     finally:
         pass
 
@@ -95,18 +110,24 @@ def register():
 def login():
     try:
         jsonRequestData = request.get_json()
-        email = jsonRequestData["email"]
-        password = jsonRequestData["password"]
+        email = None if "email" not in jsonRequestData else jsonRequestData["email"]
+        password = (
+            None if "password" not in jsonRequestData else jsonRequestData["password"]
+        )
 
         # region validate
 
         if not isinstance(email, str) or not email or not email.strip():
-            raise Exception("Invalid email. Email is empty or blank or not string")
+            raise ProjectException(
+                "Invalid email. Email is empty or blank or not string"
+            )
         emailRegex = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b"
         if not re.fullmatch(emailRegex, email):
-            raise Exception(f"Email {email} is not an valid email.")
+            raise ProjectException(f"Email {email} is not an valid email.")
         if not isinstance(password, str) or not password or not password.strip():
-            raise Exception("Invalid password. Password empty or blank or not string")
+            raise ProjectException(
+                "Invalid password. Password empty or blank or not string"
+            )
 
         # endregion
         exist = UserModel.query.filter_by(EmailAddress=email).first()
@@ -114,23 +135,37 @@ def login():
             if bcrypt.check_password_hash(exist.PasswordHash, password):
                 access_token = create_access_token(
                     identity=email,
-                    additional_claims={"email": email, "IsAdmin" : True if exist.Role == 1 else False},
-                    expires_delta=timedelta(hours=app.config.get("TIME_TOKEN")),
+                    additional_claims={
+                        "email": email,
+                        "IsAdmin": True if exist.Role == 1 else False,
+                    },
                 )
+                app.logger.info(f"login thành công tài khoản {email}.")
                 return {
                     "Status": 1,
                     "Description": None,
                     "ResponseData": {"access_token": access_token},
                 }, 200
+        app.logger.error(
+            f"login không thành công thành công tài khoản. Tài khoản {email} chưa đăng ký!"
+        )
         return {
             "Status": 0,
             "Description": f"Tài khoản chưa đăng ký!",
             "ResponseData": None,
         }, 200
-    except Exception as ex:
+    except ProjectException as pEx:
+        app.logger.exception(f"login thất bại. Có exception[{str(pEx)}]")
         return {
             "Status": 0,
-            "Description": f"Đăng nhập không thành công. Có lỗi {ex.args}/{ex.__str__()}",
+            "Description": f"Đăng nhập không thành công",
+            "ResponseData": None,
+        }, 200
+    except Exception as ex:
+        app.logger.exception(f"login thất bại. Có exception[{str(ex)}]")
+        return {
+            "Status": 0,
+            "Description": f"Có lỗi ở máy chủ. Đăng nhập tài khoản không thành công",
             "ResponseData": None,
         }, 200
     finally:
@@ -225,7 +260,6 @@ def reset_password():
 @jwt_required()  # require Header of req Authorization: Bearer <access_token>
 def logout():
     try:
-        print(get_jwt_identity())
         jti = get_jwt()["jti"]
         db.session.add(TokenBlocklist(jti=jti, created_at=datetime.now()))
         db.session.commit()

@@ -5,13 +5,13 @@ from flask import Blueprint
 from flask import current_app as app
 from flask import request
 from flask_json import json_response
-from sqlalchemy import case, delete, func, insert, select
+from sqlalchemy import case, delete, func, insert, select, and_
 
 from src.authentication.model import UserModel
 from src.db import db
 from src.extension import ProjectException
 from src.jwt import get_jwt_identity, jwt_required
-from src.middlewares.admin_required import admin_required
+from src.middlewares.token_required import admin_required
 from src.shift.model import (
     ShiftAssignment,
     ShiftAssignmentDetail,
@@ -23,7 +23,10 @@ from src.shift.model import (
     TargetType,
     shiftListResponseSchema,
     shiftListSchema,
+    ShiftAssignmentType,
 )
+from src.department.model import DepartmentModel
+from src.designation.model import Designation
 
 Shift = Blueprint("shift", __name__)
 
@@ -51,7 +54,7 @@ def GetShiftList():
                 ShiftTypeModel.Description.label("TypeText"),
                 ShiftModel.Status,
                 case(
-                    (ShiftModel.Status == Status["Active"].value, "Đang sử dụng"),
+                    (ShiftModel.Status == Status.Active, "Đang sử dụng"),
                     else_="Inactive",
                 ).label("StatusText"),
             )
@@ -70,13 +73,20 @@ def GetShiftList():
             "Description": None,
             "ResponseData": shiftListResponseSchema.dump(shiftList),
         }, 200
-    except Exception as ex:
-        app.logger.error(f"GetShiftList thất bại. {ex}")
+    except ProjectException as pEx:
+        app.logger.exception(f"GetShiftList thất bại. Có exception[{str(pEx)}]")
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở server.",
+            "Description": f"Không tìm thấy ca làm việc nào",
             "ResponseData": None,
-        }, 400
+        }, 200
+    except Exception as ex:
+        app.logger.exception(f"GetShiftList thất bại. {ex}")
+        return {
+            "Status": 0,
+            "Description": f"Có lỗi ở server. Không tìm thấy ca làm việc nào",
+            "ResponseData": None,
+        }, 200
 
 
 @Shift.route("/type/list", methods=["GET"])
@@ -100,7 +110,7 @@ def GetShiftTypeList():
 
 
 @Shift.route("/create", methods=["POST"])
-@jwt_required()
+@admin_required()
 def createNewShift():
     try:
         jsonRequestData = request.get_json()
@@ -171,7 +181,7 @@ def createNewShift():
 
 
 @Shift.route("/", methods=["DELETE"])
-@jwt_required()
+@admin_required()
 def deleteShift():
     try:
         jsonRequestData = request.get_json()
@@ -216,7 +226,7 @@ def deleteShift():
 
 
 @Shift.route("/update", methods=["PUT"])
-@jwt_required()
+@admin_required()
 def updateShift():
     try:
         jsonRequestData = request.get_json()
@@ -305,7 +315,7 @@ def AssignShift():
         shiftId = jsonRequestData["ShiftId"]
         startDate = jsonRequestData["StartDate"]
         endDate = (
-            None if "StartDate" not in jsonRequestData else jsonRequestData["StartDate"]
+            None if "EndDate" not in jsonRequestData else jsonRequestData["EndDate"]
         )
         departmentList = (
             []
@@ -319,6 +329,10 @@ def AssignShift():
         )
         note = "" if "Note" not in jsonRequestData else jsonRequestData["Note"]
 
+        employeeList = (
+            [] if "EmployeeId" not in jsonRequestData else jsonRequestData["EmployeeId"]
+        )
+
         # endregion
 
         # region Thêm phân ca mới
@@ -327,17 +341,13 @@ def AssignShift():
         newShift.Description = description
         newShift.AssignType = assignType
         newShift.ShiftId = shiftId
-        newShift.StartDate = startDate
-        newShift.EndDate = endDate
+        newShift.StartDate = datetime.strptime(startDate, "%Y-%m-%d")
+        newShift.EndDate = datetime.strptime(endDate, "%Y-%m-%d")
         newShift.Note = note
         newShift.CreatedBy = user.Id
         newShift.ModifiedBy = user.Id
         newShift.CreatedAt = datetime.now()
         newShift.ModifiedAt = datetime.now()
-
-        # newShiftId = db.session.execute(
-        #     insert(ShiftAssignment).values(newShift).returning(ShiftAssignment.Id)
-        # )
         db.session.add(newShift)
         db.session.flush()
         db.session.refresh(newShift)
@@ -357,17 +367,36 @@ def AssignShift():
                     "ModifiedAt": datetime.now(),
                 }
             )
-        for designation in designationList:
+        for employee in designationList:
             values.append(
                 {
                     "Id": newShift.Id,
-                    "Target": designation,
+                    "Target": employee,
                     "TargetType": TargetType.Designation.value,
                     "CreatedAt": datetime.now(),
                     "ModifiedAt": datetime.now(),
                 }
             )
-
+        for employee in employeeList:
+            values.append(
+                {
+                    "Id": newShift.Id,
+                    "Target": employee,
+                    "TargetType": TargetType.Designation.value,
+                    "CreatedAt": datetime.now(),
+                    "ModifiedAt": datetime.now(),
+                }
+            )
+        
+        if len(values) == 0:
+            db.session.rollback()
+            app.logger.info("AssignShift thành công")
+            return {
+                "Status": 1,
+                "Description": f"Không thể tạo phân ca do chưa có đối tượng được phân ca.",
+                "ResponseData": None,
+            }, 200
+        
         db.session.execute(insert(ShiftAssignmentDetail), values)
 
         # endregion
@@ -377,9 +406,8 @@ def AssignShift():
         return {
             "Status": 1,
             "Description": None,
-            "ResponseData": None,
+            "ResponseData": {"Id": newShift.Id},
         }, 200
-
     except ProjectException as pEx:
         app.logger.exception(f"AssignShift thất bại. Có exception[{str(pEx)}]")
         return {
@@ -396,17 +424,125 @@ def AssignShift():
         }, 200
 
 
+@Shift.route("/assignment/list", methods=["GET"])
+@admin_required()
+def getShiftAssignmentList():
+    try:
+        shiftAssignmentList = db.session.execute(
+            select(
+                ShiftAssignment.Id,
+                ShiftAssignment.ShiftId,
+                ShiftAssignment.Description,
+                ShiftAssignment.StartDate,
+                ShiftAssignment.EndDate,
+                ShiftAssignment.AssignType,
+                ShiftAssignment.Note,
+                ShiftAssignment.Status,
+                ShiftAssignment.CreatedBy,
+                ShiftAssignment.CreatedAt,
+                ShiftModel.Description.label("ShiftDescription"),
+            )
+            .select_from(ShiftAssignment)
+            .join(ShiftModel, ShiftAssignment.ShiftId == ShiftModel.Id)
+            .order_by(ShiftAssignment.StartDate, ShiftAssignment.Id)
+        ).all()
+        app.logger.exception(f"getShiftAssignmentList thành công.")
+        return {
+            "Status": 1,
+            "Description": None,
+            "ResponseData": [dict(r) for r in shiftAssignmentList],
+        }, 200
+    except ProjectException as pEx:
+        app.logger.exception(
+            f"getShiftAssignmentList thất bại. Có exception[{str(pEx)}]"
+        )
+        return {
+            "Status": 0,
+            "Description": f"Không thể truy cập được thông tin phân ca. {pEx}",
+            "ResponseData": None,
+        }, 200
+    except Exception as ex:
+        app.logger.exception(
+            f"getShiftAssignmentList thất bại. Có exception[{str(ex)}]"
+        )
+        return {
+            "Status": 0,
+            "Description": f"Có lỗi ở máy chủ. Không thể truy cập được thông tin phân ca",
+            "ResponseData": None,
+        }, 200
+
+
 @Shift.route("/assignment/detail", methods=["POST"])
 @admin_required()
-def getShiftAssignmentDetails():
+def getShiftAssignmentDetail():
     try:
+        jsonRequestData = request.get_json()
+
+        # region validate
+
+        if "Id" not in jsonRequestData:
+            raise ProjectException("Không tìm thấy thông tin mã phân ca")
+
+        # endregion
+
+        id = jsonRequestData["Id"]
+        shiftAssignment = db.session.execute(
+            select(
+                ShiftAssignment.Id,
+                ShiftAssignment.ShiftId,
+                ShiftAssignment.StartDate,
+                ShiftAssignment.EndDate,
+                ShiftAssignment.Note,
+                ShiftAssignment.Description,
+                ShiftAssignment.CreatedAt,
+                ShiftAssignment.CreatedBy,
+                ShiftAssignment.AssignType,
+                ShiftAssignmentType.Name.label("AssignmentTypeName"),
+            ).where(
+                and_(
+                    ShiftAssignment.Id == id,
+                    ShiftAssignment.AssignType == ShiftAssignmentType.Id,
+                )
+            )
+        ).first()
+        shiftAssignmentDetail = db.session.execute(
+            select(
+                ShiftAssignmentDetail.Id,
+                ShiftAssignmentDetail.Target,
+                ShiftAssignmentDetail.TargetType,
+                case(
+                    (ShiftAssignmentDetail.TargetType == 1, DepartmentModel.Name),
+                    else_=Designation.Name,
+                ).label("TargetDescription"),
+            )
+            .select_from(ShiftAssignmentDetail)
+            .join(
+                DepartmentModel,
+                and_(
+                    ShiftAssignmentDetail.TargetType == 1,
+                    ShiftAssignmentDetail.Target == DepartmentModel.Id,
+                ),
+                isouter=True,
+            )
+            .join(
+                Designation,
+                and_(
+                    ShiftAssignmentDetail.TargetType == 2,
+                    ShiftAssignmentDetail.Target == Designation.Id,
+                ),
+                isouter=True,
+            )
+            .where(ShiftAssignmentDetail.Id == id)
+        ).all()
+        detailDict = [dict(r) for r in shiftAssignmentDetail]
+        response = ShiftAssignmentSchema().dump(shiftAssignment)
+        response["Detail"] = detailDict
         app.logger.info("getShiftAssignmentDetails thành công")
         return {
             "Status": 1,
             "Description": None,
-            "ResponseData": None,
+            "ResponseData": response,
         }, 200
-
     except ProjectException as pEx:
         app.logger.exception(
             f"getShiftAssignmentDetails thất bại. Có exception[{str(pEx)}]"
@@ -421,5 +557,41 @@ def getShiftAssignmentDetails():
         return {
             "Status": 0,
             "Description": f"Có lỗi ở máy chủ. Không thể truy cập được thông tin phân ca",
+            "ResponseData": None,
+        }, 200
+
+
+@Shift.route("/assignment/all-type", methods=["GET", "POST"])
+@jwt_required()
+def GetAssignmentTypes():
+    try:
+        shiftAssignmentTypeList = db.session.execute(
+            select(
+                ShiftAssignmentType.Id,
+                ShiftAssignmentType.Name,
+                ShiftAssignmentType.Name2,
+                ShiftAssignmentType.CreatedAt,
+                ShiftAssignmentType.CreatedBy,
+            ).where(ShiftAssignmentType.Status == Status.Active)
+        ).all()
+        response = [dict(r) for r in shiftAssignmentTypeList]
+        app.logger.info("GetAssignmentTypes thành công")
+        return {
+            "Status": 1,
+            "Description": None,
+            "ResponseData": response,
+        }, 200
+    except ProjectException as pEx:
+        app.logger.exception(f"GetAssignmentTypes thất bại. Có exception[{str(pEx)}]")
+        return {
+            "Status": 0,
+            "Description": f"Không thể truy cập được thông tin kiểu phân ca. {pEx}",
+            "ResponseData": None,
+        }, 200
+    except Exception as ex:
+        app.logger.exception(f"GetAssignmentTypes thất bại. Có exception[{str(ex)}]")
+        return {
+            "Status": 0,
+            "Description": f"Có lỗi ở máy chủ. Không thể truy cập được thông tin kiểu phân ca.",
             "ResponseData": None,
         }, 200

@@ -13,7 +13,7 @@ from src.department.model import (DepartmentModel, departmentListSchema,
 from src.employee.model import EmployeeModel, employeeInfoListSchema
 from src.extension import object_as_dict
 from src.jwt import get_jwt_identity, jwt_required
-from src.middlewares.admin_required import admin_required
+from src.middlewares.token_required import admin_required
 
 Department = Blueprint("department", __name__)
 

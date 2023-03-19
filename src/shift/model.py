@@ -85,7 +85,7 @@ class ShiftAssignment(db.Model):
     StartDate = Column(DateTime(), nullable=False)
     EndDate = Column(DateTime(), nullable=True)
     AssignType = Column(Integer(), nullable=True)
-    Description = Column(String())
+    Description = Column(String(), nullable=False)
     Note = Column(String())
     Status = Column(String())
     CreatedBy = Column(Integer())
@@ -99,15 +99,17 @@ class ShiftAssignmentSchema(marshmallow.Schema):
         fields = (
             "Id",
             "ShiftId",
+            "Description",
             "StartDate",
             "EndDate",
             "AssignType",
-            # "DepartmentId",
-            # "Designation",
-            # "EmployeeId",
+            "ShiftDescription",
+            "Note",
             "Status",
+            "CreatedBy",
+            "CreatedAt",
+            "AssignmentTypeName"
         )
-
 
 class ShiftAssignmentDetail(db.Model):
     __tablename__ = "ShiftAssignmentDetail"
@@ -121,6 +123,16 @@ class ShiftAssignmentDetail(db.Model):
     CreatedAt = Column(DateTime())
     ModifiedAt = Column(DateTime())
 
+class ShiftAssignmentType(db.Model):
+    __tablename__ = "ShiftAssignmentType"
+    Id = Column(Integer(), primary_key=True)
+    Name = Column(String(), unique=True)
+    Name2 = Column(String())
+    Status = Column(String())
+    CreatedBy = Column(Integer())
+    ModifiedBy = Column(Integer())
+    CreatedAt = Column(DateTime())
+    ModifiedAt = Column(DateTime())
 
 shiftSchema = ShiftSchema()
 shiftListSchema = ShiftSchema(many=True)
@@ -129,9 +141,9 @@ shiftListResponseSchema = ShiftListResponseSchema(many=True)
 Status = Enum("Status", ["Active", "Inactive"])
 TargetType = Enum("TargetType", ["Department","Designation", "Employee"])
 
-class Status(Enum):
-    Active = 1
-    Inactive = 2
+class Status:
+    Active = "1"
+    Inactive = "2"
 
 class TargetType(Enum):
     Department = 1

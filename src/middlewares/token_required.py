@@ -2,12 +2,12 @@ from functools import wraps
 
 from flask import Flask, jsonify
 from src.jwt import (
+    jwt,
     JWTManager,
     create_access_token,
     get_jwt,
     verify_jwt_in_request,
 )
-
 
 def admin_required():
     def wrapper(fn):
@@ -22,9 +22,10 @@ def admin_required():
                     jsonify(
                         Status=0,
                         Description="Yêu cầu tài khoản có quyền quản trị viên",
-                        ResponseData=None
+                        ResponseData=None,
                     ),
                     403,
                 )
+
         return decorator
     return wrapper

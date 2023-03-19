@@ -15,5 +15,6 @@ class Config:
     MAIL_USE_SSL = os.getenv("MAIL_USE_SSL").lower() in ('true', '1', 't')
     CLIENT_URL = os.getenv("CLIENT_URL")
     SECRET_KEY = os.getenv("JWT_SECRET_KEY")
-    TIME_TOKEN = int(os.getenv("TIME_TOKEN"))
-    JSON_AS_ASCII = False
+    JWT_ACCESS_TOKEN_EXPIRES = (int(os.getenv("TIME_TOKEN")) * 60)
+    JWT_ALGORITHM = os.getenv("JWT_ALGORITHM") if os.getenv("JWT_ALGORITHM") else "HS256"
+    JSON_AS_ASCII = False 
