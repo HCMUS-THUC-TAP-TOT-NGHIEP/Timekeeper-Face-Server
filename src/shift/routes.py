@@ -454,7 +454,6 @@ def getShiftAssignmentList():
             "ResponseData": None,
         }, 200
 
-
 @Shift.route("/assignment/detail", methods=["POST"])
 @admin_required()
 def getShiftAssignmentDetail():
@@ -578,3 +577,30 @@ def GetAssignmentTypes():
             "Description": f"Có lỗi ở máy chủ. Không thể truy cập được thông tin kiểu phân ca.",
             "ResponseData": None,
         }, 200
+
+@Shift.route("/assignment/update", methods=["POST"])
+@admin_required()
+def UpdateAssignment():
+    try:
+        app.logger.info("UpdateAssignment thành công")
+        return {
+            "Status": 1,
+            "Description": None,
+            "ResponseData": None,
+        }, 200
+    except ProjectException as pEx:
+        app.logger.exception(f"UpdateAssignment thất bại. Có exception[{str(pEx)}]")
+        return {
+            "Status": 0,
+            "Description": f"Không thể cập nhật được phân ca. {pEx}",
+            "ResponseData": None,
+        }, 200
+    except Exception as ex:
+        app.logger.exception(f"UpdateAssignment thất bại. Có exception[{str(ex)}]")
+        return {
+            "Status": 0,
+            "Description": f"Có lỗi ở máy chủ. Không thể cập nhật được phân ca.",
+            "ResponseData": None,
+        }, 200
+
+    
