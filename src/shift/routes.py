@@ -27,6 +27,7 @@ from src.shift.model import (
 )
 from src.department.model import DepartmentModel
 from src.designation.model import Designation
+from src.employee.model import EmployeeModel
 
 Shift = Blueprint("shift", __name__)
 
@@ -322,16 +323,10 @@ def AssignShift():
             if "DepartmentId" not in jsonRequestData
             else jsonRequestData["DepartmentId"]
         )
-        designationList = (
-            []
-            if "DesignationId" not in jsonRequestData
-            else jsonRequestData["DesignationId"]
-        )
-        note = "" if "Note" not in jsonRequestData else jsonRequestData["Note"]
-
         employeeList = (
             [] if "EmployeeId" not in jsonRequestData else jsonRequestData["EmployeeId"]
         )
+        note = "" if "Note" not in jsonRequestData else jsonRequestData["Note"]
 
         # endregion
 
@@ -367,16 +362,6 @@ def AssignShift():
                     "ModifiedAt": datetime.now(),
                 }
             )
-        for employee in designationList:
-            values.append(
-                {
-                    "Id": newShift.Id,
-                    "Target": employee,
-                    "TargetType": TargetType.Designation.value,
-                    "CreatedAt": datetime.now(),
-                    "ModifiedAt": datetime.now(),
-                }
-            )
         for employee in employeeList:
             values.append(
                 {
@@ -387,7 +372,6 @@ def AssignShift():
                     "ModifiedAt": datetime.now(),
                 }
             )
-        
         if len(values) == 0:
             db.session.rollback()
             app.logger.info("AssignShift thành công")
@@ -396,7 +380,6 @@ def AssignShift():
                 "Description": f"Không thể tạo phân ca do chưa có đối tượng được phân ca.",
                 "ResponseData": None,
             }, 200
-        
         db.session.execute(insert(ShiftAssignmentDetail), values)
 
         # endregion
@@ -512,7 +495,7 @@ def getShiftAssignmentDetail():
                 ShiftAssignmentDetail.TargetType,
                 case(
                     (ShiftAssignmentDetail.TargetType == 1, DepartmentModel.Name),
-                    else_=Designation.Name,
+                    else_=EmployeeModel.FirstName + " " + EmployeeModel.LastName,
                 ).label("TargetDescription"),
             )
             .select_from(ShiftAssignmentDetail)
@@ -525,10 +508,10 @@ def getShiftAssignmentDetail():
                 isouter=True,
             )
             .join(
-                Designation,
+                EmployeeModel,
                 and_(
                     ShiftAssignmentDetail.TargetType == 2,
-                    ShiftAssignmentDetail.Target == Designation.Id,
+                    ShiftAssignmentDetail.Target == EmployeeModel.Id,
                 ),
                 isouter=True,
             )

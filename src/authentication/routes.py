@@ -1,5 +1,5 @@
 import re
-from datetime import datetime, timedelta
+from datetime import datetime
 from urllib.parse import urljoin
 
 from flask import Blueprint
@@ -10,6 +10,7 @@ from src import bcrypt
 from src.authentication.model import UserModel, UserSchema
 from src.db import db
 from src.email import send_email
+from src.extension import ProjectException
 from src.jwt import (
     TokenBlocklist,
     create_access_token,
@@ -17,7 +18,6 @@ from src.jwt import (
     get_jwt_identity,
     jwt_required,
 )
-from src.extension import ProjectException
 
 Authentication = Blueprint("auth", __name__)
 
@@ -193,7 +193,7 @@ def request_reset_password():
             raise Exception(f"Email {email} has been not register yet.")
         reset_link = urljoin(
             clientUrl,
-            f"/reset-password/{create_access_token(identity=email, additional_claims={'email': email}, expires_delta=timedelta(hours=app.config.get('TIME_TOKEN')))}",
+            f"/reset-password/{create_access_token(identity=email, additional_claims={'email': email})}",
         )
         send_email(
             subject="Reset password",
