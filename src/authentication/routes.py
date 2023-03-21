@@ -155,14 +155,14 @@ def login():
             "ResponseData": None,
         }, 200
     except ProjectException as pEx:
-        app.logger.exception(f"login thất bại. Có exception[{str(pEx)}]")
+        app.logger.error(f"login thất bại. Có exception[{str(pEx)}]")
         return {
             "Status": 0,
             "Description": f"Đăng nhập không thành công",
             "ResponseData": None,
         }, 200
     except Exception as ex:
-        app.logger.exception(f"login thất bại. Có exception[{str(ex)}]")
+        app.logger.error(f"login thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
             "Description": f"Có lỗi ở máy chủ. Đăng nhập tài khoản không thành công",

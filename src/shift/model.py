@@ -16,7 +16,6 @@ class ShiftModel(db.Model):
     BreakAt = Column(Time(), nullable=False)
     BreakMinutes = Column(Integer(), nullable=False)
     BreakEnd = Column(Time(), nullable=False)
-    Type = Column(Integer(), nullable=False)
     Status = Column(Integer())
     CreatedBy = Column(Integer())
     CreatedAt = Column(DateTime(), nullable=False)
@@ -27,20 +26,20 @@ class ShiftModel(db.Model):
         super().__init__()
 
 
-class ShiftTypeModel(db.Model):
-    __tablename__ = "ShiftType"
+# class ShiftTypeModel(db.Model):
+#     __tablename__ = "ShiftType"
 
-    Id = Column(Integer(), primary_key=True)
-    Description = Column(String())
-    CreatedBy = Column(
-        Integer(),
-    )
-    CreatedAt = Column(DateTime(), nullable=False)
-    ModifiedBy = Column(Integer())
-    ModifiedAt = Column(DateTime(), nullable=False)
+#     Id = Column(Integer(), primary_key=True)
+#     Description = Column(String())
+#     CreatedBy = Column(
+#         Integer(),
+#     )
+#     CreatedAt = Column(DateTime(), nullable=False)
+#     ModifiedBy = Column(Integer())
+#     ModifiedAt = Column(DateTime(), nullable=False)
 
-    def __init__(self) -> None:
-        super().__init__()
+#     def __init__(self) -> None:
+#         super().__init__()
 
 
 class ShiftSchema(marshmallow.Schema):
@@ -52,7 +51,6 @@ class ShiftSchema(marshmallow.Schema):
             "FinishTime",
             "BreakAt",
             "BreakEnd",
-            "Type",
         )
 
 
@@ -65,8 +63,6 @@ class ShiftListResponseSchema(marshmallow.Schema):
             "FinishTime",
             "BreakAt",
             "BreakEnd",
-            "Type",
-            "TypeText",
             "Status",
             "StatusText",
         )
@@ -147,5 +143,4 @@ class Status:
 
 class TargetType(Enum):
     Department = 1
-    Designation = 2
-    Employee = 3
+    Employee = 2

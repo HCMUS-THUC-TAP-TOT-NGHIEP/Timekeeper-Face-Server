@@ -36,7 +36,8 @@ class LogFormatter(logging.Formatter):
 logFormatter = LogFormatter(
     "[%(asctime)s] %(remote_addr)s requested %(url)s\n"
     "%(levelname)s in %(module)s: %(message)s \n"
-    "---------------------------------------------------------------\n\n"
+    "---------------------------------------------------------------\n\n",
+    datefmt="%Y-%m-%d %H:%M:%S"
 )
 # add file handler to the root logger
 fileHandler = RotatingFileHandler("log.log", backupCount=100, maxBytes=1024 * 1024)
@@ -55,6 +56,8 @@ def create_app(config_class=Config):
     jwt.init_app(app)
     cors.init_app(app)
     marshmallow.init_app(app)
+
+    app.logger.info("Connect to Database successfully!")
 
     @app.before_request
     def log_request_info():
