@@ -101,28 +101,18 @@ def createNewShift():
         # region validate
         if "Description" not in jsonRequestData:
             raise ProjectException("Không tìm thấy tên ca làm việc")
-        if "ShiftType" not in jsonRequestData:
-            raise ProjectException("Không tìm thấy loại ca làm việc")
         if "StartTime" not in jsonRequestData:
             raise ProjectException("Không tìm thấy giờ checkin")
         if "FinishTime" not in jsonRequestData:
             raise ProjectException("Không tìm thấy giờ checkout")
-        # if "BreakAt" not in jsonRequestData:
-        #     raise ProjectException("Không tìm thấy tên ca làm việc")
-        # if "BreakEnd" not in jsonRequestData:
-        #     raise ProjectException("Không tìm thấy tên ca làm việc")
-        # if "Status" not in jsonRequestData:
-        #     raise ProjectException("Không tìm thấy tên ca làm việc")
 
         # endregion
 
         Description = jsonRequestData["Description"]
-        ShiftType = jsonRequestData["ShiftType"]
         StartTime = jsonRequestData["StartTime"]
         FinishTime = jsonRequestData["FinishTime"]
         BreakAt = jsonRequestData["BreakAt"]
         BreakEnd = jsonRequestData["BreakEnd"]
-        # Status = jsonRequestData["Status"]
 
         newShift = ShiftModel()
         newShift.Description = Description
@@ -131,7 +121,6 @@ def createNewShift():
         newShift.BreakAt = BreakAt
         newShift.BreakEnd = BreakEnd
         newShift.Status = 1
-        newShift.Type = ShiftType
         newShift.CreatedAt = datetime.now()
         newShift.ModifiedAt = datetime.now()
         newShift.CreatedBy = 0
