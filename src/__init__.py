@@ -115,6 +115,15 @@ def create_app(config_class=Config):
 
     app.register_blueprint(designation_bp, url_prefix="/api/designation")
 
+    @app.errorhandler(404)
+    def page_not_found(error):
+        app.logger.error(f"Không hỗ trợ [{request}]. [{error}]")
+        return {
+            "Status": 0,
+            "Description": f"Không hỗ trợ {request}",
+            "ResponseData": None,
+        }, 200
+
     # endregion
 
     return app

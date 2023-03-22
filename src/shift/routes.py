@@ -5,7 +5,7 @@ from flask import Blueprint
 from flask import current_app as app
 from flask import request
 from flask_json import json_response
-from sqlalchemy import and_, case, delete, func, insert, select
+from sqlalchemy import and_, case, delete, func, insert, select, or_
 
 from src.authentication.model import UserModel
 from src.db import db
@@ -15,11 +15,18 @@ from src.employee.model import EmployeeModel
 from src.extension import ProjectException, object_as_dict
 from src.jwt import get_jwt_identity, jwt_required
 from src.middlewares.token_required import admin_required
-from src.shift.model import (ShiftAssignment, ShiftAssignmentDetail,
-                             ShiftAssignmentSchema, ShiftAssignmentType,
-                             ShiftModel, ShiftTypeModelSchema, Status,
-                             TargetType, shiftListResponseSchema,
-                             shiftListSchema)
+from src.shift.model import (
+    ShiftAssignment,
+    ShiftAssignmentDetail,
+    ShiftAssignmentSchema,
+    ShiftAssignmentType,
+    ShiftModel,
+    ShiftTypeModelSchema,
+    Status,
+    TargetType,
+    shiftListResponseSchema,
+    shiftListSchema,
+)
 
 Shift = Blueprint("shift", __name__)
 
@@ -631,7 +638,6 @@ def UpdateAssignment():
                         temp2,
                     )
                 )
-                pass
             case 2:  # Phân ca theo nhân viên
                 temp = list(
                     filter(
@@ -653,19 +659,20 @@ def UpdateAssignment():
                         temp2,
                     )
                 )
-                pass
             case other:
-                pass
+                raise ProjectException(f'Chưa hỗ trợ loại phân ca có mã "{other}"')
+        # print("insertArray", insertArray)
+        # print("deleteArray", deleteArray)
+        if len(insertArray) + len(deleteArray) == 0:
+            raise ProjectException("Không có sự thay đổi ở đối tượng được phân công.")
         if len(deleteArray) != 0:
             db.session.execute(
                 delete(ShiftAssignmentDetail).where(
-                    ShiftAssignmentDetail.Target._in(deleteArray)
+                    or_(*[ShiftAssignmentDetail.Target == x for x in deleteArray])
                 )
             )
         if len(insertArray) != 0:
             db.session.execute(insert(ShiftAssignmentDetail), insertArray)
-        print(insertArray)
-        print(deleteArray)
         db.session.commit()
         app.logger.info(f"UpdateAssignment [{id}] thành công")
         return {
