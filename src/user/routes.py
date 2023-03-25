@@ -217,3 +217,65 @@ def DeleteUser():
             "Description": f"Có lỗi ở máy chủ. \nKhông thể xóa người dùng.",
             "ResponseData": None,
         }
+
+
+@User.route("/update", methods=["PUT"])
+@admin_required()
+def UpdateUser():
+    try:
+        claims = get_jwt()
+        email = claims["email"]
+        id = claims["id"]
+
+        jsonRequestData = request.get_json()
+        # region validation
+
+        if "Username" not in jsonRequestData:
+            raise ProjectException("Chưa cung cấp mã user")
+
+        # endregion
+        username = jsonRequestData["Username"]
+        exist = db.session.execute(
+            db.select(UserModel).filter_by(Username=username)
+        ).scalar_one_or_none()
+        if not exist:
+            raise ProjectException(
+                'Tài khoản "' + username + '" đã bị thay đổi hoặc xóa bởi người khác'
+            )
+
+        hasSomeChanges = False
+
+        for key in jsonRequestData:
+            if getattr(exist, key) != jsonRequestData[key]:
+                hasSomeChanges = True
+                setattr(exist, key, jsonRequestData[key])
+        if not hasSomeChanges:
+            raise ProjectException(
+                f"Không thông tin thay đổi trong người dùng [{username}]"
+            )
+        exist.ModifiedAt = datetime.now()
+        exist.ModifiedBy = id
+        db.session.commit()
+        app.logger.info(f"UpdateUser username[{username}] thành công")
+        return {
+            "Status": 1,
+            "Description": None,
+            "ResponseData": None,
+        }, 200
+
+    except ProjectException as pEx:
+        db.session.rollback()
+        app.logger.exception(f"AddNewUser có lỗi. {pEx}")
+        return {
+            "Status": 0,
+            "Description": f"{pEx}",
+            "ResponseData": None,
+        }
+    except Exception as ex:
+        db.session.rollback()
+        app.logger.exception(ex)
+        return {
+            "Status": 0,
+            "Description": f"Có lỗi ở máy chủ. \nKhông thể thay đổi thông tin người dùng.",
+            "ResponseData": None,
+        }
