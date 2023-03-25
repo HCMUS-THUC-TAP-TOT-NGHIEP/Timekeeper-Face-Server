@@ -14,7 +14,9 @@ Employee = Blueprint("employee", __name__)
 @jwt_required()
 def GetEmployeeInfo():
     try:
-        email = get_jwt_identity()
+        identity= get_jwt_identity()
+        email = identity["email"]
+        username = identity["username"]
         employeeId = request.args.get("Id")
         employee = db.session.execute(
             db.select(EmployeeModel).filter_by(Id=employeeId)
@@ -44,7 +46,9 @@ def GetEmployeeInfo():
 def CreateEmployee():
     try:
         jsonRequestData = request.get_json()
-        email = get_jwt_identity()
+        identity= get_jwt_identity()
+        email = identity["email"]
+        username = identity["username"]
 
         # region validate
 
@@ -132,7 +136,9 @@ def CreateEmployee():
 @jwt_required()
 def UpdateEmployeeInfo():
     try:
-        email = get_jwt_identity()
+        identity= get_jwt_identity()
+        email = identity["email"]
+        username = identity["username"]
         jsonRequestData = request.get_json()
 
         # region validate
@@ -194,7 +200,9 @@ def DeleteEmployee():
         jsonRequestData = request.get_json()
 
         # region validate
-        email = get_jwt_identity()
+        identity= get_jwt_identity()
+        email = identity["email"]
+        username = identity["username"]
         user = db.session.execute(
             db.select(UserModel).filter_by(EmailAddress=email)
         ).scalar_one_or_none()
@@ -233,7 +241,9 @@ def DeleteEmployee():
 @jwt_required()
 def GetManyEMployee():
     try:
-        email = get_jwt_identity()
+        identity= get_jwt_identity()
+        email = identity["email"]
+        username = identity["username"]
         args = request.args.to_dict()
         page = 1
         perPage = 10

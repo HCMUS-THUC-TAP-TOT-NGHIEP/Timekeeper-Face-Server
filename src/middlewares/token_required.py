@@ -26,6 +26,5 @@ def admin_required():
                     ),
                     403,
                 )
-
         return decorator
     return wrapper

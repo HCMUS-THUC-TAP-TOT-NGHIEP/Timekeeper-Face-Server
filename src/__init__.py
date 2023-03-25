@@ -37,10 +37,12 @@ logFormatter = LogFormatter(
     "[%(asctime)s] %(remote_addr)s requested %(url)s\n"
     "%(levelname)s in %(module)s: %(message)s \n"
     "---------------------------------------------------------------\n\n",
-    datefmt="%Y-%m-%d %H:%M:%S"
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
 # add file handler to the root logger
-fileHandler = RotatingFileHandler("log.log", backupCount=100, maxBytes=1024 * 1024)
+fileHandler = RotatingFileHandler(
+    filename="log.log", backupCount=100, maxBytes=1024 * 1024, encoding="utf8"
+)
 fileHandler.setFormatter(logFormatter)
 logger.addHandler(fileHandler)
 

@@ -18,6 +18,7 @@ from src.jwt import (
     get_jwt_identity,
     jwt_required,
 )
+from sqlalchemy import select, or_
 
 Authentication = Blueprint("auth", __name__)
 
@@ -130,12 +131,21 @@ def login():
             )
 
         # endregion
-        exist = UserModel.query.filter_by(EmailAddress=email).first()
+        exist = (
+            db.session.query(UserModel)
+            .filter(or_(UserModel.EmailAddress == email, UserModel.Username == email))
+            .first()
+        )
+        print(type(exist))
+
         if exist:
             if bcrypt.check_password_hash(exist.PasswordHash, password):
+                identity = {"email": email, "username": exist.Username}
                 access_token = create_access_token(
-                    identity=email,
+                    identity=identity,
                     additional_claims={
+                        "id": exist.Id,
+                        "username": exist.Username,
                         "email": email,
                         "IsAdmin": True if exist.Role == 1 else False,
                     },
@@ -181,19 +191,28 @@ def request_reset_password():
         # region validate
 
         if not isinstance(email, str) or not email or not email.strip():
-            raise Exception("Invalid email. Email is empty or blank or not string")
+            raise ProjectException("Invalid email. Email is empty or blank or not string")
         emailRegex = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b"
         if not re.fullmatch(emailRegex, email):
-            raise Exception(f"Email {email} is not an valid email.")
+            raise ProjectException(f"Email {email} is not an valid email.")
 
         # endregion
 
         exist = UserModel.query.filter(UserModel.EmailAddress == email).first()
         if not exist:
-            raise Exception(f"Email {email} has been not register yet.")
+            raise ProjectException(f"Email {email} chưa được đăng ký.")
+        identity = {"email": email, "username": exist.Username}
+        additional_claims = (
+            {
+                "id": exist.Id,
+                "username": exist.Username,
+                "email": email,
+                "IsAdmin": True if exist.Role == 1 else False,
+            },
+        )
         reset_link = urljoin(
             clientUrl,
-            f"/reset-password/{create_access_token(identity=email, additional_claims={'email': email})}",
+            f"/reset-password/{create_access_token(identity=identity, additional_claims=additional_claims)}",
         )
         send_email(
             subject="Reset password",
@@ -209,13 +228,21 @@ def request_reset_password():
             "Description": f"Check mail",
             "ResponseData": None,
         }, 200
+    except ProjectException as pEx:
+        app.logger.exception(f"request_reset_password có lỗi. {pEx}")
+        return {
+            "Status": 0,
+            "Description": f"Yêu cầu không thành công. {pEx}",
+            "ResponseData": None,
+        }
+
     except Exception as ex:
         app.logger.exception(ex)
         print("Failed to reset password")
         print(f"Ex: {ex.args}")
         return {
             "Status": 0,
-            "Description": f"Failed to reset password.",
+            "Description": f"Có lỗi ở máy chủ. \nKhông thể thay đổi mật khẩu",
             "ResponseData": None,
         }, 200
     finally:
@@ -229,7 +256,9 @@ def reset_password():
     new_password = jsonRequestData["new_password"]
     jti = get_jwt()["jti"]
     try:
-        email = get_jwt_identity()
+        identity = get_jwt_identity()
+        email = identity["email"]
+        username = identity["username"]
         existUser = UserModel.query.filter(UserModel.EmailAddress == email).first()
         if not existUser:
             raise Exception(f"Could not find user {email}")

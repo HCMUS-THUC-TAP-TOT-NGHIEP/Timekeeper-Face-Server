@@ -8,8 +8,7 @@ from sqlalchemy import func, select
 
 from src.authentication.model import UserModel
 from src.db import db
-from src.department.model import (DepartmentModel, departmentListSchema,
-                                  departmentSchema)
+from src.department.model import DepartmentModel, departmentListSchema, departmentSchema
 from src.employee.model import EmployeeModel, employeeInfoListSchema
 from src.extension import object_as_dict
 from src.jwt import get_jwt_identity, jwt_required
@@ -71,7 +70,9 @@ def AddNewDepartment():
 
         # region validate
 
-        email = get_jwt_identity()
+        identity = get_jwt_identity()
+        email = identity["email"]
+        username = identity["username"]
         user = db.session.execute(
             db.select(UserModel).filter_by(EmailAddress=email)
         ).scalar_one_or_none()
@@ -128,7 +129,9 @@ def UpdateDepartment():
 
         # region validate
 
-        email = get_jwt_identity()
+        identity = get_jwt_identity()
+        email = identity["email"]
+        username = identity["username"]
         user = db.session.execute(
             db.select(UserModel).filter_by(EmailAddress=email)
         ).scalar_one_or_none()
@@ -182,7 +185,9 @@ def DeleteOneDepartment():
 
         # region validate
 
-        email = get_jwt_identity()
+        identity = get_jwt_identity()
+        email = identity["email"]
+        username = identity["username"]
         user = db.session.execute(
             db.select(UserModel).filter_by(EmailAddress=email)
         ).scalar_one_or_none()
