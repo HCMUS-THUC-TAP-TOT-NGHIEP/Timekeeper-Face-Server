@@ -36,7 +36,8 @@ class LogFormatter(logging.Formatter):
 logFormatter = LogFormatter(
     "[%(asctime)s] %(remote_addr)s requested %(url)s\n"
     "%(levelname)s in %(module)s: %(message)s \n"
-    "---------------------------------------------------------------\n\n"
+    "---------------------------------------------------------------\n\n",
+    datefmt="%Y-%m-%d %H:%M:%S"
 )
 # add file handler to the root logger
 fileHandler = RotatingFileHandler("log.log", backupCount=100, maxBytes=1024 * 1024)
@@ -55,6 +56,8 @@ def create_app(config_class=Config):
     jwt.init_app(app)
     cors.init_app(app)
     marshmallow.init_app(app)
+
+    app.logger.info("Connect to Database successfully!")
 
     @app.before_request
     def log_request_info():
@@ -108,6 +111,18 @@ def create_app(config_class=Config):
     from src.shift.routes import Shift as shift_bp
 
     app.register_blueprint(shift_bp, url_prefix="/api/shift")
+    from src.designation.routes import Designation as designation_bp
+
+    app.register_blueprint(designation_bp, url_prefix="/api/designation")
+
+    @app.errorhandler(404)
+    def page_not_found(error):
+        app.logger.error(f"Không hỗ trợ [{request}]. [{error}]")
+        return {
+            "Status": 0,
+            "Description": f"Không hỗ trợ {request}",
+            "ResponseData": None,
+        }, 200
 
     # endregion
 

@@ -1,13 +1,19 @@
-from flask import Blueprint, request, current_app as app
-from src.db import db
-from src.department.model import DepartmentModel, departmentSchema, departmentListSchema
-from src.jwt import get_jwt_identity, jwt_required, admin_required
-from src.authentication.model import UserModel
-from src.employee.model import EmployeeModel, employeeInfoListSchema
-from datetime import datetime
 import json
+from datetime import datetime
+
+from flask import Blueprint
+from flask import current_app as app
+from flask import request
+from sqlalchemy import func, select
+
+from src.authentication.model import UserModel
+from src.db import db
+from src.department.model import (DepartmentModel, departmentListSchema,
+                                  departmentSchema)
+from src.employee.model import EmployeeModel, employeeInfoListSchema
 from src.extension import object_as_dict
-from sqlalchemy import select, func
+from src.jwt import get_jwt_identity, jwt_required
+from src.middlewares.token_required import admin_required
 
 Department = Blueprint("department", __name__)
 
