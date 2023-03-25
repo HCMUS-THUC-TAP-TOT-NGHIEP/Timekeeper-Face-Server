@@ -2,15 +2,17 @@ from src.db import db
 from sqlalchemy import Column, Integer, String, SmallInteger, DateTime
 from datetime import datetime
 from src import marshmallow
+
 # MODELS
 
+
 class UserModel(db.Model):
-    __tablename__ = 'User'
-    
+    __tablename__ = "User"
+
     Id = Column(Integer(), primary_key=True)
     EmailAddress = Column(String(), unique=True, nullable=False)
     PasswordHash = Column(String(), nullable=False)
-    UserName = Column(String())
+    Username = Column(String())
     EmployeeId = Column(Integer())
     Status = Column(SmallInteger())
     Role = Column(Integer())
@@ -18,6 +20,7 @@ class UserModel(db.Model):
     CreatedBy = Column(Integer())
     ModifiedAt = Column(DateTime())
     ModifiedBy = Column(Integer())
+    Name = Column(String())
 
     def __init__(self, email, password, salt, employee_id, status, role=None):
         self.EmailAddress = email
@@ -31,11 +34,17 @@ class UserModel(db.Model):
         self.ModifiedBy = 0
         self.ModifiedAt = datetime.now()
 
-#SCHEMA
+    def __init__(self) -> None:
+        super().__init__()
+
+
+# SCHEMA
+
 
 class UserSchema(marshmallow.Schema):
     class Meta:
-        fields=("Id", "EmailAddress", "UserName", "EmployeeId", "Status", "Role")
+        fields = ("Id", "EmailAddress", "Username", "EmployeeId", "Status", "Role")
+
 
 user_schema = UserSchema()
 userList_schema = UserSchema(many=True)

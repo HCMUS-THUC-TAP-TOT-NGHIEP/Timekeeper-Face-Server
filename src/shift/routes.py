@@ -103,7 +103,9 @@ def GetShiftList():
 def createNewShift():
     try:
         jsonRequestData = request.get_json()
-        email = get_jwt_identity()
+        identity= get_jwt_identity()
+        email = identity["email"]
+        username = identity["username"]
 
         # region validate
         if "Description" not in jsonRequestData:
@@ -163,7 +165,9 @@ def createNewShift():
 def deleteShift():
     try:
         jsonRequestData = request.get_json()
-        email = get_jwt_identity()
+        identity= get_jwt_identity()
+        email = identity["email"]
+        username = identity["username"]
 
         # region validate
 
@@ -208,7 +212,9 @@ def deleteShift():
 def updateShift():
     try:
         jsonRequestData = request.get_json()
-        email = get_jwt_identity()
+        identity= get_jwt_identity()
+        email = identity["email"]
+        username = identity["username"]
 
         # region validate
 
@@ -266,7 +272,9 @@ def updateShift():
 def AssignShift():
     try:
         jsonRequestData = request.get_json()
-        email = get_jwt_identity()
+        identity= get_jwt_identity()
+        email = identity["email"]
+        username = identity["username"]
         # region validate
 
         user = UserModel.query.filter_by(EmailAddress=email).first()
@@ -561,7 +569,9 @@ def GetAssignmentTypes():
 @admin_required()
 def UpdateAssignment():
     try:
-        email = get_jwt_identity()
+        identity= get_jwt_identity()
+        email = identity["email"]
+        username = identity["username"]
         jsonRequestData = request.get_json()
 
         # region validate
