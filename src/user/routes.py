@@ -11,7 +11,6 @@ from datetime import datetime
 
 User = Blueprint("user", __name__)
 
-
 # GET api/user
 @User.route("", methods=["GET"])
 @jwt_required()
@@ -89,7 +88,6 @@ def GetUserList():
             "ResponseData": None,
         }
 
-
 @User.route("/add", methods=["POST"])
 @admin_required()
 def AddNewUser():
@@ -164,7 +162,6 @@ def AddNewUser():
             "Description": f"Có lỗi ở máy chủ. \nKhông thể thêm user mới.",
             "ResponseData": None,
         }
-
 
 @User.route("/delete", methods=["DELETE"])
 @admin_required()
