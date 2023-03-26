@@ -122,22 +122,18 @@ def login():
             raise ProjectException(
                 "Invalid email. Email is empty or blank or not string"
             )
-        emailRegex = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b"
-        if not re.fullmatch(emailRegex, email):
-            raise ProjectException(f"Email {email} is not an valid email.")
         if not isinstance(password, str) or not password or not password.strip():
             raise ProjectException(
                 "Invalid password. Password empty or blank or not string"
             )
 
         # endregion
+
         exist = (
             db.session.query(UserModel)
-            .filter(or_(UserModel.EmailAddress == email, UserModel.Username == email))
+            .where(or_(UserModel.EmailAddress == email, UserModel.Username == email))
             .first()
         )
-        print(type(exist))
-
         if exist:
             if bcrypt.check_password_hash(exist.PasswordHash, password):
                 identity = {"email": email, "username": exist.Username}
@@ -168,7 +164,7 @@ def login():
         app.logger.error(f"login thất bại. Có exception[{str(pEx)}]")
         return {
             "Status": 0,
-            "Description": f"Đăng nhập không thành công",
+            "Description": f"Đăng nhập không thành công. {pEx}",
             "ResponseData": None,
         }, 200
     except Exception as ex:
@@ -191,7 +187,9 @@ def request_reset_password():
         # region validate
 
         if not isinstance(email, str) or not email or not email.strip():
-            raise ProjectException("Invalid email. Email is empty or blank or not string")
+            raise ProjectException(
+                "Invalid email. Email is empty or blank or not string"
+            )
         emailRegex = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b"
         if not re.fullmatch(emailRegex, email):
             raise ProjectException(f"Email {email} is not an valid email.")
