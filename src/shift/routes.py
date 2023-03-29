@@ -610,59 +610,52 @@ def UpdateAssignment():
             shiftAssignment.Note = note
         if endDate and endDate != shiftAssignment.EndDate:
             shiftAssignment.EndDate = endDate
-
         deleteArray = []
         insertArray = []
-        match (assignType):
-            case 1:  # Phân ca theo phòng ban vị trí
-                # for detail in shiftAssignmentDetail:
-                #     if detail.Target in departmentId:
-                #         deleteArray.append(detail.Target)
-                temp = list(
-                    filter(
-                        lambda x: (x.Target not in departmentId), shiftAssignmentDetail
-                    )
+        if assigntype == 1: # Phân ca theo phòng ban vị trí
+            temp = list(
+                filter(
+                    lambda x: (x.Target not in departmentId), shiftAssignmentDetail
                 )
-                deleteArray = list(map(lambda x: x.Target, temp))
-                temp = list(map(lambda x: x.Target, shiftAssignmentDetail))
-                temp2 = list(filter(lambda x: x not in temp, departmentId))
-                insertArray = list(
-                    map(
-                        lambda x: {
-                            "Id": id,
-                            "Target": x,
-                            "TargetType": TargetType.Department.value,
-                            "CreatedAt": datetime.now(),
-                            "ModifiedAt": datetime.now(),
-                        },
-                        temp2,
-                    )
+            )
+            deleteArray = list(map(lambda x: x.Target, temp))
+            temp = list(map(lambda x: x.Target, shiftAssignmentDetail))
+            temp2 = list(filter(lambda x: x not in temp, departmentId))
+            insertArray = list(
+                map(
+                    lambda x: {
+                        "Id": id,
+                        "Target": x,
+                        "TargetType": TargetType.Department.value,
+                        "CreatedAt": datetime.now(),
+                        "ModifiedAt": datetime.now(),
+                    },
+                    temp2,
                 )
-            case 2:  # Phân ca theo nhân viên
-                temp = list(
+            )
+        elif assigntype == 2: # Phân ca theo nhân viên
+            temp = list(
                     filter(
                         lambda x: (x.Target not in employeeId), shiftAssignmentDetail
                     )
                 )
-                deleteArray = list(map(lambda x: x.Target, temp))
-                temp = list(map(lambda x: x.Target, shiftAssignmentDetail))
-                temp2 = list(filter(lambda x: x not in temp, employeeId))
-                insertArray = list(
-                    map(
-                        lambda x: {
-                            "Id": id,
-                            "Target": x,
-                            "TargetType": TargetType.Employee.value,
-                            "CreatedAt": datetime.now(),
-                            "ModifiedAt": datetime.now(),
-                        },
-                        temp2,
-                    )
+            deleteArray = list(map(lambda x: x.Target, temp))
+            temp = list(map(lambda x: x.Target, shiftAssignmentDetail))
+            temp2 = list(filter(lambda x: x not in temp, employeeId))
+            insertArray = list(
+                map(
+                    lambda x: {
+                        "Id": id,
+                        "Target": x,
+                        "TargetType": TargetType.Employee.value,
+                        "CreatedAt": datetime.now(),
+                        "ModifiedAt": datetime.now(),
+                    },
+                    temp2,
                 )
-            case other:
-                raise ProjectException(f'Chưa hỗ trợ loại phân ca có mã "{other}"')
-        # print("insertArray", insertArray)
-        # print("deleteArray", deleteArray)
+            )
+        else:
+            raise ProjectException(f'Chưa hỗ trợ loại phân ca có mã "{other}"')
         if len(insertArray) + len(deleteArray) == 0:
             raise ProjectException("Không có sự thay đổi ở đối tượng được phân công.")
         if len(deleteArray) != 0:
