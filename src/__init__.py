@@ -1,4 +1,4 @@
-from flask import has_request_context, request, Flask, jsonify
+from flask import has_request_context, request, Flask, jsonify, 
 import json
 from flask_mail import Mail
 from src.config import Config
@@ -114,6 +114,15 @@ def create_app(config_class=Config):
     from src.designation.routes import Designation as designation_bp
 
     app.register_blueprint(designation_bp, url_prefix="/api/designation")
+
+
+    @app.route("/")
+    def index():
+        return {
+            "Status": 0,
+            "Description": f"Welcome to Timekeeper-Face-Server",
+            "ResponseData": None,
+        }
 
     @app.errorhandler(404)
     def page_not_found(error):
