@@ -1,4 +1,4 @@
-from flask import has_request_context, request, Flask, jsonify, 
+from flask import has_request_context, request, Flask
 import json
 from flask_mail import Mail
 from src.config import Config
@@ -6,10 +6,9 @@ from flask_migrate import Migrate
 from flask_bcrypt import Bcrypt
 from src.db import db
 from src.jwt import jwt
-from logging.config import dictConfig
 import logging
 from logging.handlers import RotatingFileHandler
-from flask_cors import CORS, cross_origin
+from flask_cors import CORS
 from threading import Thread
 from flask_marshmallow import Marshmallow
 
