@@ -613,7 +613,7 @@ def UpdateAssignment():
 
         deleteArray = []
         insertArray = []
-        match assignType:
+        match (assignType):
             case 1:  # Phân ca theo phòng ban vị trí
                 # for detail in shiftAssignmentDetail:
                 #     if detail.Target in departmentId:
