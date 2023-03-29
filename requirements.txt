@@ -14,3 +14,4 @@ flask_jwt_extended
 flask-cors
 flask-marshmallow
 flask-json
+gunicorn
