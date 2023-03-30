@@ -12,37 +12,37 @@ from logging.handlers import RotatingFileHandler
 from flask_cors import CORS, cross_origin
 from threading import Thread
 from flask_marshmallow import Marshmallow
+from src.logger import logger, fileHandler
 
 mail = Mail()
 migrate = Migrate()
 bcrypt = Bcrypt()
 cors = CORS()
 marshmallow = Marshmallow()
-logger = logging.getLogger()
+# logger = logging.getLogger()
 
 
 # create a formatter object
-class LogFormatter(logging.Formatter):
-    def format(self, record):
-        if has_request_context():
-            record.url = request.url
-            record.remote_addr = request.remote_addr
-        else:
-            record.url = None
-            record.remote_addr = None
-        return super().format(record)
+# class LogFormatter(logging.Formatter):
+#     def format(self, record):
+#         if has_request_context():
+#             record.url = request.url
+#             record.remote_addr = request.remote_addr
+#         else:
+#             record.url = None
+#             record.remote_addr = None
+#         return super().format(record)
 
-
-logFormatter = LogFormatter(
-    "[%(asctime)s] %(remote_addr)s requested %(url)s\n"
-    "%(levelname)s in %(module)s: %(message)s \n"
-    "---------------------------------------------------------------\n\n",
-    datefmt="%Y-%m-%d %H:%M:%S"
-)
-# add file handler to the root logger
-fileHandler = RotatingFileHandler("log.log", backupCount=100, maxBytes=1024 * 1024)
-fileHandler.setFormatter(logFormatter)
-logger.addHandler(fileHandler)
+# logFormatter = LogFormatter(
+#     "[%(asctime)s] %(remote_addr)s requested %(url)s\n"
+#     "%(levelname)s in %(module)s: %(message)s \n"
+#     "---------------------------------------------------------------\n\n",
+#     datefmt="%Y-%m-%d %H:%M:%S"
+# )
+# # add file handler to the root logger
+# fileHandler = RotatingFileHandler("log.log", backupCount=100, maxBytes=1024 * 1024)
+# fileHandler.setFormatter(logFormatter)
+# logger.addHandler(fileHandler)
 
 
 # init application
@@ -56,6 +56,11 @@ def create_app(config_class=Config):
     jwt.init_app(app)
     cors.init_app(app)
     marshmallow.init_app(app)
+    log_type = app.config["LOG_TYPE"]
+    if log_type == "stream":
+        pass
+    else:
+        logger.addHandler(fileHandler)
 
     app.logger.info("Connect to Database successfully!")
 
