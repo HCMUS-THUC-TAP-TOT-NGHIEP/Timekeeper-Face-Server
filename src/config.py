@@ -20,3 +20,7 @@ class Config:
         os.getenv("JWT_ALGORITHM") if os.getenv("JWT_ALGORITHM") else "HS256"
     )
     JSON_AS_ASCII = False
+    LOG_TYPE= os.getenv("LOG_TYPE") if os.getenv("LOG_TYPE") else "stream"
+    LOG_LEVEL= os.getenv("LOG_LEVEL") if os.getenv("LOG_LEVEL") else "INFO"
+    LOG_DIR= os.getenv("LOG_DIR") if os.getenv("LOG_DIR") else ""
+    APP_LOG_NAME= os.getenv("APP_LOG_NAME") if os.getenv("APP_LOG_NAME") else "log.log"
