@@ -2,14 +2,15 @@ from src.db import db
 from flask import Blueprint, current_app as app, request
 from src.jwt import jwt_required, get_jwt_identity, get_jwt
 from src.middlewares.token_required import admin_required
-from sqlalchemy import select, func, or_
+from sqlalchemy import select, or_
 from src.authentication.model import UserModel
 from src.employee.model import EmployeeModel
-from src.extension import object_as_dict, ProjectException
+from src.extension import ProjectException
 from src import bcrypt
 from datetime import datetime
 
 User = Blueprint("user", __name__)
+
 
 # GET api/user
 @User.route("", methods=["GET"])
@@ -22,7 +23,7 @@ def authorization():
         return {
             "Status": 1,
             "Description": None,
-            "ResponseData": {"email": email},
+            "ResponseData": {"Email": email, "Username": username},
         }
     except Exception as ex:
         app.logger.exception(ex)
@@ -87,6 +88,7 @@ def GetUserList():
             "Description": f"Không thể truy vấn danh sách các user/ account.",
             "ResponseData": None,
         }
+
 
 @User.route("/add", methods=["POST"])
 @admin_required()
@@ -162,6 +164,7 @@ def AddNewUser():
             "Description": f"Có lỗi ở máy chủ. \nKhông thể thêm user mới.",
             "ResponseData": None,
         }
+
 
 @User.route("/delete", methods=["DELETE"])
 @admin_required()

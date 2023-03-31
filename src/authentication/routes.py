@@ -136,13 +136,13 @@ def login():
         )
         if exist:
             if bcrypt.check_password_hash(exist.PasswordHash, password):
-                identity = {"email": email, "username": exist.Username}
+                identity = {"email": exist.EmailAddress, "username": exist.Username}
                 access_token = create_access_token(
                     identity=identity,
                     additional_claims={
                         "id": exist.Id,
                         "username": exist.Username,
-                        "email": email,
+                        "email": exist.EmailAddress,
                         "IsAdmin": True if exist.Role == 1 else False,
                     },
                 )
