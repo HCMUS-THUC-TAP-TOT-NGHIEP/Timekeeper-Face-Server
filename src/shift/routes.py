@@ -32,6 +32,7 @@ Shift = Blueprint("shift", __name__)
 
 
 @Shift.route("/list", methods=["GET"])
+@admin_required()
 def GetShiftList():
     try:
         args = request.args.to_dict()

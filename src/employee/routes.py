@@ -5,6 +5,7 @@ from src.db import db
 from src.employee.model import (EmployeeModel, employeeInfoListSchema,
                                 employeeInfoSchema)
 from src.jwt import get_jwt_identity, jwt_required
+from src.middlewares.token_required import admin_required
 
 Employee = Blueprint("employee", __name__)
 
@@ -238,7 +239,7 @@ def DeleteEmployee():
 
 # GET api/employee/many
 @Employee.route("/many", methods=["GET"])
-@jwt_required()
+@admin_required()
 def GetManyEMployee():
     try:
         identity= get_jwt_identity()
