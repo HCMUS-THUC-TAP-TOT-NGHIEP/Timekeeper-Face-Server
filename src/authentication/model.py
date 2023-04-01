@@ -21,19 +21,6 @@ class UserModel(db.Model):
     ModifiedAt = Column(DateTime())
     ModifiedBy = Column(Integer())
     Name = Column(String())
-
-    def __init__(self, email, password, salt, employee_id, status, role=None):
-        self.EmailAddress = email
-        self.PasswordHash = password
-        self.PasswordSalt = salt
-        self.EmployeeId = employee_id
-        self.Status = status
-        self.Role = role if role is not None else -1
-        self.CreatedBy = 0
-        self.CreatedAt = datetime.now()
-        self.ModifiedBy = 0
-        self.ModifiedAt = datetime.now()
-
     def __init__(self) -> None:
         super().__init__()
 
