@@ -12,7 +12,7 @@ from src.db import db
 from src.email import send_email
 from src.extension import ProjectException
 from src.jwt import (
-    TokenBlocklist,
+    TokenBlockList,
     create_access_token,
     get_jwt,
     get_jwt_identity,
@@ -181,7 +181,7 @@ def login():
 @Authentication.route("/request/reset-password", methods=["GET"])
 def request_reset_password():
     try:
-        clientUrl = app.config["CLIENT_URL"]
+        clientUrl = request.origin
         email = request.args.get("email")
 
         # region validate
@@ -200,30 +200,30 @@ def request_reset_password():
         if not exist:
             raise ProjectException(f"Email {email} chưa được đăng ký.")
         identity = {"email": email, "username": exist.Username}
-        additional_claims = (
-            {
-                "id": exist.Id,
-                "username": exist.Username,
-                "email": email,
-                "IsAdmin": True if exist.Role == 1 else False,
-            },
-        )
+        additional_claims = {
+            "id": exist.Id,
+            "username": exist.Username,
+            "email": email,
+            "IsAdmin": True if exist.Role == 1 else False,
+        }
         reset_link = urljoin(
-            clientUrl,
-            f"/reset-password/{create_access_token(identity=identity, additional_claims=additional_claims)}",
+            base=str(clientUrl),
+            url=f"/reset-password/{create_access_token(identity=identity, additional_claims=additional_claims)}",
         )
         send_email(
             subject="Reset password",
             html_body=render_template(
-                "reset_password.html", receiver=email, reset_link=reset_link
+                "reset_password.html", receiver=exist.Username, reset_link=reset_link
             ),
             recipients=[email],
-            sender="admin@gmail.com",
+            sender="admin",
             text_body="",
         )
+        print("clientUrl", clientUrl)
+        print("reset_link", reset_link)
         return {
             "Status": 1,
-            "Description": f"Check mail",
+            "Description": None,
             "ResponseData": None,
         }, 200
     except ProjectException as pEx:
@@ -233,11 +233,8 @@ def request_reset_password():
             "Description": f"Yêu cầu không thành công. {pEx}",
             "ResponseData": None,
         }
-
     except Exception as ex:
         app.logger.exception(ex)
-        print("Failed to reset password")
-        print(f"Ex: {ex.args}")
         return {
             "Status": 0,
             "Description": f"Có lỗi ở máy chủ. \nKhông thể thay đổi mật khẩu",
@@ -265,7 +262,7 @@ def reset_password():
         )
         existUser.ModifiedAt = datetime.now()
         existUser.ModifiedBy = existUser.Id
-        db.session.add(TokenBlocklist(jti=jti, created_at=datetime.now()))
+        db.session.add(TokenBlockList(jti=jti, created_at=datetime.now()))
         db.session.commit()
         return {
             "Status": 1,
@@ -288,7 +285,7 @@ def reset_password():
 def logout():
     try:
         jti = get_jwt()["jti"]
-        db.session.add(TokenBlocklist(jti=jti, created_at=datetime.now()))
+        db.session.add(TokenBlockList(jti=jti, created_at=datetime.now()))
         db.session.commit()
         return {
             "Status": 1,

@@ -1,48 +1,20 @@
-from flask import has_request_context, request, Flask
+from flask import request, Flask
 import json
-from flask_mail import Mail
 from src.config import Config
 from flask_migrate import Migrate
 from flask_bcrypt import Bcrypt
 from src.db import db
 from src.jwt import jwt
-import logging
-from logging.handlers import RotatingFileHandler
+from src.email import mail
 from flask_cors import CORS
 from threading import Thread
 from flask_marshmallow import Marshmallow
 from src.logger import logger, fileHandler
 
-mail = Mail()
 migrate = Migrate()
 bcrypt = Bcrypt()
 cors = CORS()
 marshmallow = Marshmallow()
-# logger = logging.getLogger()
-
-
-# create a formatter object
-# class LogFormatter(logging.Formatter):
-#     def format(self, record):
-#         if has_request_context():
-#             record.url = request.url
-#             record.remote_addr = request.remote_addr
-#         else:
-#             record.url = None
-#             record.remote_addr = None
-#         return super().format(record)
-
-# logFormatter = LogFormatter(
-#     "[%(asctime)s] %(remote_addr)s requested %(url)s\n"
-#     "%(levelname)s in %(module)s: %(message)s \n"
-#     "---------------------------------------------------------------\n\n",
-#     datefmt="%Y-%m-%d %H:%M:%S"
-# )
-# # add file handler to the root logger
-# fileHandler = RotatingFileHandler("log.log", backupCount=100, maxBytes=1024 * 1024)
-# fileHandler.setFormatter(logFormatter)
-# logger.addHandler(fileHandler)
-
 
 # init application
 def create_app(config_class=Config):
@@ -126,7 +98,6 @@ def create_app(config_class=Config):
     from src.designation.routes import Designation as designation_bp
 
     app.register_blueprint(designation_bp, url_prefix="/api/designation")
-
 
     @app.route("/")
     def index():
