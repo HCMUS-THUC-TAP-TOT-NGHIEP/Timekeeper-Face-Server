@@ -65,30 +65,38 @@ def create_app(config_class=Config):
     def log_request_info():
         args = request.args.to_dict()
         bodyData = request.get_data()
-        if not bodyData:
-            data = {}
-        else:
-            data = json.dumps(json.loads(bodyData), indent=2)
-        Thread(
-            app.logger.info(
-                "\nHeaders: %s\nParams: %s\nRequest Body: %s",
-                request.headers,
-                args,
-                data,
-            )
-        ).start()
+        try:
+            if not bodyData:
+                data = {}
+            else:
+                data = json.dumps(json.loads(bodyData), indent=2)
+        except Exception as ex:
+            data = str(bodyData)
+        finally:
+            Thread(
+                app.logger.info(
+                    "\nHeaders: %s\nParams: %s\nRequest Body: %s",
+                    request.headers,
+                    args,
+                    data,
+                )
+            ).start()
 
     @app.after_request
     def after_request(response):
         text_response = response.data
-        if response.data:
-            text_response = json.dumps(json.loads(response.data), indent=4)
-        Thread(
-            app.logger.info(
-                "\nHeaders: %s\nResponse Body: %s", response.headers, text_response
-            )
-        ).start()
-        return response
+        try:
+            if response.data:
+                text_response = json.dumps(json.loads(response.data), indent=4)
+        except Exception as e:
+            text_response = str(text_response)
+        finally:
+            Thread(
+                app.logger.info(
+                    "\nHeaders: %s\nResponse Body: %s", response.headers, text_response
+                )
+            ).start()
+            return response
 
     app.app_context().push()
 
