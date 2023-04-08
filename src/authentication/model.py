@@ -2,6 +2,7 @@ from src.db import db
 from sqlalchemy import Column, Integer, String, SmallInteger, DateTime
 from datetime import datetime
 from src import marshmallow
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # MODELS
 
@@ -21,6 +22,16 @@ class UserModel(db.Model):
     ModifiedAt = Column(DateTime())
     ModifiedBy = Column(Integer())
     Name = Column(String())
+
+    @property
+    def password(self):
+        raise AttributeError("password is not a readable attribute")
+    @password.setter
+    def password(self, value):
+        self.PasswordHash = generate_password_hash(value)
+    def verify_password(self, password):
+        return check_password_hash(self.PasswordHash, password)
+
     def __init__(self) -> None:
         super().__init__()
 

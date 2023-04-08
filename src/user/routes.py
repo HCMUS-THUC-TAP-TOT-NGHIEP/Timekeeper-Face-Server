@@ -6,7 +6,7 @@ from sqlalchemy import select, or_
 from src.authentication.model import UserModel
 from src.employee.model import EmployeeModel
 from src.extension import ProjectException
-from src import bcrypt
+# from src import bcrypt
 from datetime import datetime
 
 User = Blueprint("user", __name__)
@@ -135,7 +135,7 @@ def AddNewUser():
         newUser = UserModel()
         newUser.Username = username
         newUser.EmailAddress = email
-        newUser.PasswordHash = bcrypt.generate_password_hash(password).decode("utf-8")
+        newUser.password = password
         newUser.Name = name
         newUser.CreatedAt = datetime.now()
         newUser.CreatedBy = id

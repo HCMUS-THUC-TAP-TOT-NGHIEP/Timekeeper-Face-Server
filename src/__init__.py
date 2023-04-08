@@ -12,7 +12,6 @@ from flask_marshmallow import Marshmallow
 from src.logger import logger, fileHandler
 
 migrate = Migrate()
-bcrypt = Bcrypt()
 cors = CORS()
 marshmallow = Marshmallow()
 
@@ -23,7 +22,6 @@ def create_app(config_class=Config):
     mail.init_app(app)
     db.init_app(app)
     migrate.init_app(app, db)
-    bcrypt.init_app(app)
     jwt.init_app(app)
     cors.init_app(app)
     marshmallow.init_app(app)
