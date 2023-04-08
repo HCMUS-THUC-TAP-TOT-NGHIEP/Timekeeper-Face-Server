@@ -15,3 +15,6 @@ Notes: Luôn activate venv trước khi coding.
 1. Flask: https://flask.palletsprojects.com/en/2.2.x/
 2. watchdog: https://pythonhosted.org/watchdog/quickstart.html
 3. python-dotenv: https://github.com/theskumar/python-dotenv#readme
+
+# Command with Docker
+1. 
