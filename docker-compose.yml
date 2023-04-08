@@ -1,8 +1,7 @@
-version: '3.4'
-
+version: '20230408'
 services:
-  timekeeperfaceserver:
-    image: timekeeperfaceserver
+  Attendance_BE:
+    image: khanhnt1011/attendance_server:20230408
     build: '.'
     command: flask run --host=0.0.0.0 --port=5000
     ports:
