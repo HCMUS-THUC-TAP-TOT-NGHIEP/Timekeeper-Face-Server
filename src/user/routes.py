@@ -6,6 +6,7 @@ from sqlalchemy import select, or_
 from src.authentication.model import UserModel
 from src.employee.model import EmployeeModel
 from src.extension import ProjectException
+
 # from src import bcrypt
 from datetime import datetime
 
@@ -32,6 +33,7 @@ def authorization():
             "Description": f"Failed to reset password.",
             "ResponseData": None,
         }
+
 
 # GET api/user/list
 @User.route("/list", methods=["POST"])
@@ -90,6 +92,7 @@ def GetUserList():
         }
 
 
+# POST api/user/add
 @User.route("/add", methods=["POST"])
 @admin_required()
 def AddNewUser():
@@ -218,44 +221,83 @@ def DeleteUser():
         }
 
 
+# PUT: api/user/update
 @User.route("/update", methods=["PUT"])
 @admin_required()
 def UpdateUser():
     try:
+        # region Khai báo
         claims = get_jwt()
         email = claims["email"]
+        username = claims["username"]
         id = claims["id"]
-
         jsonRequestData = request.get_json()
-        # region validation
-
-        if "Username" not in jsonRequestData:
-            raise ProjectException("Chưa cung cấp mã user")
+        targetUser = (
+            jsonRequestData["Username"] if "Username" in jsonRequestData else None
+        )
+        confirmPassword = (
+            jsonRequestData["ConfirmPassword"]
+            if "ConfirmPassword" in jsonRequestData
+            else None
+        )
 
         # endregion
-        username = jsonRequestData["Username"]
-        exist = db.session.execute(
-            db.select(UserModel).filter_by(Username=username)
-        ).scalar_one_or_none()
-        if not exist:
+
+        # region validation
+
+        if not targetUser or not targetUser.strip():
+            raise ProjectException("Chưa cung cấp mã user")
+
+        if not confirmPassword or not confirmPassword.strip():
+            raise ProjectException("Chưa cung cấp mật khẩu xác thực.")
+
+        # endregion
+
+        # region authentication
+
+        user = UserModel.query.filter(
+            or_(UserModel.Username == username, UserModel.EmailAddress == email)
+        ).first()
+
+        if not user:
+            app.logger.error(f"Người dùng {username} đã bị thay đổi hoặc xóa.")
+            return {
+                "Status": 0,
+                "Description": f"Người dùng {username} đã bị thay đổi hoặc xóa.",
+                "ResponseData": None,
+            }, 500
+
+        if not user.verify_password(confirmPassword):
             raise ProjectException(
-                'Tài khoản "' + username + '" đã bị thay đổi hoặc xóa bởi người khác'
+                f"Xác thực không thành công! Vui lòng kiểm tra lại mật khẩu!"
+            )
+
+        # endregion
+
+        target = db.session.execute(
+            db.select(UserModel).filter_by(Username=targetUser)
+        ).scalar_one_or_none()
+        if not target:
+            raise ProjectException(
+                'Tài khoản "' + targetUser + '" đã bị thay đổi hoặc xóa bởi người khác'
             )
 
         hasSomeChanges = False
-
         for key in jsonRequestData:
-            if getattr(exist, key) != jsonRequestData[key]:
+            if (
+                key != "ConfirmPassword"
+                and getattr(target, key) != jsonRequestData[key]
+            ):
                 hasSomeChanges = True
-                setattr(exist, key, jsonRequestData[key])
+                setattr(target, key, jsonRequestData[key])
         if not hasSomeChanges:
             raise ProjectException(
-                f"Không thông tin thay đổi trong người dùng [{username}]"
+                f"Không có thông tin thay đổi trong người dùng [{targetUser}]"
             )
-        exist.ModifiedAt = datetime.now()
-        exist.ModifiedBy = id
+        target.ModifiedAt = datetime.now()
+        target.ModifiedBy = id
         db.session.commit()
-        app.logger.info(f"UpdateUser username[{username}] thành công")
+        app.logger.info(f"UpdateUser username[{targetUser}] thành công")
         return {
             "Status": 1,
             "Description": None,

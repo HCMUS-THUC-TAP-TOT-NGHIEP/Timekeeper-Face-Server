@@ -4,7 +4,6 @@ from urllib.parse import urljoin
 from flask import Blueprint
 from flask import current_app as app
 from flask import render_template, request
-# from src import bcrypt
 from src.authentication.model import UserModel, UserSchema
 from src.db import db
 from src.email import send_email
@@ -16,7 +15,7 @@ from src.jwt import (
     get_jwt_identity,
     jwt_required,
 )
-from sqlalchemy import select, or_, and_
+from sqlalchemy import or_, and_
 
 Authentication = Blueprint("auth", __name__)
 
@@ -203,7 +202,7 @@ def login():
     finally:
         pass
 
-
+# GET: api/auth/request/reset-password
 @Authentication.route("/request/reset-password", methods=["GET"])
 def request_reset_password():
     try:
@@ -269,7 +268,7 @@ def request_reset_password():
     finally:
         pass
 
-
+# POST: api/auth/reset_password
 @Authentication.route("/reset_password", methods=["POST"])
 @jwt_required(locations="json")
 def reset_password():
