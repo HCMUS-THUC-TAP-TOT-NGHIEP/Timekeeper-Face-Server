@@ -28,6 +28,8 @@ logFormatter = LogFormatter(
 # fileHandler = RotatingFileHandler("log.log", backupCount=100, maxBytes=1024 * 1024, encoding="utf-8")
 # fileHandler.setFormatter(logFormatter)
 
-fileHandler = TimedRotatingFileHandler("log.log", when="D", backupCount=3,)
+fileHandler = TimedRotatingFileHandler(
+    "log.log", when="D", backupCount=3, encoding="utf-8"
+)
 fileHandler.setFormatter(logFormatter)
 fileHandler.suffix = "%Y-%m-%d"

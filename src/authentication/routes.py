@@ -383,7 +383,7 @@ def changePassword():
         # currentUser.PasswordHash = bcrypt.generate_password_hash(NewPassword)
         currentUser.password = NewPassword
         db.session.commit()
-        app.logger.info(f"Đổi mật khẩu cho user {username} thành công")
+        app.logger.info(f"Đổi mật khẩu cho user [{username}] thành công")
         return {
             "Status": 1,
             "Description": f"Đổi mật khẩu thành công.",

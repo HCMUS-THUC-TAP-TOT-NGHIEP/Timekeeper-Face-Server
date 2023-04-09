@@ -4,12 +4,8 @@ watchdog
 flask-cors
 Flask-Migrate
 psycopg2-binary
-google-api-python-client
-google-auth-httplib2
-google-auth-oauthlib
 Flask-Mail
 flask-sqlalchemy
-flask-bcrypt
 flask_jwt_extended
 flask-cors
 flask-marshmallow

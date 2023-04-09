@@ -2,7 +2,6 @@ from flask import request, Flask
 import json
 from src.config import Config
 from flask_migrate import Migrate
-from flask_bcrypt import Bcrypt
 from src.db import db
 from src.jwt import jwt
 from src.email import mail
