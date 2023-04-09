@@ -2,7 +2,7 @@ from src.db import db
 from flask import Blueprint, current_app as app, request
 from src.jwt import jwt_required, get_jwt_identity, get_jwt
 from src.middlewares.token_required import admin_required
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_, and_
 from src.authentication.model import UserModel
 from src.employee.model import EmployeeModel
 from src.extension import ProjectException
@@ -97,34 +97,62 @@ def GetUserList():
 @admin_required()
 def AddNewUser():
     try:
-        claims = get_jwt()
-        email = claims["email"]
-        id = claims["id"]
+        # region declare
 
+        claims = get_jwt()
+        adminUsername = claims["username"]
+        id = claims["id"]
         jsonRequestData = request.get_json()
+        username = (
+            jsonRequestData["Username"] if "Username" in jsonRequestData else None
+        )
+        password = (
+            jsonRequestData["Password"] if "Password" in jsonRequestData else None
+        )
+        email = (
+            jsonRequestData["EmailAddress"]
+            if "EmailAddress" in jsonRequestData
+            else None
+        )
+        name = jsonRequestData["Name"] if "Name" in jsonRequestData else None
+        confirmPassword = (
+            jsonRequestData["ConfirmPassword"]
+            if "ConfirmPassword" in jsonRequestData
+            else None
+        )
+        # role = jsonRequestData['Role']
+
+        # endregion
 
         # region validate
 
-        if "Username" not in jsonRequestData:
+        if not username or not username.strip():
             raise ProjectException("Chưa cung cấp username.")
-        if "Password" not in jsonRequestData:
+        if not password or not password.strip():
             raise ProjectException("Chưa cung cấp mật khẩu.")
-        if "EmailAddress" not in jsonRequestData:
+        if not email or not email.strip():
             raise ProjectException("Chưa cung cấp email.")
         # if "Role" in jsonRequestData:
         #     raise ProjectException("Chưa chọn phân quyền.")
+        if not confirmPassword or not confirmPassword.strip():
+            raise ProjectException("Chưa cung cấp mật khẩu xác thực.")
 
         # endregion
 
-        # region declare
-
-        username = jsonRequestData["Username"]
-        password = jsonRequestData["Password"]
-        email = jsonRequestData["EmailAddress"]
-        # role = jsonRequestData['Role']
-        name = None if "Name" not in jsonRequestData else jsonRequestData["Name"]
-
-        # endregion
+        adminUser = UserModel.query.filter(
+            and_(UserModel.Username == adminUsername, UserModel.Id == id)
+        ).first()
+        if not adminUser:
+            app.logger.error(f"Người dùng {adminUsername} đã bị thay đổi hoặc xóa.")
+            return {
+                "Status": 0,
+                "Description": f"Người dùng {adminUsername} đã bị thay đổi hoặc xóa.",
+                "ResponseData": None,
+            }, 500
+        if not adminUser.verify_password(confirmPassword):
+            raise ProjectException(
+                f"Xác thực không thành công! Vui lòng kiểm tra lại mật khẩu!"
+            )
 
         exist = db.session.execute(
             select(UserModel).where(
@@ -247,7 +275,6 @@ def UpdateUser():
 
         if not targetUser or not targetUser.strip():
             raise ProjectException("Chưa cung cấp mã user")
-
         if not confirmPassword or not confirmPassword.strip():
             raise ProjectException("Chưa cung cấp mật khẩu xác thực.")
 
