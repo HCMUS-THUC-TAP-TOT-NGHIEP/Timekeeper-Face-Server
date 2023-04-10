@@ -99,7 +99,7 @@ def create_app(config_class=Config):
     from src.employee_checkin.routes import EmployeeCheckin as employee_checkin_bp
 
     app.register_blueprint(employee_checkin_bp, url_prefix="/api/checkin")
-    from src.face_api.routes import FaceAPI as face_api_bp
+    from src.face_api.routes import FaceApi as face_api_bp
     app.register_blueprint(face_api_bp, url_prefix="/api/face")
 
     @app.route("/")
