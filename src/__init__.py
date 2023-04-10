@@ -14,6 +14,7 @@ migrate = Migrate()
 cors = CORS()
 marshmallow = Marshmallow()
 
+
 # init application
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -95,6 +96,11 @@ def create_app(config_class=Config):
     from src.designation.routes import Designation as designation_bp
 
     app.register_blueprint(designation_bp, url_prefix="/api/designation")
+    from src.employee_checkin.routes import EmployeeCheckin as employee_checkin_bp
+
+    app.register_blueprint(employee_checkin_bp, url_prefix="/api/checkin")
+    from src.face_api.routes import FaceAPI as face_api_bp
+    app.register_blueprint(face_api_bp, url_prefix="/api/face")
 
     @app.route("/")
     def index():
