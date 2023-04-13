@@ -4,6 +4,10 @@ from src.db import db
 from src.jwt import get_jwt_identity, jwt_required
 from src.middlewares.token_required import admin_required
 from src.extension import ProjectException
+from src.face_api.model import *
+from config import Config
+
+
 
 FaceApi = Blueprint("face", __name__)
 
@@ -18,8 +22,20 @@ FaceApi = Blueprint("face", __name__)
 FaceApi.route("/register", methods=["POST"])
 def register():
     try:
-        return {"Status": 0, "Description": None, "ResponseData": None}
+        processed_faces(Config.TEST_RAW_PATH)
+        train_model(Config.TEST_TRAIN_PATH)
+        return {"Status": 1, "Description": "Đăng ký khuôn mặt thành công.", "ResponseData": None}
     except ProjectException as pEx:
-        pass
+        app.logger.error(f"Đăng ký khuôn mặt thất bại. Có exception[{str(pEx)}]")
+        return {
+            "Status": 0,
+            "Description": f"Đăng ký khuôn mặt không thành công. {pEx}",
+            "ResponseData": None,
+        }, 200
     except Exception as ex:
-        pass
+        app.logger.error(f"Đăng ký khuôn mặt thất bại. Có exception[{ex}]")
+        return {
+            "Status": 0,
+            "Description": f"Có lỗi ở máy chủ. Đăng ký khuôn mặt không thành công",
+            "ResponseData": None,
+        }, 200

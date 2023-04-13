@@ -11,3 +11,6 @@ flask-cors
 flask-marshmallow
 flask-json
 gunicorn
+opencv-contrib-python
+opencv-python
+Pillow

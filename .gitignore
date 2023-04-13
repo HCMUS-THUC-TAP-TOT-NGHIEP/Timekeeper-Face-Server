@@ -131,3 +131,4 @@ dmypy.json
 .pyre/
 /*.log*
 /*.env*
+public/datasets/processed/*

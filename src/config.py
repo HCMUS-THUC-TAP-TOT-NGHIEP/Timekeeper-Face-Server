@@ -24,3 +24,10 @@ class Config:
     LOG_LEVEL= os.getenv("LOG_LEVEL") if os.getenv("LOG_LEVEL") else "INFO"
     LOG_DIR= os.getenv("LOG_DIR") if os.getenv("LOG_DIR") else ""
     APP_LOG_NAME= os.getenv("APP_LOG_NAME") if os.getenv("APP_LOG_NAME") else "log.log"
+
+    TEST_RAW_PATH = "../../public/datasets/raw"
+    TEST_TRAIN_PATH = "../../public/datasets/processed"
+    HAARCASCADEPATH = "../../public/static/haarcascade_frontalface_default.xml"
+    PATH_MODEL_TRAIN = "../../public/static/Trainner.yml"
+    
+
