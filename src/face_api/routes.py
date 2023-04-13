@@ -39,3 +39,32 @@ def register():
             "Description": f"Có lỗi ở máy chủ. Đăng ký khuôn mặt không thành công",
             "ResponseData": None,
         }, 200
+
+# POST api/face/recognition
+FaceApi.route("/recognition", methods=["POST"])
+def recognition():
+    try:
+        img = ""
+        id = get_id_from_img(img)
+        if id:
+            name = ""
+            return {"Status": 1, "Description": "Nhận diện thành công.", "ResponseData": {name}}
+        else:
+            raise ProjectException (
+                "Khuôn mặt hiện tại chưa đăng ký hoặc nhận diện sai."
+            )
+        
+    except ProjectException as pEx:
+        app.logger.error(f"Nhận diện khuôn mặt thất bại. Có exception[{str(pEx)}]")
+        return {
+            "Status": 0,
+            "Description": f"Nhận diện không thành công. {pEx}",
+            "ResponseData": None,
+        }, 200
+    except Exception as ex:
+        app.logger.error(f"Nhận diện khuôn mặt thất bại. Có exception[{ex}]")
+        return {
+            "Status": 0,
+            "Description": f"Có lỗi ở máy chủ. Nhận diện khuôn mặt không thành công",
+            "ResponseData": None,
+        }, 200

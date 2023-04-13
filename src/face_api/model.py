@@ -6,8 +6,6 @@ import time
 import numpy as np
 from src.config import Config
 
-detector = cv2.CascadeClassifier(Config.HAARCASCADEPATH)
-
 def save_images(images, id, name):
     path = Config.TEST_RAW_PATH + "/" + id + "_" + name
     if not os.path.isdir(path):
@@ -26,7 +24,7 @@ def counter_img(path):
 
 #cắt khuôn mặt từ ảnh lưu vào processed
 def processed_faces(path_raw):
-    
+    detector = cv2.CascadeClassifier(Config.HAARCASCADEPATH)
     #đọc các id đã có
     for ID in os.listdir(path_raw):
         path_raw_id = path_raw + "/" + ID
@@ -88,6 +86,7 @@ def train_model(path_train):
 # nhận dạng khuôn mặt từ 1 ảnh
 def get_id_from_img(image):
 
+    detector = cv2.CascadeClassifier(Config.HAARCASCADEPATH)
     img = cv2.imread(image)
     clf = cv2.face.LBPHFaceRecognizer_create()
     clf.read(Config.PATH_MODEL_TRAIN)
