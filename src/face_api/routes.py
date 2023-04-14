@@ -9,8 +9,9 @@ from src.jwt import get_jwt_identity, jwt_required
 from src.middlewares.token_required import admin_required
 from src.extension import ProjectException
 from src.face_api.model import *
+
 # from config import Config
-from src.employee.model import EmployeeModel
+from src.employee.model import EmployeeModel, employeeInfoSchema
 from sqlalchemy import func, select
 
 RAW_PATH = "./public/datasets/raw"
@@ -30,45 +31,39 @@ FaceApi = Blueprint("face", __name__)
 @FaceApi.route("/register", methods=["POST"])
 def register():
     try:
+        app.logger.info("register bắt đầu.")
         jsonRequestData = request.get_json()
 
-        PictureList = None if "PictureList" not in jsonRequestData else jsonRequestData["PictureList"]
-        EmployeeId = None if "EmployeeId" not in jsonRequestData else jsonRequestData["EmployeeId"]
-        
-        exit = db.session.execute(
-            db.select(EmployeeModel).filter_by(Id=EmployeeId)
-        ).scalar_one_or_none()
-        
-        if PictureList:
-            if exit:
-                name = db.session.execute(
-                    select(
-                        func.concat(EmployeeModel.FirstName, " ", EmployeeModel.LastName).label("ManagerName")
-                    )
-                    .select_from(EmployeeModel)
-                    .where(EmployeeModel.Id == EmployeeId)
-                )
+        PictureList = (
+            jsonRequestData["PictureList"] if "PictureList" in jsonRequestData else None
+        )
+        EmployeeId = (
+            jsonRequestData["EmployeeId"] if "EmployeeId" in jsonRequestData else None
+        )
 
-                # Lưu local mảng ảnh đã nhận 
-                save_images(PictureList, EmployeeId, name)
-            else:
-                raise ProjectException(
-                    "không tồn tại Id {EmployeeId}"
-                )
-        else:
-            raise ProjectException(
-                "Không nhận được hình ảnh đăng ký"
-            )
-        
+        if not PictureList or len(PictureList) == 0:
+            raise ProjectException("Không nhận được hình ảnh đăng ký")
+        if not EmployeeId:
+            raise ProjectException("Không nhận được mã nhân viên")
+
+        employee = EmployeeModel.query.filter(EmployeeModel.Id == EmployeeId).first()
+        if not employee:
+            raise ProjectException(f"không tồn tại nhân viên [{EmployeeId}]")
+
+        name = f"{employee.FirstName}_{employee.LastName}"
+        print(name)
+        # Lưu local mảng ảnh đã nhận
+        save_images(PictureList, EmployeeId, name)
+
         # quá trình trích xuất khuôn mặt và train ảnh
         print("Registering")
         processed_faces(RAW_PATH)
         train_model(TRAIN_PATH)
 
         return {
-            "Status": 1, 
-            "Description": "1. Đăng ký khuôn mặt thành công.", 
-            "ResponseData": None
+            "Status": 1,
+            "Description": None,
+            "ResponseData": None,
         }
     except ProjectException as pEx:
         app.logger.error(f"Đăng ký khuôn mặt thất bại. Có exception[{str(pEx)}]")
@@ -81,11 +76,11 @@ def register():
         app.logger.error(f"Đăng ký khuôn mặt thất bại. Có exception[{ex}]")
         return {
             "Status": 0,
-            "Description": f"3. Có lỗi ở máy chủ. Đăng ký khuôn mặt không thành công",
+            "Description": f"3. Có lỗi ở máy chủ",
             "ResponseData": None,
         }, 200
     finally:
-        pass
+        app.logger.info("register kết thúc.")
 
 
 # POST api/face/recognition
@@ -93,7 +88,11 @@ def register():
 def recognition():
     try:
         jsonRequestData = request.get_json()
-        PictureList = None if "PictureList" not in jsonRequestData else jsonRequestData["PictureList"]
+        PictureList = (
+            None
+            if "PictureList" not in jsonRequestData
+            else jsonRequestData["PictureList"]
+        )
         ids = []
         for img in PictureList:
             id = get_id_from_img(img)
