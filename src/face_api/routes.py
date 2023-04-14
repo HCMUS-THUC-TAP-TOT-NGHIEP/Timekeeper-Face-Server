@@ -1,13 +1,15 @@
 from datetime import datetime
-from flask import Blueprint, current_app as app, request
+
+from flask import Blueprint
+from flask import current_app as app
+from flask import request
+
+from src.config import Config
 from src.db import db
-from src.jwt import get_jwt_identity, jwt_required
-from src.middlewares.token_required import admin_required
 from src.extension import ProjectException
 from src.face_api.model import *
-from config import Config
-
-
+from src.jwt import get_jwt_identity, jwt_required
+from src.middlewares.token_required import admin_required
 
 FaceApi = Blueprint("face", __name__)
 
@@ -18,13 +20,18 @@ FaceApi = Blueprint("face", __name__)
 
 # HttpMethod api/face/...
 
+
 # POST api/face/register
-FaceApi.route("/register", methods=["POST"])
+@FaceApi.route("/register", methods=["POST"])
 def register():
     try:
         processed_faces(Config.TEST_RAW_PATH)
         train_model(Config.TEST_TRAIN_PATH)
-        return {"Status": 1, "Description": "Đăng ký khuôn mặt thành công.", "ResponseData": None}
+        return {
+            "Status": 1,
+            "Description": "Đăng ký khuôn mặt thành công.",
+            "ResponseData": None,
+        }
     except ProjectException as pEx:
         app.logger.error(f"Đăng ký khuôn mặt thất bại. Có exception[{str(pEx)}]")
         return {
@@ -40,20 +47,27 @@ def register():
             "ResponseData": None,
         }, 200
 
+
 # POST api/face/recognition
 FaceApi.route("/recognition", methods=["POST"])
+
+
 def recognition():
     try:
         img = ""
         id = get_id_from_img(img)
         if id:
             name = ""
-            return {"Status": 1, "Description": "Nhận diện thành công.", "ResponseData": {name}}
+            return {
+                "Status": 1,
+                "Description": "Nhận diện thành công.",
+                "ResponseData": {name},
+            }
         else:
-            raise ProjectException (
+            raise ProjectException(
                 "Khuôn mặt hiện tại chưa đăng ký hoặc nhận diện sai."
             )
-        
+
     except ProjectException as pEx:
         app.logger.error(f"Nhận diện khuôn mặt thất bại. Có exception[{str(pEx)}]")
         return {

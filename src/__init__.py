@@ -41,7 +41,11 @@ def create_app(config_class=Config):
             if not bodyData:
                 data = {}
             else:
-                data = json.dumps(json.loads(bodyData), indent=2)
+                data = (
+                    json.dumps(json.loads(bodyData), indent=2)
+                    .encode("utf-8")
+                    .decode("utf-8")
+                )
         except Exception as ex:
             data = str(bodyData)
         finally:
@@ -59,13 +63,19 @@ def create_app(config_class=Config):
         text_response = response.data
         try:
             if response.data:
-                text_response = json.dumps(json.loads(response.data), indent=4)
+                text_response = (
+                    json.dumps(json.loads(response.data), indent=4)
+                    .encode("utf-8")
+                    .decode("utf-8")
+                )
         except Exception as e:
-            text_response = str(text_response)
+            text_response = str(text_response).encode("utf-8").decode("utf-8")
         finally:
             Thread(
                 app.logger.info(
-                    "\nHeaders: %s\nResponse Body: %s", response.headers, text_response
+                    "\nHeaders: %s\nResponse Body: %s",
+                    response.headers,
+                    text_response,
                 )
             ).start()
             return response
@@ -100,6 +110,7 @@ def create_app(config_class=Config):
 
     app.register_blueprint(employee_checkin_bp, url_prefix="/api/checkin")
     from src.face_api.routes import FaceApi as face_api_bp
+
     app.register_blueprint(face_api_bp, url_prefix="/api/face")
 
     @app.route("/")

@@ -20,7 +20,9 @@ class LogFormatter(logging.Formatter):
 logFormatter = LogFormatter(
     "[%(asctime)s] %(remote_addr)s requested %(url)s\n"
     "%(levelname)s in %(module)s: %(message)s \n"
-    "---------------------------------------------------------------\n\n",
+    "---------------------------------------------------------------\n\n".encode(
+        "utf-8"
+    ).decode("utf-8"),
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
