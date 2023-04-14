@@ -6,6 +6,7 @@ import time
 import numpy as np
 from src.config import Config
 
+# lưu ảnh dạng jpg với đầu vào là mảng ảnh, id và tên vào datasets/raw/...
 def save_images(images, id, name):
     path = Config.TEST_RAW_PATH + "/" + id + "_" + name
     if not os.path.isdir(path):
@@ -102,12 +103,51 @@ def get_id_from_img(image):
         else:
             return None
         
+def take_image(path = "./public/datasets/raw"):
+    cap = cv2.VideoCapture(0)
+    counter_loop = 0
+    counter_img = 0
+    # Id = input("nhap ma nhan vien: ")
+    # name = input("\nnhap ten nhan vien: ")
+    Id = "200"
+    name = "nguyen anh"
+
+    folder_path = path + "/" + Id + "_" + name
+
+    if not os.path.isdir(folder_path):
+        os.makedirs(folder_path)
+        print("tao forder thanh cong")
+
+    while(True):
+        # Capture frame-by-frame
+        ret, frame = cap.read()
+        counter_loop += 1
+
+        # Display the resulting frame
+        cv2.imshow('frame', frame)
+        if counter_loop % 5 == 0:
+            counter_img +=1
+            path_name = folder_path + "/" + str(counter_img) + ".jpg"
+            cv2.imwrite(path_name, frame)
+            print("Luu thanh cong")
+            
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+        if counter_loop >= 80:
+            break
+
+    # When everything done, release the capture
+    cap.release()
+    cv2.destroyAllWindows()
+            
 # def main():
 #     # processed_faces(test_raw_path)
 #     # train_model(test_train_path)
-#     img_path = "../../datasets/raw/SonTung/SonTung_0015.jpg"
-#     id = get_id_from_img(img_path)
-#     print(id)
+#     # img_path = "../../datasets/raw/SonTung/SonTung_0015.jpg"
+#     # id = get_id_from_img(img_path)
+#     # print(id)
+#     take_image()
 
 
 

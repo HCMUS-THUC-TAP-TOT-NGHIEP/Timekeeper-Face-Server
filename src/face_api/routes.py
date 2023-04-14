@@ -1,18 +1,20 @@
 from datetime import datetime
-from flask import Blueprint, current_app as app, request
+
+from flask import Blueprint
+from flask import current_app as app
+from flask import request
+
 from src.db import db
 from src.jwt import get_jwt_identity, jwt_required
 from src.middlewares.token_required import admin_required
 from src.extension import ProjectException
 from src.face_api.model import *
 # from config import Config
-# from src.authentication.model import UserModel
 from src.employee.model import EmployeeModel
 from sqlalchemy import func, select
 
-RAW_PATH = "../../public/datasets/raw"
-
-TRAIN_PATH = "../../public/datasets/processed"
+RAW_PATH = "./public/datasets/raw"
+TRAIN_PATH = "./public/datasets/processed"
 
 FaceApi = Blueprint("face", __name__)
 
@@ -23,8 +25,9 @@ FaceApi = Blueprint("face", __name__)
 
 # HttpMethod api/face/...
 
+
 # POST api/face/register
-FaceApi.route("/register", methods=["POST"])
+@FaceApi.route("/register", methods=["POST"])
 def register():
     try:
         jsonRequestData = request.get_json()
@@ -86,19 +89,27 @@ def register():
 
 
 # POST api/face/recognition
-FaceApi.route("/recognition", methods=["POST"])
+@FaceApi.route("/recognition", methods=["POST"])
 def recognition():
     try:
-        img = ""
-        id = get_id_from_img(img)
+        jsonRequestData = request.get_json()
+        PictureList = None if "PictureList" not in jsonRequestData else jsonRequestData["PictureList"]
+        ids = []
+        for img in PictureList:
+            id = get_id_from_img(img)
+            ids.append(id)
         if id:
             name = ""
-            return {"Status": 1, "Description": "Nhận diện thành công.", "ResponseData": {name}}
+            return {
+                "Status": 1,
+                "Description": "Nhận diện thành công.",
+                "ResponseData": {name},
+            }
         else:
-            raise ProjectException (
+            raise ProjectException(
                 "Khuôn mặt hiện tại chưa đăng ký hoặc nhận diện sai."
             )
-        
+
     except ProjectException as pEx:
         app.logger.error(f"Nhận diện khuôn mặt thất bại. Có exception[{str(pEx)}]")
         return {

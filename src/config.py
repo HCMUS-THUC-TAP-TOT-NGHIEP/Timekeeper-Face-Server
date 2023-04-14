@@ -25,9 +25,9 @@ class Config:
     LOG_DIR= os.getenv("LOG_DIR") if os.getenv("LOG_DIR") else ""
     APP_LOG_NAME= os.getenv("APP_LOG_NAME") if os.getenv("APP_LOG_NAME") else "log.log"
 
-    RAW_PATH = "../../public/datasets/raw"
-    TRAIN_PATH = "../../public/datasets/processed"
-    HAARCASCADEPATH = "../../public/static/haarcascade_frontalface_default.xml"
-    PATH_MODEL_TRAIN = "../../public/static/Trainner.yml"
+    RAW_PATH = "./public/datasets/raw"
+    TRAIN_PATH = "./public/datasets/processed"
+    HAARCASCADEPATH = "./public/static/haarcascade_frontalface_default.xml"
+    PATH_MODEL_TRAIN = "./public/static/Trainner.yml"
     
 
