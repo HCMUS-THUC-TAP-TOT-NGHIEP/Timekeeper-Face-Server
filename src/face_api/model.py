@@ -68,7 +68,7 @@ def getImagesAndLabels(path):
             faces.append(imageNp)
             Ids.append(Id)
 
-    print(list_names)
+
     return faces, Ids
 
 #train ảnh khuôn mặt
