@@ -113,6 +113,10 @@ def create_app(config_class=Config):
 
     app.register_blueprint(face_api_bp, url_prefix="/api/face")
 
+    from src.attendance_machine.routes import AttendanceMachineApi as attendance_machine_api_bp
+
+    app.register_blueprint(attendance_machine_api_bp, url_prefix="/api/attendance_machine/")
+
     @app.route("/")
     def index():
         return {
