@@ -51,14 +51,20 @@ def register():
             raise ProjectException(f"không tồn tại nhân viên [{EmployeeId}]")
 
         name = f"{employee.FirstName}_{employee.LastName}"
-        print(name)
-        # Lưu local mảng ảnh đã nhận
-        save_images(PictureList, EmployeeId, name)
+        # region Lưu local mảng ảnh đã nhận
 
-        # quá trình trích xuất khuôn mặt và train ảnh
-        print("Registering")
+        flag = save_images(PictureList, EmployeeId, name)
+        if not flag:
+            raise Exception("Không lưu được ảnh")
+        app.logger.info("save_images successfully. Lưu ảnh thành công")
+
+        #endregion
+
+        # region quá trình trích xuất khuôn mặt và train ảnh
         processed_faces(RAW_PATH)
         train_model(TRAIN_PATH)
+
+        #endregion
 
         return {
             "Status": 1,

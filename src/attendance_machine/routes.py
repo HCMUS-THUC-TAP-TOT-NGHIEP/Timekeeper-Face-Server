@@ -47,7 +47,6 @@ def LoadEmployeeList():
         # region Khai bao
 
         jsonRequest = request.get_json()
-        print(jsonRequest)
         departmentId = (
             jsonRequest["DepartmentId"] if "DepartmentId" in jsonRequest else None
         )
