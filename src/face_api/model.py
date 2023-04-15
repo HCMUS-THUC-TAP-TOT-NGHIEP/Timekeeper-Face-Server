@@ -11,21 +11,36 @@ import base64
 # lưu ảnh dạng png với đầu vào là mảng ảnh, id và tên vào datasets/raw/...
 def save_images(images, id, name):
     try:
-        path = f"{Config.RAW_PATH}/{id}_{name}"
+        # path = f"{Config.RAW_PATH}/{id}_{name}"
+        # path = f"D:\\Thuc_Tap_TN\\Timekeeper-Face-Server\\public\\datasets\\raw\\1_Khanh_Nguyễn"\
+        # path = os.curdir
+        path = os.path.join(os.getcwd(), "public", "datasets","raw",  f"{id}")
+        # path = os.path.join(path, "datasets")
+        # path = os.path.join(path, "raw")
+        # path = os.path.join(path, f"{id}_{name}")
+        # path = os.path.join(os.curdir, "images")
+        # print(os.getcwd())
         if not os.path.isdir(path):
             os.makedirs(path)
+
+        flag = []
+
         for i in range(len(images)):
             # print(images)
-            img_path = path + "/" + str(i) + ".png"
+            img_path = os.path.join(path, f"{i}.png")
             # region Convert base64 image to OpenCV image
 
             image_data = bytes(images[i].split(",")[1], encoding="utf-8")
             np_data = np.frombuffer(base64.decodebytes(image_data), np.uint8)
-            img = cv2.imdecode(np_data, cv2.IMREAD_UNCHANGED)
-            # endregion
+            img = cv2.imdecode(np_data, cv2.IMREAD_ANYCOLOR)
 
-            cv2.imwrite(img_path, img)
-            return True
+            # endregion
+            print(img_path)
+            result = cv2.imwrite(img_path, img)
+            flag.append(result)
+        print(flag)
+        return True
+
     except Exception as ex:
         raise Exception(f"save_images failed. [exception{ex}]")
 
