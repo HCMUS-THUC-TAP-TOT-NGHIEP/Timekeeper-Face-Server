@@ -96,10 +96,10 @@ def recognition():
     try:
         app.logger.info("recognition bắt đầu.")
         jsonRequestData = request.get_json()
-        PictureList = (
-            jsonRequestData["PictureList"] if "PictureList" in jsonRequestData else None
+        Picture = (
+            jsonRequestData["Picture"] if "Picture" in jsonRequestData else None
         )
-        Id = get_id_from_img(PictureList)
+        Id = get_id_from_img(Picture)
         if id == None:
             raise ProjectException(
                 "Khuôn mặt hiện tại chưa đăng ký hoặc nhận diện sai."
