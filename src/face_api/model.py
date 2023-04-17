@@ -11,15 +11,7 @@ import base64
 # lưu ảnh dạng png với đầu vào là mảng ảnh, id và tên vào datasets/raw/...
 def save_images(images, id, name):
     try:
-        # path = f"{Config.RAW_PATH}/{id}_{name}"
-        # path = f"D:\\Thuc_Tap_TN\\Timekeeper-Face-Server\\public\\datasets\\raw\\1_Khanh_Nguyễn"\
-        # path = os.curdir
         path = os.path.join(os.getcwd(), "public", "datasets","raw",  f"{id}")
-        # path = os.path.join(path, "datasets")
-        # path = os.path.join(path, "raw")
-        # path = os.path.join(path, f"{id}_{name}")
-        # path = os.path.join(os.curdir, "images")
-        # print(os.getcwd())
         if not os.path.isdir(path):
             os.makedirs(path)
 
@@ -63,7 +55,8 @@ def processed_faces(path_raw):
         detector = cv2.CascadeClassifier(Config.HAARCASCADEPATH)
         # đọc các id đã có
         for ID in os.listdir(path_raw):
-            path_raw_id = path_raw + "/" + ID
+            # path_raw_id = path_raw + "/" + ID
+            path_raw_id = os.path.join(path_raw, ID) 
             path_processed_id = path_raw_id.replace("raw", "processed")
             # kiểm tra tồn tại của folder id
             if not os.path.isdir(path_processed_id):
@@ -71,7 +64,8 @@ def processed_faces(path_raw):
 
             # duyệt các ảnh trong thư mục id
             for list in os.listdir(path_raw_id):
-                img_path = path_raw_id + "/" + list
+                # img_path = path_raw_id + "/" + list
+                img_path = os.path.join(path_raw_id,list)
                 img = cv2.imread(img_path)
                 gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
                 faces = detector.detectMultiScale(
@@ -104,7 +98,7 @@ def getImagesAndLabels(path):
                 # Now we are converting the PIL image into numpy array
                 imageNp = np.array(pilImage, "uint8")
                 # getting the Id from the image
-                Id = int(folder.split("_")[0])
+                Id = int(folder)
                 # Id = int(folder)
                 # extract the face from the training image sample
                 faces.append(imageNp)
@@ -152,16 +146,24 @@ def get_id_from_img(image):
     except Exception as ex:
         raise Exception(f"train_model faild. [exception{ex}]")
 
+def openCV2base64(Id):
+    try:
+        img_path = os.path.join(Config.RAW_PATH, Id, "0.png")
+        img = cv2.imread(img_path)
+        string = base64.b64encode(cv2.imencode('.png', img)[1]).decode()
+        return string
+    except Exception as ex:
+        raise Exception(f"openCV2base64 faild. [exception{ex}]")
 
 def take_image(path="./public/datasets/raw"):
     try:
         cap = cv2.VideoCapture(0)
         counter_loop = 0
         counter_img = 0
-        # Id = input("nhap ma nhan vien: ")
-        # name = input("\nnhap ten nhan vien: ")
-        Id = "200"
-        name = "nguyen anh"
+        Id = input("nhap ma nhan vien: ")
+        name = input("\nnhap ten nhan vien: ")
+        # Id = "200"
+        # name = "nguyen anh"
 
         folder_path = path + "/" + Id + "_" + name
 

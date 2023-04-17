@@ -90,30 +90,35 @@ def register():
 
 
 # POST api/face/recognition
+# https://helpex.vn/question/python-opencv-hinh-anh-thanh-chuoi-byte-de-chuyen-json-60cecfa5f137b0e523f9cce4
 @FaceApi.route("/recognition", methods=["POST"])
 def recognition():
     try:
+        app.logger.info("recognition bắt đầu.")
         jsonRequestData = request.get_json()
         PictureList = (
-            None
-            if "PictureList" not in jsonRequestData
-            else jsonRequestData["PictureList"]
+            jsonRequestData["PictureList"] if "PictureList" in jsonRequestData else None
         )
-        ids = []
-        for img in PictureList:
-            id = get_id_from_img(img)
-            ids.append(id)
-        if id:
-            name = ""
-            return {
-                "Status": 1,
-                "Description": "Nhận diện thành công.",
-                "ResponseData": {name},
-            }
-        else:
+        Id = get_id_from_img(PictureList)
+        if id == None:
             raise ProjectException(
                 "Khuôn mặt hiện tại chưa đăng ký hoặc nhận diện sai."
             )
+        
+        employee = EmployeeModel.query.filter(EmployeeModel.Id == Id).first()
+        name = f"{employee.FirstName}_{employee.LastName}"
+        str_img = openCV2base64(Id)
+
+        return {
+            "Status": 1,
+            "Description": "Nhận diện thành công.",
+            "ResponseData": {
+                "Id": {Id},
+                "Name": {name},
+                "Img": {str_img} 
+            },
+        }
+            
 
     except ProjectException as pEx:
         app.logger.error(f"Nhận diện khuôn mặt thất bại. Có exception[{str(pEx)}]")
