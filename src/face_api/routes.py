@@ -118,13 +118,14 @@ def recognition():
         img = cv2.imread(img_path)
         str_img = openCVToBase64(img)
         app.logger.info(f"Recognition thành công nhân viên Id[{Id}]")
+
         return {
             "Status": 1,
             "Description": "Nhận diện thành công.",
             "ResponseData": {
-                "Id": {Id},
-                "Name": {name},
-                "Img": {str_img} 
+                "Id": Id,
+                "Name": name,
+                "Img": str_img
             },
         }
             
