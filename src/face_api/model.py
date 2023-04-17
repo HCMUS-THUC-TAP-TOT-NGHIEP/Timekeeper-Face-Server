@@ -8,6 +8,25 @@ from src.config import Config
 import base64
 
 
+
+def openCVToBase64(img):
+    try:
+        # img_path = os.path.join(Config.RAW_PATH, Id, "0.png")
+        # img = cv2.imread(img_path)
+        string = base64.b64encode(cv2.imencode('.png', img)[1]).decode()
+        return string
+    except Exception as ex:
+        raise Exception(f"openCV2base64 faild. [exception{ex}]")
+    
+def base64ToOpenCV(str_img):
+    try:
+        image_data = bytes(str_img.split(",")[1], encoding="utf-8")
+        np_data = np.frombuffer(base64.decodebytes(image_data), np.uint8)
+        img = cv2.imdecode(np_data, cv2.IMREAD_ANYCOLOR)
+        return img
+    except Exception as ex:
+        raise Exception(f"base64ToOpenCV faild. [exception{ex}]")
+
 # lưu ảnh dạng png với đầu vào là mảng ảnh, id và tên vào datasets/raw/...
 def save_images(images, id, name):
     try:
@@ -20,14 +39,14 @@ def save_images(images, id, name):
         for i in range(len(images)):
             # print(images)
             img_path = os.path.join(path, f"{i}.png")
+            
             # region Convert base64 image to OpenCV image
-
-            image_data = bytes(images[i].split(",")[1], encoding="utf-8")
-            np_data = np.frombuffer(base64.decodebytes(image_data), np.uint8)
-            img = cv2.imdecode(np_data, cv2.IMREAD_ANYCOLOR)
+            # image_data = bytes(images[i].split(",")[1], encoding="utf-8")
+            # np_data = np.frombuffer(base64.decodebytes(image_data), np.uint8)
+            # img = cv2.imdecode(np_data, cv2.IMREAD_ANYCOLOR)
+            img = base64ToOpenCV(images[i])
 
             # endregion
-            print(img_path)
             result = cv2.imwrite(img_path, img)
             flag.append(result)
         print(flag)
@@ -145,15 +164,6 @@ def get_id_from_img(image):
                 return None
     except Exception as ex:
         raise Exception(f"train_model faild. [exception{ex}]")
-
-def openCV2base64(Id):
-    try:
-        img_path = os.path.join(Config.RAW_PATH, Id, "0.png")
-        img = cv2.imread(img_path)
-        string = base64.b64encode(cv2.imencode('.png', img)[1]).decode()
-        return string
-    except Exception as ex:
-        raise Exception(f"openCV2base64 faild. [exception{ex}]")
 
 def take_image(path="./public/datasets/raw"):
     try:
