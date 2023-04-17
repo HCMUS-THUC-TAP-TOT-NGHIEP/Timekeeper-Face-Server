@@ -99,9 +99,10 @@ def recognition():
         Picture = (
             jsonRequestData["Picture"] if "Picture" in jsonRequestData else None
         )
+        img = base64ToOpenCV(Picture)
+        Id = get_id_from_img(img)
 
-        Id = get_id_from_img(Picture)
-        if id == None:
+        if Id == None:
             raise ProjectException(
                 "Khuôn mặt hiện tại chưa đăng ký hoặc nhận diện sai."
             )
@@ -109,11 +110,14 @@ def recognition():
         employee = EmployeeModel.query.filter(EmployeeModel.Id == Id).first()
         name = f"{employee.FirstName}_{employee.LastName}"
 
-        list_img = os.listdir(Config.RAW_PATH)
-        img_path = os.path.join(Config.RAW_PATH, Id, list_img[0])
+        app.logger.info("EmployeeID:" + str(Id))
+
+        list_img = os.listdir(os.path.join(Config.RAW_PATH, str(Id)))
+        img_path = os.path.join(Config.RAW_PATH, str(Id), list_img[0])
+
         img = cv2.imread(img_path)
         str_img = openCVToBase64(img)
-
+        app.logger.info(f"Recognition thành công nhân viên Id[{Id}]")
         return {
             "Status": 1,
             "Description": "Nhận diện thành công.",

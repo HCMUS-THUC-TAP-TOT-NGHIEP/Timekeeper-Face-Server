@@ -16,7 +16,7 @@ def openCVToBase64(img):
         string = base64.b64encode(cv2.imencode('.png', img)[1]).decode()
         return string
     except Exception as ex:
-        raise Exception(f"openCV2base64 faild. [exception{ex}]")
+        raise Exception(f"openCV2base64 failed. [exception{ex}]")
     
 def base64ToOpenCV(str_img):
     try:
@@ -25,7 +25,7 @@ def base64ToOpenCV(str_img):
         img = cv2.imdecode(np_data, cv2.IMREAD_ANYCOLOR)
         return img
     except Exception as ex:
-        raise Exception(f"base64ToOpenCV faild. [exception{ex}]")
+        raise Exception(f"base64ToOpenCV failed. [exception{ex}]")
 
 # lưu ảnh dạng png với đầu vào là mảng ảnh, id và tên vào datasets/raw/...
 def save_images(images, id, name):
@@ -95,7 +95,7 @@ def processed_faces(path_raw):
                     if not os.path.isdir(path_processed):
                         cv2.imwrite(path_processed, gray_img[y : y + h, x : x + w])
     except Exception as ex:
-        raise Exception(f"processed_faces faild. [exception{ex}]")
+        raise Exception(f"processed_faces failed. [exception{ex}]")
 
 
 # láy ảnh và nhãn từ mục ảnh processed
@@ -125,7 +125,7 @@ def getImagesAndLabels(path):
 
         return faces, Ids
     except Exception as ex:
-        raise Exception(f"getImagesAndLabels faild. [exception{ex}]")
+        raise Exception(f"getImagesAndLabels failed. [exception{ex}]")
 
 
 # train ảnh khuôn mặt
@@ -141,14 +141,14 @@ def train_model(path_train):
         recognizer.save(Config.PATH_MODEL_TRAIN)
         # print("All Images")
     except Exception as ex:
-        raise Exception(f"train_model faild. [exception{ex}]")
+        raise Exception(f"train_model failed. [exception{ex}]")
 
 
 # nhận dạng khuôn mặt từ 1 ảnh
-def get_id_from_img(image):
+def get_id_from_img(img):
     try:
         detector = cv2.CascadeClassifier(Config.HAARCASCADEPATH)
-        img = cv2.imread(image)
+        # img = cv2.imread(image)
         clf = cv2.face.LBPHFaceRecognizer_create()
         clf.read(Config.PATH_MODEL_TRAIN)
 
@@ -163,7 +163,7 @@ def get_id_from_img(image):
             else:
                 return None
     except Exception as ex:
-        raise Exception(f"train_model faild. [exception{ex}]")
+        raise Exception(f"get_id_from_img failed. [exception{ex}]")
 
 def take_image(path="./public/datasets/raw"):
     try:
@@ -203,7 +203,7 @@ def take_image(path="./public/datasets/raw"):
         cap.release()
         cv2.destroyAllWindows()
     except Exception as ex:
-        raise Exception(f"take_image faild. [exception{ex}]")
+        raise Exception(f"take_image failed. [exception{ex}]")
 
 
 # def main():
