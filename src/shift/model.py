@@ -11,11 +11,6 @@ class ShiftModel(db.Model):
 
     Id = Column(Integer(), primary_key=True)
     Description = Column(String(), nullable=False)
-    # StartTime = Column(Time(), nullable=False)
-    # FinishTime = Column(Time(), nullable=False)
-    # BreakAt = Column(Time(), nullable=False)
-    # BreakMinutes = Column(Integer(), nullable=False)
-    # BreakEnd = Column(Time(), nullable=False)
     ShiftType = Column(Integer(), nullable=False)
     Status = Column(Integer())
     CreatedBy = Column(Integer())
