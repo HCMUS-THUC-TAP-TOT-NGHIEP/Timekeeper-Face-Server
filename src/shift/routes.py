@@ -13,7 +13,7 @@ from src.department.model import DepartmentModel
 from src.designation.model import Designation
 from src.employee.model import EmployeeModel
 from src.extension import ProjectException, object_as_dict
-from src.jwt import get_jwt_identity, jwt_required
+from src.jwt import get_jwt_identity, jwt_required, get_jwt
 from src.middlewares.token_required import admin_required
 from src.shift.model import (
     ShiftAssignment,
@@ -26,11 +26,14 @@ from src.shift.model import (
     TargetType,
     shiftListResponseSchema,
     shiftListSchema,
+    ShiftTypeModel,
+    ShiftDetailModel,
 )
 
 Shift = Blueprint("shift", __name__)
 
 
+# GET api/shift/list
 @Shift.route("/list", methods=["GET"])
 @admin_required()
 def GetShiftList():
@@ -43,20 +46,36 @@ def GetShiftList():
         if "PerPage" in args:
             perPage = int(args["PerPage"])
 
+        # shiftList = db.session.execute(
+        #     select(
+        #         ShiftModel.Id,
+        #         ShiftModel.Description,
+        #         ShiftModel.StartTime,
+        #         ShiftModel.FinishTime,
+        #         ShiftModel.BreakAt,
+        #         ShiftModel.BreakEnd,
+        #         ShiftModel.Status,
+        #     )
+        #     .select_from(ShiftModel)
+        #     .order_by(ShiftModel.Id)
+        # ).all()
+
         shiftList = db.session.execute(
             select(
                 ShiftModel.Id,
                 ShiftModel.Description,
-                ShiftModel.StartTime,
-                ShiftModel.FinishTime,
-                ShiftModel.BreakAt,
-                ShiftModel.BreakEnd,
-                ShiftModel.Status,
+                ShiftDetailModel.StartTime,
+                ShiftDetailModel.FinishTime,
+                ShiftDetailModel.StartDate,
+                ShiftDetailModel.EndDate,
+                ShiftDetailModel.BreakAt,
+                ShiftDetailModel.BreakEnd,
             )
             .select_from(ShiftModel)
+            .join(ShiftDetailModel, ShiftDetailModel.ShiftId == ShiftModel.Id)
             .order_by(ShiftModel.Id)
         ).all()
-
+        # print(shiftList)
         app.logger.info(f"GetShiftList thành công.")
         return {
             "Status": 1,
@@ -79,63 +98,106 @@ def GetShiftList():
         }, 200
 
 
-# @Shift.route("/type/list", methods=["GET"])
-# def GetShiftTypeList():
-#     try:
-#         shiftTypeList = ShiftTypeModel.query.all()
-#         app.logger.info(f"GetShiftList thành công.")
-#         return {
-#             "Status": 1,
-#             "Description": None,
-#             "ResponseData": ShiftTypeModelSchema(many=True).dump(shiftTypeList),
-#         }, 200
+@Shift.route("/type/list", methods=["GET"])
+def GetShiftTypeList():
+    try:
+        app.logger.info("GetShiftTypeList bắt đầu")
+        shiftTypeList = ShiftTypeModel.query.all()
+        app.logger.info(f"GetShiftList thành công.")
+        return {
+            "Status": 1,
+            "Description": None,
+            "ResponseData": ShiftTypeModelSchema(many=True).dump(shiftTypeList),
+        }, 200
 
-# except Exception as ex:
-#     app.logger.error(f"GetShiftTypeList thất bại. {ex}")
-#     return {
-#         "Status": 0,
-#         "Description": f"Có lỗi ở server.",
-#         "ResponseData": None,
-#     }, 400
+    except Exception as ex:
+        app.logger.error(f"GetShiftTypeList thất bại. {ex}")
+        return {
+            "Status": 0,
+            "Description": f"Có lỗi ở server.",
+            "ResponseData": None,
+        }, 400
+    finally:
+        app.logger.info("GetShiftTypeList kết thúc.")
 
 
 @Shift.route("/create", methods=["POST"])
 @admin_required()
 def createNewShift():
     try:
+        app.logger.info("createNewShift starts. Bắt đầu tạo ca làm việc")
         jsonRequestData = request.get_json()
-        identity= get_jwt_identity()
-        email = identity["email"]
-        username = identity["username"]
+        claims = get_jwt()
+        id = claims["id"]
 
-        # region validate
-        if "Description" not in jsonRequestData:
-            raise ProjectException("Không tìm thấy tên ca làm việc")
-        if "StartTime" not in jsonRequestData:
-            raise ProjectException("Không tìm thấy giờ checkin")
-        if "FinishTime" not in jsonRequestData:
-            raise ProjectException("Không tìm thấy giờ checkout")
+        # region Khai báo
+
+        Description = (
+            jsonRequestData["Description"] if "Description" in jsonRequestData else None
+        )
+        ShiftType = (
+            jsonRequestData["ShiftType"] if "ShiftType" in jsonRequestData else None
+        )
+        StartDate = (
+            jsonRequestData["StartDate"] if "StartDate" in jsonRequestData else None
+        )
+        EndDate = jsonRequestData["EndDate"] if "EndDate" in jsonRequestData else None
+        StartTime = (
+            jsonRequestData["StartTime"] if "StartTime" in jsonRequestData else None
+        )
+        FinishTime = (
+            jsonRequestData["FinishTime"] if "FinishTime" in jsonRequestData else None
+        )
+        BreakAt = jsonRequestData["BreakAt"] if "BreakAt" in jsonRequestData else None
+        BreakEnd = (
+            jsonRequestData["BreakEnd"] if "BreakEnd" in jsonRequestData else None
+        )
 
         # endregion
 
-        Description = jsonRequestData["Description"]
-        StartTime = jsonRequestData["StartTime"]
-        FinishTime = jsonRequestData["FinishTime"]
-        BreakAt = jsonRequestData["BreakAt"]
-        BreakEnd = jsonRequestData["BreakEnd"]
+        # region validation
+
+        if not Description or not Description.strip():
+            raise ProjectException("Chưa cung cấp tên ca làm việc")
+        if not ShiftType:
+            raise ProjectException("Chưa cung cấp loại ca làm việc")
+        if not StartDate:
+            raise ProjectException("Chưa cung cấp ngày bắt đầu")
+        if not StartTime:
+            raise ProjectException("Chưa cung cấp tên giờ checkin")
+        if not FinishTime:
+            raise ProjectException("Chưa cung cấp tên giờ checkout")
+        if (BreakAt and not BreakEnd) or (not BreakAt and BreakEnd):
+            raise ProjectException(
+                f"Chưa cung cấp đủ thông tin giờ nghỉ. Bắt đầu {BreakAt}, kết thúc {BreakEnd}."
+            )
+
+        # endregion
 
         newShift = ShiftModel()
         newShift.Description = Description
-        newShift.StartTime = StartTime
-        newShift.FinishTime = FinishTime
-        newShift.BreakAt = BreakAt
-        newShift.BreakEnd = BreakEnd
-        newShift.Status = 1
+        newShift.ShiftType = ShiftType
         newShift.CreatedAt = datetime.now()
         newShift.ModifiedAt = datetime.now()
-        newShift.CreatedBy = 0
-        newShift.ModifiedBy = 0
+        newShift.CreatedBy = id
+        newShift.ModifiedBy = id
         db.session.add(newShift)
+        db.session.flush()
+        db.session.refresh(newShift)
+
+        shiftDetail = ShiftDetailModel()
+        shiftDetail.ShiftId = newShift.Id
+        shiftDetail.StartDate = StartDate
+        shiftDetail.EndDate = EndDate
+        shiftDetail.StartTime = StartTime
+        shiftDetail.FinishTime = FinishTime
+        shiftDetail.BreakAt = BreakAt
+        shiftDetail.BreakEnd = BreakEnd
+        shiftDetail.CreatedAt = datetime.now()
+        shiftDetail.ModifiedAt = datetime.now()
+        shiftDetail.CreatedBy = id
+        shiftDetail.ModifiedBy = id
+        db.session.add(shiftDetail)
         db.session.commit()
         app.logger.info("createNewShift thành công")
         return {
@@ -159,6 +221,8 @@ def createNewShift():
             "Description": f"Có lỗi ở máy chủ. Không thể thêm ca làm việc mới",
             "ResponseData": None,
         }, 200
+    finally:
+        app.logger.info("createNewShift finishes. Kết thúc tạo ca làm việc")
 
 
 @Shift.route("/", methods=["DELETE"])
@@ -166,7 +230,7 @@ def createNewShift():
 def deleteShift():
     try:
         jsonRequestData = request.get_json()
-        identity= get_jwt_identity()
+        identity = get_jwt_identity()
         email = identity["email"]
         username = identity["username"]
 
@@ -213,7 +277,7 @@ def deleteShift():
 def updateShift():
     try:
         jsonRequestData = request.get_json()
-        identity= get_jwt_identity()
+        identity = get_jwt_identity()
         email = identity["email"]
         username = identity["username"]
 
@@ -273,7 +337,7 @@ def updateShift():
 def AssignShift():
     try:
         jsonRequestData = request.get_json()
-        identity= get_jwt_identity()
+        identity = get_jwt_identity()
         email = identity["email"]
         username = identity["username"]
         # region validate
@@ -570,7 +634,7 @@ def GetAssignmentTypes():
 @admin_required()
 def UpdateAssignment():
     try:
-        identity= get_jwt_identity()
+        identity = get_jwt_identity()
         email = identity["email"]
         username = identity["username"]
         jsonRequestData = request.get_json()
@@ -623,11 +687,9 @@ def UpdateAssignment():
             shiftAssignment.EndDate = endDate
         deleteArray = []
         insertArray = []
-        if assigntype == 1: # Phân ca theo phòng ban vị trí
+        if assigntype == 1:  # Phân ca theo phòng ban vị trí
             temp = list(
-                filter(
-                    lambda x: (x.Target not in departmentId), shiftAssignmentDetail
-                )
+                filter(lambda x: (x.Target not in departmentId), shiftAssignmentDetail)
             )
             deleteArray = list(map(lambda x: x.Target, temp))
             temp = list(map(lambda x: x.Target, shiftAssignmentDetail))
@@ -644,12 +706,10 @@ def UpdateAssignment():
                     temp2,
                 )
             )
-        elif assigntype == 2: # Phân ca theo nhân viên
+        elif assigntype == 2:  # Phân ca theo nhân viên
             temp = list(
-                    filter(
-                        lambda x: (x.Target not in employeeId), shiftAssignmentDetail
-                    )
-                )
+                filter(lambda x: (x.Target not in employeeId), shiftAssignmentDetail)
+            )
             deleteArray = list(map(lambda x: x.Target, temp))
             temp = list(map(lambda x: x.Target, shiftAssignmentDetail))
             temp2 = list(filter(lambda x: x not in temp, employeeId))

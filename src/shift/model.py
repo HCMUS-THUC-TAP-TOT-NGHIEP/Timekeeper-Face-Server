@@ -11,11 +11,12 @@ class ShiftModel(db.Model):
 
     Id = Column(Integer(), primary_key=True)
     Description = Column(String(), nullable=False)
-    StartTime = Column(Time(), nullable=False)
-    FinishTime = Column(Time(), nullable=False)
-    BreakAt = Column(Time(), nullable=False)
-    BreakMinutes = Column(Integer(), nullable=False)
-    BreakEnd = Column(Time(), nullable=False)
+    # StartTime = Column(Time(), nullable=False)
+    # FinishTime = Column(Time(), nullable=False)
+    # BreakAt = Column(Time(), nullable=False)
+    # BreakMinutes = Column(Integer(), nullable=False)
+    # BreakEnd = Column(Time(), nullable=False)
+    ShiftType = Column(Integer(), nullable=False)
     Status = Column(Integer())
     CreatedBy = Column(Integer())
     CreatedAt = Column(DateTime(), nullable=False)
@@ -26,20 +27,36 @@ class ShiftModel(db.Model):
         super().__init__()
 
 
-# class ShiftTypeModel(db.Model):
-#     __tablename__ = "ShiftType"
+class ShiftDetailModel(db.Model):
+    __tablename__ = "ShiftDetail"
+    Id = Column(Integer(), primary_key=True)
+    ShiftId = Column(Integer(), nullable=False)
+    StartDate = Column(Time(), nullable=False)
+    EndDate = Column(Time(), nullable=False)
+    StartTime = Column(Time(), nullable=False)
+    FinishTime = Column(Time(), nullable=False)
+    BreakAt = Column(Time())
+    BreakEnd = Column(Time())
+    Status = Column(Integer())
+    CreatedBy = Column(Integer())
+    CreatedAt = Column(DateTime())
+    ModifiedBy = Column(Integer())
+    ModifiedAt = Column(DateTime())
 
-#     Id = Column(Integer(), primary_key=True)
-#     Description = Column(String())
-#     CreatedBy = Column(
-#         Integer(),
-#     )
-#     CreatedAt = Column(DateTime(), nullable=False)
-#     ModifiedBy = Column(Integer())
-#     ModifiedAt = Column(DateTime(), nullable=False)
 
-#     def __init__(self) -> None:
-#         super().__init__()
+class ShiftTypeModel(db.Model):
+    __tablename__ = "ShiftType"
+
+    Id = Column(Integer(), primary_key=True)
+    Description = Column(String())
+    Status = Column(Integer())
+    CreatedBy = Column(Integer())
+    CreatedAt = Column(DateTime(), nullable=False)
+    ModifiedBy = Column(Integer())
+    ModifiedAt = Column(DateTime(), nullable=False)
+
+    def __init__(self) -> None:
+        super().__init__()
 
 
 class ShiftSchema(marshmallow.Schema):
@@ -47,6 +64,8 @@ class ShiftSchema(marshmallow.Schema):
         fields = (
             "Id",
             "Description",
+            "StartDate",
+            "EndDate",
             "StartTime",
             "FinishTime",
             "BreakAt",
@@ -65,6 +84,8 @@ class ShiftListResponseSchema(marshmallow.Schema):
             "BreakEnd",
             "Status",
             "StatusText",
+            "StartDate",
+            "EndDate",
         )
 
 
@@ -104,8 +125,9 @@ class ShiftAssignmentSchema(marshmallow.Schema):
             "Status",
             "CreatedBy",
             "CreatedAt",
-            "AssignmentTypeName"
+            "AssignmentTypeName",
         )
+
 
 class ShiftAssignmentDetail(db.Model):
     __tablename__ = "ShiftAssignmentDetail"
@@ -119,6 +141,7 @@ class ShiftAssignmentDetail(db.Model):
     CreatedAt = Column(DateTime())
     ModifiedAt = Column(DateTime())
 
+
 class ShiftAssignmentType(db.Model):
     __tablename__ = "ShiftAssignmentType"
     Id = Column(Integer(), primary_key=True)
@@ -130,16 +153,19 @@ class ShiftAssignmentType(db.Model):
     CreatedAt = Column(DateTime())
     ModifiedAt = Column(DateTime())
 
+
 shiftSchema = ShiftSchema()
 shiftListSchema = ShiftSchema(many=True)
 shiftListResponseSchema = ShiftListResponseSchema(many=True)
 
 Status = Enum("Status", ["Active", "Inactive"])
-TargetType = Enum("TargetType", ["Department","Designation", "Employee"])
+TargetType = Enum("TargetType", ["Department", "Designation", "Employee"])
+
 
 class Status:
     Active = "1"
     Inactive = "2"
+
 
 class TargetType(Enum):
     Department = 1
