@@ -69,6 +69,7 @@ class ShiftSchema(marshmallow.Schema):
             "EndDate",
             "CreatedAt",
             "CreatedBy",
+            "ShiftType"
         )
 
 

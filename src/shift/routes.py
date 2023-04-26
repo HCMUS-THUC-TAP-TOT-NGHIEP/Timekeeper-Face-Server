@@ -71,6 +71,7 @@ def GetShiftList():
                 ShiftDetailModel.BreakAt,
                 ShiftDetailModel.BreakEnd,
                 ShiftModel.CreatedAt,
+                ShiftModel.ShiftType
             )
             .select_from(ShiftModel)
             .join(ShiftDetailModel, ShiftDetailModel.ShiftId == ShiftModel.Id)
