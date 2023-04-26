@@ -59,12 +59,16 @@ class ShiftSchema(marshmallow.Schema):
         fields = (
             "Id",
             "Description",
-            "StartDate",
-            "EndDate",
             "StartTime",
             "FinishTime",
             "BreakAt",
             "BreakEnd",
+            "Status",
+            "StatusText",
+            "StartDate",
+            "EndDate",
+            "CreatedAt",
+            "CreatedBy",
         )
 
 

@@ -70,6 +70,7 @@ def GetShiftList():
                 ShiftDetailModel.EndDate,
                 ShiftDetailModel.BreakAt,
                 ShiftDetailModel.BreakEnd,
+                ShiftModel.CreatedAt,
             )
             .select_from(ShiftModel)
             .join(ShiftDetailModel, ShiftDetailModel.ShiftId == ShiftModel.Id)
@@ -80,7 +81,7 @@ def GetShiftList():
         return {
             "Status": 1,
             "Description": None,
-            "ResponseData": shiftListResponseSchema.dump(shiftList),
+            "ResponseData": shiftListSchema.dump(shiftList),
         }, 200
     except ProjectException as pEx:
         app.logger.exception(f"GetShiftList thất bại. Có exception[{str(pEx)}]")
