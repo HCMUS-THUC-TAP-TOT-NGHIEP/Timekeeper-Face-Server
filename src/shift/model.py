@@ -32,11 +32,32 @@ class ShiftDetailModel(db.Model):
     FinishTime = Column(Time(), nullable=False)
     BreakAt = Column(Time())
     BreakEnd = Column(Time())
+    DayIndexList = Column(ARRAY(Integer))
+    Note = Column(String())
+    BreakMinutes = Column(Integer())
     Status = Column(Integer())
     CreatedBy = Column(Integer())
     CreatedAt = Column(DateTime())
     ModifiedBy = Column(Integer())
     ModifiedAt = Column(DateTime())
+
+
+class ShiftDetailSchema(marshmallow.Schema):
+    class Meta:
+        fields = (
+            "Id",
+            "ShiftId",
+            "StartDate",
+            "EndDate",
+            "StartTime",
+            "FinishTime",
+            "BreakAt",
+            "BreakEnd",
+            "DayIndexList",
+            "BreakMinutes",
+            "Status",
+            "Note",
+        )
 
 
 class ShiftTypeModel(db.Model):
@@ -69,7 +90,11 @@ class ShiftSchema(marshmallow.Schema):
             "EndDate",
             "CreatedAt",
             "CreatedBy",
-            "ShiftType"
+            "ShiftType",
+            "ShiftTypeText",
+            "DayIndexList",
+            "Note",
+            "BreakMinutes"
         )
 
 
@@ -86,6 +111,8 @@ class ShiftListResponseSchema(marshmallow.Schema):
             "StatusText",
             "StartDate",
             "EndDate",
+            "DayIndexList",
+            "Note",
         )
 
 
@@ -99,6 +126,7 @@ class ShiftAssignment(db.Model):
 
     Id = Column(Integer(), primary_key=True)
     ShiftId = Column(Integer(), nullable=False)
+    ShiftDetailId = Column(Integer(), nullable=False)
     StartDate = Column(DateTime(), nullable=False)
     EndDate = Column(DateTime(), nullable=True)
     AssignType = Column(Integer(), nullable=True)
@@ -133,8 +161,10 @@ class ShiftAssignmentDetail(db.Model):
     __tablename__ = "ShiftAssignmentDetail"
 
     Id = Column(Integer(), primary_key=True)
-    Target = Column(Integer(), primary_key=True)
-    TargetType = Column(Integer(), primary_key=True)
+    ShiftAssignmentId = Column(Integer(), nullable=False)
+    Target = Column(Integer(), nullable=False)
+    TargetType = Column(Integer(), nullable=False)
+    FinishAssignmentTime = Column(Time())
     Status = Column(String())
     CreatedBy = Column(Integer())
     ModifiedBy = Column(Integer())
