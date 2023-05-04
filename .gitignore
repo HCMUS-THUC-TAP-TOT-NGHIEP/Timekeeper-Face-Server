@@ -132,3 +132,4 @@ dmypy.json
 /*.log*
 /*.env*
 public/datasets/processed/*
+public/datasets/raw/*
