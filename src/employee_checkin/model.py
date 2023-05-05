@@ -6,44 +6,26 @@ from datetime import datetime
 # MODELS
 
 
-class EmployeeModel(db.Model):
-    __tablename__ = "EmployeeInfo"
-
+class EmployeeCheckin(db.Model):
+    __tablename__ = "EmployeeCheckin"
     Id = Column(Integer(), primary_key=True)
-    FirstName = Column(String(), nullable=False)
-    LastName = Column(String(), nullable=False)
-    DateOfBirth = Column(DateTime(), nullable=False)
-    Gender = Column(Boolean(), nullable=False)
-    Address = Column(String(), nullable=False)
-    JoinDate = Column(DateTime(), nullable=False)
-    LeaveDate = Column(DateTime())
-    DepartmentId = Column(Integer())
-    Position = Column(String())
-    Email = Column(String())
-    MobilePhone = Column(String())
-    CreatedBy = Column(Integer(), nullable=False)
-    CreatedAt = Column(DateTime(), nullable=False)
-    ModifiedBy = Column(Integer(), nullable=False)
-    ModifiedAt = Column(DateTime(), nullable=False)
+    EmployeeId = Column(Integer(), nullable=False)
+    Method = Column(Integer())
+    MethodText = Column(String())
+    Time = Column(Integer())
+    EvidenceId = Column(Integer())
+    LogType = Column(Integer())
+    CreatedBy = Column(Integer())
+    CreatedAt = Column(DateTime())
+    ModifiedBy = Column(Integer())
+    ModifiedAt = Column(DateTime())
 
 
-class EmployeeInfoSchema(marshmallow.Schema):
+class EmployeeCheckinSchema(marshmallow.Schema):
     class Meta:
-        fields = (
-            "Id",
-            "FirstName",
-            "LastName",
-            "DateOfBirth",
-            "Gender",
-            "Address",
-            "JoinDate",
-            "LeaveDate",
-            "DepartmentId",
-            "Position",
-            "Email",
-            "MobilePhone",
-        )
+        fields = ("Id", "EmployeeId" ,"Method", "MethodText", "Time", "EvidenceId", "LogType",
+                  "CreatedBy", "CreatedAt", "ModifiedBy", "ModifiedAt")
 
 
-employeeInfoSchema = EmployeeInfoSchema()
-employeeInfoListSchema = EmployeeInfoSchema(many=True)
+employeeCheckinSchema = EmployeeCheckinSchema()
+employeeCheckinListSchema = EmployeeCheckinSchema(many=True)

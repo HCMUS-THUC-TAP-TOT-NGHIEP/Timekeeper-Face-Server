@@ -10,6 +10,7 @@ from src.middlewares.token_required import admin_required
 from src.extension import ProjectException
 from src.face_api.actions import *
 from src.employee.model import EmployeeModel, employeeInfoSchema
+from src.employee_checkin.model import EmployeeCheckin, employeeCheckinSchema, employeeCheckinListSchema
 from sqlalchemy import func, select
 
 RAW_PATH = "./public/datasets/raw"
@@ -95,9 +96,27 @@ def recognition():
     try:
         app.logger.info("recognition bắt đầu.")
         jsonRequestData = request.get_json()
+        # region: Khai báo
+
         Picture = (
             jsonRequestData["Picture"] if "Picture" in jsonRequestData else None
         )
+        AttendanceTime = (
+            jsonRequestData["AttendanceTime"] if "AttendanceTime" in jsonRequestData else None
+        )
+
+        #endregion
+        
+        #region validation
+
+        if not Picture or len(Picture) == 0:
+            raise ProjectException("Yêu cầu không hợp lệ do không cung cấp hình ảnh.")        
+        if not AttendanceTime :
+            raise ProjectException("Yêu cầu không hợp lệ do thời gian nhận diện không có hoặc không hợp lệ.")
+        
+        #endregion
+
+        RecognitionMethod = 1
         img = base64ToOpenCV(Picture)
         Id = get_id_from_img(img)
 
@@ -107,7 +126,22 @@ def recognition():
             )
         
         employee = EmployeeModel.query.filter(EmployeeModel.Id == Id).first()
-        name = f"{employee.FirstName}_{employee.LastName}"
+        if not employee:
+            raise ValueError(f"Không tìm thấy nhân viên mã {Id}")
+        name = f"{employee.LastName} {employee.LastName}"
+
+        employeeCheckin = EmployeeCheckin()
+        employeeCheckin.Method = RecognitionMethod
+        employeeCheckin.MethodText = "Khuôn mặt"
+        employeeCheckin.EmployeeId = employee.Id
+        employeeCheckin.Time = AttendanceTime
+        employeeCheckin.EvidenceId = None
+        employeeCheckin.LogType = 0
+        employeeCheckin.CreatedAt = datetime.now()
+        employeeCheckin.CreatedBy = 0
+        employeeCheckin.ModifiedAt = datetime.now()
+        employeeCheckin.ModifiedBy = 0
+        db.session.add(employeeCheckin)
 
         app.logger.info("EmployeeID:" + str(Id))
 
@@ -116,8 +150,8 @@ def recognition():
 
         img = cv2.imread(img_path)
         str_img = openCVToBase64(img)
+        db.session.commit()
         app.logger.info(f"Recognition thành công nhân viên Id[{Id}]")
-
         return {
             "Status": 1,
             "Description": "Nhận diện thành công.",
