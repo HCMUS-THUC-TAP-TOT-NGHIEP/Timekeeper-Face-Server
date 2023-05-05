@@ -8,9 +8,7 @@ from src.db import db
 from src.jwt import get_jwt_identity, jwt_required
 from src.middlewares.token_required import admin_required
 from src.extension import ProjectException
-from src.face_api.model import *
-
-# from config import Config
+from src.face_api.actions import *
 from src.employee.model import EmployeeModel, employeeInfoSchema
 from sqlalchemy import func, select
 
@@ -29,6 +27,7 @@ FaceApi = Blueprint("face", __name__)
 
 # POST api/face/register
 @FaceApi.route("/register", methods=["POST"])
+@admin_required()
 def register():
     try:
         app.logger.info("register bắt đầu.")

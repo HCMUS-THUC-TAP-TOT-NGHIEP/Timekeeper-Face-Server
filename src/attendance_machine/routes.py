@@ -7,7 +7,8 @@ from flask import request
 from src.config import Config
 from src.db import db
 from src.extension import ProjectException
-from src.jwt import get_jwt_identity, jwt_required
+from src.jwt import get_jwt_identity, jwt_required 
+from src.middlewares.token_required import admin_required
 from src.employee.model import EmployeeModel, EmployeeInfoSchema, employeeInfoListSchema
 from src.department.model import DepartmentModel, departmentListSchema
 
@@ -16,6 +17,7 @@ AttendanceMachineApi = Blueprint("attendance_machine", __name__)
 
 # "GET", "POST" api/attendance_machine/department/load
 @AttendanceMachineApi.route("/department/load", methods=["GET"])
+@admin_required()
 def LoadDepartment():
     try:
         departmentList = DepartmentModel.query.all()
@@ -42,6 +44,7 @@ def LoadDepartment():
 
 # "POST" api/attendance_machine/employee/load
 @AttendanceMachineApi.route("/employee/load", methods=["POST"])
+@admin_required()
 def LoadEmployeeList():
     try:
         # region Khai bao
