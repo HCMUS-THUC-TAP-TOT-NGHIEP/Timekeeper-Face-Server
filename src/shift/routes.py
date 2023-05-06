@@ -519,43 +519,7 @@ def AssignShift():
         CheckIfExist(
             assignType=assignType, shiftDetail=shiftDetail, targetList=targetArray
         )
-        # for target in targetArray:
-        #     existAssignmentList = db.session.execute(
-        #         select(
-        #             ShiftAssignmentDetail.Target,
-        #             ShiftDetailModel.StartDate,
-        #             ShiftDetailModel.EndDate,
-        #         )
-        #         .select_from(ShiftAssignmentDetail)
-        #         .join(
-        #             ShiftAssignment,
-        #             and_(
-        #                 ShiftAssignment.AssignType == assignType,
-        #                 ShiftAssignmentDetail.ShiftAssignmentId == ShiftAssignment.Id,
-        #             ),
-        #         )
-        #         .join(
-        #             ShiftDetailModel,
-        #             and_(ShiftAssignment.ShiftDetailId == ShiftDetailModel.Id),
-        #         )
-        #         .where(
-        #             and_(
-        #                 ShiftAssignment.AssignType == assignType,
-        #                 ShiftAssignmentDetail.Status == "1",
-        #                 ShiftAssignmentDetail.Target == target,
-        #             )
-        #         )
-        #     ).all()
-        #     for existAssignment in existAssignmentList:
-        #         if not (existAssignment.StartDate > shiftDetail.EndDate or shiftDetail.StartDate > existAssignment.EndDate):
-        #             content = ""
-        #             if assignType == 1:
-        #                 department = DepartmentModel.query.filter_by(Id = target).first()
-        #                 content = f"phòng ban {department.Name} ({target})"
-        #             elif assignType == 2:
-        #                 employee = EmployeeModel.query.filter_by(Id=target).first()
-        #                 content= f"nhân viên {employee.LastName} {employee.FirstName} ({target})"
-        #             raise ProjectException(f"Phân ca {content} bị lồng.")
+
         # endregion
 
         # region Thêm phân ca mới

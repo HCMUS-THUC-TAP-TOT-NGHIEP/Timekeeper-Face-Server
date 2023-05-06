@@ -106,7 +106,7 @@ def create_app(config_class=Config):
     from src.designation.routes import Designation as designation_bp
 
     app.register_blueprint(designation_bp, url_prefix="/api/designation")
-    from src.employee_checkin.routes import EmployeeCheckin as employee_checkin_bp
+    from src.employee_checkin.routes import EmployeeCheckinRoute as employee_checkin_bp
 
     app.register_blueprint(employee_checkin_bp, url_prefix="/api/checkin")
     from src.face_api.routes import FaceApi as face_api_bp

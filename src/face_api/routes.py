@@ -128,7 +128,7 @@ def recognition():
         employee = EmployeeModel.query.filter(EmployeeModel.Id == Id).first()
         if not employee:
             raise ValueError(f"Không tìm thấy nhân viên mã {Id}")
-        name = f"{employee.LastName} {employee.LastName}"
+        name = f"{employee.LastName} {employee.First}"
 
         employeeCheckin = EmployeeCheckin()
         employeeCheckin.Method = RecognitionMethod
@@ -161,8 +161,6 @@ def recognition():
                 "Img": str_img
             },
         }
-            
-
     except ProjectException as pEx:
         app.logger.error(f"Nhận diện khuôn mặt thất bại. Có exception[{str(pEx)}]")
         return {
