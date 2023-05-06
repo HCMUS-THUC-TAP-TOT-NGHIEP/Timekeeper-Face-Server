@@ -59,7 +59,8 @@ def register():
         #endregion
 
         # region quá trình trích xuất khuôn mặt và train ảnh
-        train_model(Config.LOCAL_STORAGE)
+        # processed_faces(RAW_PATH)
+        train_model_face(RAW_PATH)
 
         #endregion
 
@@ -115,8 +116,8 @@ def recognition():
 
         RecognitionMethod = 1
         img = base64ToOpenCV(Picture)
-        Id = get_id_from_img(img)
-        # Id = 3
+        Id = get_id_from_img_face(img)
+
         if Id == None:
             raise ProjectException(
                 "Khuôn mặt hiện tại chưa đăng ký hoặc nhận diện sai."
