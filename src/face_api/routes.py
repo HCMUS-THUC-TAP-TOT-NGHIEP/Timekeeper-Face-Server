@@ -61,8 +61,8 @@ def register():
         #endregion
 
         # region quá trình trích xuất khuôn mặt và train ảnh
-        processed_faces(RAW_PATH)
-        train_model(TRAIN_PATH)
+        # processed_faces(RAW_PATH)
+        train_model_face(RAW_PATH)
 
         #endregion
 
@@ -100,7 +100,7 @@ def recognition():
             jsonRequestData["Picture"] if "Picture" in jsonRequestData else None
         )
         img = base64ToOpenCV(Picture)
-        Id = get_id_from_img(img)
+        Id = get_id_from_img_face(img)
 
         if Id == None:
             raise ProjectException(
