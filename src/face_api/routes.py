@@ -10,7 +10,7 @@ from src.middlewares.token_required import admin_required
 from src.extension import ProjectException
 from src.face_api.actions import *
 from src.employee.model import EmployeeModel, employeeInfoSchema
-from src.employee_checkin.model import EmployeeCheckin, employeeCheckinSchema, employeeCheckinListSchema
+from src.employee_checkin.EmployeeCheckin import EmployeeCheckin, employeeCheckinSchema, employeeCheckinListSchema
 from sqlalchemy import func, select
 
 RAW_PATH = "./public/datasets/raw"
@@ -128,7 +128,7 @@ def recognition():
         employee = EmployeeModel.query.filter(EmployeeModel.Id == Id).first()
         if not employee:
             raise ValueError(f"Không tìm thấy nhân viên mã {Id}")
-        name = f"{employee.LastName} {employee.First}"
+        name = f"{employee.LastName} {employee.FirstName}"
 
         employeeCheckin = EmployeeCheckin()
         employeeCheckin.Method = RecognitionMethod

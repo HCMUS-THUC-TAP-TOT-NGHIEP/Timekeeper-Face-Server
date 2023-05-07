@@ -8,7 +8,8 @@ from src.authentication.model import UserModel
 from src.db import db
 from src.employee.model import (EmployeeModel, employeeInfoListSchema,
                                 employeeInfoSchema)
-from src.employee_checkin.model import EmployeeCheckin, employeeCheckinListSchema
+from src.employee_checkin.EmployeeCheckin import EmployeeCheckin, employeeCheckinListSchema
+from src.employee_checkin.AttendanceStatistic import AttendanceStatistic, AttendanceStatisticSchema
 from src.extension import ProjectException
 from src.jwt import get_jwt_identity, jwt_required, get_jwt
 from src.middlewares.token_required import admin_required
@@ -40,46 +41,25 @@ def getCheckinRecord():
         claims = get_jwt()
         id = claims["id"]
         jsonRequestData = request.get_json()
-        EmployeeName = (
-            jsonRequestData["EmployeeName"] if "EmployeeName" in jsonRequestData else None)
+        Keyword = (
+            jsonRequestData["Keyword"] if "Keyword" in jsonRequestData else None)
         DateFrom = (jsonRequestData["DateFrom"]
                     if "DateFrom" in jsonRequestData else None)
         DateTo = (jsonRequestData["DateTo"]
                   if "DateTo" in jsonRequestData else None)
 
-        print(DateFrom, DateTo, EmployeeName)
-        print(datetime.strptime(DateFrom, '%d - %m - %Y'))
-        print(datetime.strptime(DateTo, '%d - %m - %Y'))
-
-        data = db.session.execute(
-            select(func.max(EmployeeModel.Id).label("Id"), EmployeeModel.FirstName, func.min(EmployeeCheckin.Time).label(
-                "FirstCheckin"), func.max(EmployeeCheckin.Time).label("LastCheckin"), func.count())
-            .select_from(EmployeeModel)
-            .join(EmployeeCheckin,
-                  and_(EmployeeModel.Id == EmployeeCheckin.EmployeeId,
-                       EmployeeCheckin.Time >= datetime.strptime(
-                           DateFrom, '%d - %m - %Y'),
-                       EmployeeCheckin.Time <= datetime.strptime(DateTo, '%d - %m - %Y')),
-                  isouter=True)
-            .group_by(EmployeeModel.Id, func.date(EmployeeCheckin.Time))
-        )
-        print(
-            select(EmployeeModel.FirstName, EmployeeModel.LastName,
-                   EmployeeModel.Id, func.min(EmployeeCheckin.Time).label("FirstCheckin"), func.max(EmployeeCheckin.Time).label("LastCheckin"))
-            .select_from(EmployeeModel)
-            .join(EmployeeCheckin,
-                  and_(EmployeeModel.Id == EmployeeCheckin.EmployeeId,
-                       EmployeeCheckin.Time >= datetime.strptime(
-                           DateFrom, '%d - %m - %Y'),
-                       EmployeeCheckin.Time <= datetime.strptime(DateTo, '%d - %m - %Y')),
-                  isouter=True)
-            .group_by(EmployeeModel.Id, func.date(EmployeeCheckin.Time))
-        )
+        result = AttendanceStatistic.QueryMany(
+            # DateFrom=datetime.strptime(DateFrom, '%d - %m - %Y'), DateTo=datetime.strptime(DateTo, '%d - %m - %Y'), Keyword=Keyword)
+            DateFrom=DateFrom, DateTo=DateTo, Keyword=Keyword)
+        data = AttendanceStatisticSchema(many=True).dump(result)
+        app.logger.info(f"getCheckinRecord thành công")
         return {
-            "Status": 0,
+            "Status": 1,
             "Description": f"",
             "ResponseData": {
-                "Statistics": [dict(r) for r in data]
+                # "Statistics": [dict(r) for r in data]
+                "Statistics": data,
+                "Total": data.__len__()
             },
         }, 200
     except ProjectException as pEx:
