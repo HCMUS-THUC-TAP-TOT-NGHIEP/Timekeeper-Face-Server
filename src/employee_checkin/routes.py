@@ -47,19 +47,30 @@ def getCheckinRecord():
                     if "DateFrom" in jsonRequestData else None)
         DateTo = (jsonRequestData["DateTo"]
                   if "DateTo" in jsonRequestData else None)
-
         result = AttendanceStatistic.QueryMany(
-            # DateFrom=datetime.strptime(DateFrom, '%d - %m - %Y'), DateTo=datetime.strptime(DateTo, '%d - %m - %Y'), Keyword=Keyword)
             DateFrom=DateFrom, DateTo=DateTo, Keyword=Keyword)
         data = AttendanceStatisticSchema(many=True).dump(result)
+        dataDict = dict()
+        for d in data:
+            if d["Id"] not in dataDict.keys():
+                dataDict[d["Id"]] = {
+                    "Id": d["Id"],
+                    "EmployeeName": d["EmployeeName"],
+                    "CheckinList": {}
+                }
+            dataDict[d["Id"]]["CheckinList"][d["Date"]] = {
+                "FirstCheckin": d["FirstCheckin"].split("T")[1],
+                "LastCheckin": d["LastCheckin"].split("T")[1]
+            }
+
+        dataList = list(map(lambda key: dataDict[key], dataDict.keys()))
         app.logger.info(f"getCheckinRecord thành công")
         return {
             "Status": 1,
             "Description": f"",
             "ResponseData": {
-                # "Statistics": [dict(r) for r in data]
-                "Statistics": data,
-                "Total": data.__len__()
+                "Statistics": dataList,
+                "Total": dataDict.__len__()
             },
         }, 200
     except ProjectException as pEx:

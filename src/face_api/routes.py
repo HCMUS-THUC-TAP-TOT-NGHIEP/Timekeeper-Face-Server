@@ -13,8 +13,10 @@ from src.employee.model import EmployeeModel, employeeInfoSchema
 from src.employee_checkin.EmployeeCheckin import EmployeeCheckin, employeeCheckinSchema, employeeCheckinListSchema
 from sqlalchemy import func, select
 
-RAW_PATH = "./public/datasets/raw"
-TRAIN_PATH = "./public/datasets/processed"
+# RAW_PATH = "./public/datasets/raw"
+# TRAIN_PATH = "./public/datasets/processed"
+RAW_PATH = Config.RAW_PATH
+TRAIN_PATH = Config.TRAIN_PATH
 
 FaceApi = Blueprint("face", __name__)
 
