@@ -5,7 +5,7 @@ from src.middlewares.token_required import admin_required
 from sqlalchemy import select, or_, and_
 from src.authentication.model import UserModel
 from src.employee.model import EmployeeModel
-from src.extension import ProjectException
+from src.extension import ProjectException, object_as_dict
 
 # from src import bcrypt
 from datetime import datetime
@@ -71,9 +71,10 @@ def GetUserList():
             .where(UserModel.Id.in_(list(map(lambda x: int(x), accountIdList.items))))
             .order_by(UserModel.Id)
         ).all()
+        
         response = {
-            "AccountList": [dict(r) for r in accountList],
-            "Total": accountIdList.total,
+            "AccountList": [r._asdict() for r in accountList],
+            "Total": accountIdList.total,       
             "TotalPages": accountIdList.pages,
             "CurrentPage": accountIdList.page,
         }
@@ -91,8 +92,7 @@ def GetUserList():
             "ResponseData": None,
         }
 
-
-# POST api/user/add
+#  POST api/user/add
 @User.route("/add", methods=["POST"])
 @admin_required()
 def AddNewUser():
