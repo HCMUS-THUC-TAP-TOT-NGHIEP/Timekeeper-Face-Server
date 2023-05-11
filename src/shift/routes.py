@@ -779,7 +779,7 @@ def getShiftAssignmentDetail():
                 )
             )
         ).all()
-        detailDict = [dict(r) for r in shiftAssignmentDetail]
+        detailDict = [r._asdict() for r in shiftAssignmentDetail]
         response = {
             "Assignment": ShiftAssignmentSchema().dump(
                 shiftAssignment["ShiftAssignment"],

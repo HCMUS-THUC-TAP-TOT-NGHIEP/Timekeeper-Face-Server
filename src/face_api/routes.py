@@ -104,7 +104,7 @@ def recognition():
             jsonRequestData["Picture"] if "Picture" in jsonRequestData else None
         )
         AttendanceTime = (
-            jsonRequestData["AttendanceTime"] if "AttendanceTime" in jsonRequestData else None
+            jsonRequestData["AttendanceTime"] if "AttendanceTime" in jsonRequestData else datetime.now()
         )
 
         #endregion
