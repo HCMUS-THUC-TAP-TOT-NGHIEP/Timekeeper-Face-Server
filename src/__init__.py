@@ -126,8 +126,16 @@ def create_app(config_class=Config):
         }
 
     @app.errorhandler(404)
-    def page_not_found(error):
+    def error404Handle(error):
         app.logger.error(f"Không hỗ trợ [{request}]. [{error}]")
+        return {
+            "Status": 0,
+            "Description": f"Không hỗ trợ {request}",
+            "ResponseData": None,
+        }, 200
+
+    @app.errorhandler(405)
+    def error405Handle(error):
         return {
             "Status": 0,
             "Description": f"Không hỗ trợ {request}",
