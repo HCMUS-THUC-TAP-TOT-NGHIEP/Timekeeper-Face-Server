@@ -14,6 +14,8 @@ gunicorn
 opencv-contrib-python
 opencv-python
 Pillow
+marshmallow
+marshmallow-sqlalchemy
 
 #google drive api
 google-api-python-client

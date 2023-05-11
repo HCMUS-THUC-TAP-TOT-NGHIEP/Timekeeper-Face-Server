@@ -686,7 +686,7 @@ def getShiftAssignmentList():
         return {
             "Status": 1,
             "Description": None,
-            "ResponseData": [dict(r) for r in shiftAssignmentList],
+            "ResponseData": [r._asdict() for r in shiftAssignmentList],
         }, 200
     except ProjectException as pEx:
         app.logger.exception(
@@ -832,7 +832,7 @@ def GetAssignmentType():
                 ShiftAssignmentType.CreatedBy,
             ).where(ShiftAssignmentType.Status == Status.Active)
         ).all()
-        response = [dict(r) for r in shiftAssignmentTypeList]
+        response = [r._asdict() for r in shiftAssignmentTypeList]
         app.logger.info("GetAssignmentTypes thành công")
         return {
             "Status": 1,
