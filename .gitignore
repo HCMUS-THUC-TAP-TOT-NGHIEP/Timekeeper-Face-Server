@@ -133,3 +133,5 @@ dmypy.json
 /*.env*
 public/datasets/processed/*
 public/datasets/raw/*
+
+.vscode

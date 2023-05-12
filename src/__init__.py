@@ -141,6 +141,14 @@ def create_app(config_class=Config):
             "Description": f"Không hỗ trợ {request}",
             "ResponseData": None,
         }, 200
+    @app.errorhandler(401) #UNAUTHORIZED
+    def error401Handle(error):
+        app.logger.error(f"UNAUTHORIZED: [{error}]")
+        return {
+            "Status": 401,
+            "Description": f"Phiên làm việc đã hết hạn, vui lòng đăng nhập lại",
+            "ResponseData": None,
+        }, 200
 
     # endregion
 

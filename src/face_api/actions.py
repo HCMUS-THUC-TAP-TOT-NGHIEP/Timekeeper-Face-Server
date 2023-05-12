@@ -141,10 +141,13 @@ def get_id_from_img(img):
 
         gray_image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         features = detector.detectMultiScale(gray_image, 1.1, 10)
+        print ("gray_image", gray_image)
+        print ("features", len(features) )
 
         for x, y, w, h in features:
             id, pred = clf.predict(gray_image[y : y + h, x : x + w])
             confidence = int(100 * (1 - pred / 300))
+            print ("confidence", confidence )
             if confidence > 70:
                 return id
             else:
