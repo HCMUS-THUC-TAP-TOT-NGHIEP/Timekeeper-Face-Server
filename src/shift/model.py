@@ -200,3 +200,36 @@ class Status:
 class TargetType(Enum):
     Department = 1
     Employee = 2
+
+# region Views
+class vShiftDetail(db.Model):
+    __tablename__ = "vShiftDetail"
+    Id = Column(Integer(), primary_key=True)
+    ShiftId = Column(Integer(), nullable=False)
+    StartDate = Column(Time(), nullable=False)
+    EndDate = Column(Time(), nullable=False)
+    StartTime = Column(Time(), nullable=False)
+    FinishTime = Column(Time(), nullable=False)
+    BreakAt = Column(Time())
+    BreakEnd = Column(Time())
+    DayIndexList = Column(ARRAY(Integer))
+    Note = Column(String())
+    BreakMinutes = Column(Integer())
+    Status = Column(Integer())
+    CreatedBy = Column(Integer())
+    CreatedAt = Column(DateTime())
+    ModifiedBy = Column(Integer())
+    ModifiedAt = Column(DateTime())
+    Description = Column(String(), nullable=False)
+    ShiftType = Column(Integer(), nullable=False)
+
+# endregion
+
+class DayInWeekEnum(Enum):
+    Sun=0,
+    Mon=1,
+    Tue=2,
+    Wed=3,
+    Thur=4,
+    Fri=5,
+    Sat=6

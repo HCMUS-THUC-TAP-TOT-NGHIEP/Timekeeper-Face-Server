@@ -131,7 +131,13 @@ def recognition():
         if not employee:
             raise ValueError(f"Không tìm thấy nhân viên mã {Id}")
         name = f"{employee.LastName} {employee.FirstName}"
-
+        # latestCheckin = EmployeeCheckin.query.filter_by(and_(
+        #     func.extract('epoch',
+        #         Time,
+        #         AttendanceTime
+        #     ) > 5
+        # )).first()
+        # if not latestCheckin:
         employeeCheckin = EmployeeCheckin()
         employeeCheckin.Method = RecognitionMethod
         employeeCheckin.MethodText = "Khuôn mặt"

@@ -15,6 +15,11 @@ opencv-python
 Pillow
 marshmallow
 marshmallow-sqlalchemy
+pandas
+xlwt 
+xlsxwriter
+openpyxl
+xlrd
 
 #google drive api
 google-api-python-client
