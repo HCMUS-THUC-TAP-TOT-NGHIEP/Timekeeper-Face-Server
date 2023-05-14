@@ -13,7 +13,8 @@ from src.employee_checkin.AttendanceStatistic import AttendanceStatistic, Attend
 from src.extension import ProjectException
 from src.jwt import get_jwt_identity, jwt_required, get_jwt
 from src.middlewares.token_required import admin_required
-from sqlalchemy import and_, case, delete, func, insert, or_, select, DateTime
+from sqlalchemy import and_, case, delete, func, insert, or_, select, DateTime, between
+from src.shift.model import ShiftAssignment, ShiftAssignmentDetail, ShiftModel, ShiftAssignmentType, TargetType, ShiftDetailModel, ShiftDetailSchema, vShiftDetail, DayInWeekEnum
 
 EmployeeCheckinRoute = Blueprint("/checkin", __name__)
 
@@ -95,13 +96,65 @@ def getCheckinRecord():
         app.logger.info(f"getCheckinRecord kết thúc")
 
 
-# PUT "api/checkin"
-@EmployeeCheckinRoute.route("/", methods=["PUT"])
+# PUT  "api/checkin/summary"
+@EmployeeCheckinRoute.route("/summary", methods=["POST"])
 @jwt_required()
-def EditCheckinRecord():
+def summary():
+    app.logger.info(f"summary bắt đầu")
     try:
-        pass
+        jsonRequestData = request.get_json()
+        Keyword = (
+        jsonRequestData["Keyword"] if "Keyword" in jsonRequestData else None)
+        DateFrom = (jsonRequestData["DateFrom"]
+                    if "DateFrom" in jsonRequestData else None)
+        DateTo = (jsonRequestData["DateTo"]
+                  if "DateTo" in jsonRequestData else None)
+        result = AttendanceStatistic.QueryMany(
+            DateFrom=DateFrom, DateTo=DateTo, Keyword=Keyword)
+        checkinRecord = AttendanceStatisticSchema(many=True).dump(result)
+        # region Lấy các ca làm việc trong khoảng thời gian
+        
+        # query = db.select(ShiftModel, ShiftDetailModel.Id.label("ShiftDetailId")).select_from(ShiftModel).join(ShiftDetailModel, and_(ShiftDetailModel.ShiftId == ShiftModel.Id, or_(ShiftDetailModel.StartDate.between(DateFrom, DateTo), ShiftDetailModel.EndDate.between(
+        #     DateFrom, DateTo), between(DateFrom, ShiftDetailModel.StartDate, ShiftDetailModel.EndDate), between(DateTo, ShiftDetailModel.StartDate, ShiftDetailModel.EndDate)))).where(ShiftModel.Status == 1)
+        query = select(vShiftDetail).where(
+            or_(vShiftDetail.StartDate.between(DateFrom, DateTo), vShiftDetail.EndDate.between(
+            DateFrom, DateTo), between(DateFrom, vShiftDetail.StartDate, vShiftDetail.EndDate), between(DateTo, vShiftDetail.StartDate, vShiftDetail.EndDate))
+        )
+        #print(query)
+
+        #endregion
+
+        vShiftDetailList = db.session.execute(query).scalars().all()
+        
+        checkinList = AttendanceStatistic.QueryMany(DateFrom=DateFrom, DateTo=DateTo, Keyword=Keyword)
+
+        shiftDetailList = ShiftDetailModel.query.filter_by(Status=1).all()
+        app.logger.info(f"summary thành công")
+
+        return {
+            "Status": 1,
+            "Description": f"",
+            "ResponseData": {
+                # "ShiftList": [shift.__dict__ for shift in shiftList]
+            },
+        }, 200
     except ProjectException as pEx:
-        pass
+        db.session.rollback()
+        app.logger.exception(
+            f"summary thất bại. Có exception[{str(pEx)}]")
+        return {
+            "Status": 0,
+            "Description": f"{str(pEx)}",
+            "ResponseData": None,
+        }, 200
     except Exception as ex:
-        pass
+        db.session.rollback()
+        app.logger.exception(
+            f"summary thất bại. Có exception[{str(ex)}]")
+        return {
+            "Status": 0,
+            "Description": f"Có lỗi ở máy chủ.",
+            "ResponseData": None,
+        }, 200
+    finally:
+        app.logger.info(f"summary kết thúc")
