@@ -1,7 +1,7 @@
 from flask import current_app as app
 from src.db import db
 from src import marshmallow
-from sqlalchemy import Column, Integer, Date, String, DateTime, and_, func, select
+from sqlalchemy import Column, Integer, Date, String, DateTime, and_, func, select, or_
 from datetime import datetime
 from src.employee.model import EmployeeModel
 
@@ -66,8 +66,57 @@ class AttendanceStatistic(db.Model):
 
 class AttendanceStatisticSchema(marshmallow.Schema):
     class Meta:
-        fields = ("Id", "EmployeeName", "FirstCheckin", "LastCheckin",
-                  "Date", "DepartmentId", "DepartmentName", "Position")
+        fields = ("Id", "EmployeeName", "FirstCheckin", "LastCheckin", "Time",
+                  "Date", "DepartmentId", "DepartmentName", "Position", "Method", "MethodText")
+
+
+class AttendanceStatisticV2(db.Model):
+    __tablename__ = "vAttendanceStatisticV2"
+
+    Id = Column(Integer(), primary_key=True)
+    EmployeeName = Column(String())
+    DepartmentId = Column(Integer())
+    DepartmentName = Column(String())
+    Position = Column(String())
+    Method = Column(Integer(), primary_key=True)
+    MethodText = Column(String())
+    Time = Column(DateTime(), primary_key='True')
+    Date = Column(Date())
+
+    @staticmethod
+    def QueryMany(DateFrom, DateTo, Keyword=None, Page=None, PageSize=None):
+        try:
+            app.logger.info(f"AttendanceStatisticV2.QueryMany start")
+            query = ""
+            if Keyword and Keyword.strip() != "":
+                Keyword = Keyword.strip().lower()
+                query = select(AttendanceStatisticV2)\
+                    .where(and_(
+                        AttendanceStatisticV2.Date.between(DateFrom, DateTo),
+                        func.lower(AttendanceStatisticV2.EmployeeName).like(f'%{Keyword}%')))\
+                    .distinct()\
+                    .order_by(AttendanceStatisticV2.Date, AttendanceStatisticV2.Id, AttendanceStatisticV2.Time)
+
+            else:
+                query = select(AttendanceStatisticV2)\
+                    .where(and_(
+                        AttendanceStatisticV2.Date.between(DateFrom, DateTo)
+                    )).distinct()\
+                    .order_by(AttendanceStatisticV2.Date, AttendanceStatisticV2.Id, AttendanceStatisticV2.Time)
+            if not Page:
+                Page = 1
+            if not PageSize:
+                PageSize = 50
+            app.logger.info(query)
+            data = db.paginate(query, page=Page, per_page=PageSize)
+            return data
+        except Exception as ex:
+            app.logger.exception(
+                f"AttendanceStatisticV2.QueryMany failed. Exception[{ex}]")
+            raise Exception(
+                f"AttendanceStatisticV2.QueryMany failed. Exception[{ex}]")
+        finally:
+            app.logger.info(f"AttendanceStatisticV2.QueryMany finish")
 
 
 attendanceStatisticSchema = AttendanceStatisticSchema()

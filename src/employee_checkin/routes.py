@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from flask import Blueprint
-from flask import current_app as app
+from flask import current_app as app, send_from_directory
 from flask import request
 
 from src.authentication.model import UserModel
@@ -9,12 +9,13 @@ from src.db import db
 from src.employee.model import (EmployeeModel, employeeInfoListSchema,
                                 employeeInfoSchema)
 from src.employee_checkin.EmployeeCheckin import EmployeeCheckin, employeeCheckinListSchema
-from src.employee_checkin.AttendanceStatistic import AttendanceStatistic, AttendanceStatisticSchema
+from src.employee_checkin.AttendanceStatistic import AttendanceStatistic, AttendanceStatisticSchema, AttendanceStatisticV2
 from src.extension import ProjectException
 from src.jwt import get_jwt_identity, jwt_required, get_jwt
 from src.middlewares.token_required import admin_required
 from sqlalchemy import and_, case, delete, func, insert, or_, select, DateTime, between
 from src.shift.model import ShiftAssignment, ShiftAssignmentDetail, ShiftModel, ShiftAssignmentType, TargetType, ShiftDetailModel, ShiftDetailSchema, vShiftDetail, DayInWeekEnum
+from src.config import Config
 
 EmployeeCheckinRoute = Blueprint("/checkin", __name__)
 
@@ -115,13 +116,10 @@ def getCheckinRecordV2():
                   if "Page" in jsonRequestData else 1)
         PageSize = (jsonRequestData["PageSize"]
                   if "PageSize" in jsonRequestData else 50)
-        result = AttendanceStatistic.QueryManyV2(
+        result = AttendanceStatisticV2.QueryMany(
             DateFrom=DateFrom, DateTo=DateTo, Keyword=Keyword, Page=Page, PageSize=PageSize)
-        # data = AttendanceStatisticSchema(many=True).dump(result)
         count = result.total
         data = AttendanceStatisticSchema(many=True).dump(result.items)
-
-        # dataList = list(map(lambda key: dataDict[key], dataDict.keys()))
         app.logger.info(f"getCheckinRecord v2 thành công")
         return {
             "Status": 1,
@@ -176,8 +174,7 @@ def summary():
             or_(vShiftDetail.StartDate.between(DateFrom, DateTo), vShiftDetail.EndDate.between(
             DateFrom, DateTo), between(DateFrom, vShiftDetail.StartDate, vShiftDetail.EndDate), between(DateTo, vShiftDetail.StartDate, vShiftDetail.EndDate))
         )
-        #print(query)
-
+        
         #endregion
 
         vShiftDetailList = db.session.execute(query).scalars().all()
@@ -214,3 +211,40 @@ def summary():
         }, 200
     finally:
         app.logger.info(f"summary kết thúc")
+
+#GET checkin/import/templates
+@EmployeeCheckinRoute.route("/timekeeper/templates", methods=["GET", "POST"])
+@admin_required()
+def GetTemplate():
+    try:
+        app.logger.info("GetTemplate timekeeper bắt đầu")
+        claims = get_jwt()
+        id = claims['id']
+        params = request.args
+        FileName = params['FileName']
+        excelTemplatePath = Config.EXCELTEMPLATEPATH
+        if FileName == "TimekeeperDataTemplate":
+            return send_from_directory(excelTemplatePath, "TimekeeperDataTemplate.xlsx", as_attachment=True)
+        else:            
+            raise ProjectException("Không tìm thấy tệp tin mẫu.")
+
+    except ProjectException as ex:
+        db.session.rollback()
+        app.logger.info(
+            f"Importing timekeeper thất bại. Có exception[{str(ex)}]")
+        return {
+            "Status": 0,
+            "Description": f"{ex}",
+            "ResponseData": None,
+        }, 400
+    except Exception as ex:
+        db.session.rollback()
+        app.logger.info(
+            f"GetTemplate timekeeper thất bại. Có exception[{str(ex)}]")
+        return {
+            "Status": 0,
+            "Description": f"Có lỗi ở máy chủ.",
+            "ResponseData": None,
+        }, 400
+    finally:
+        app.logger.info("GetTemplate timekeeper kết thúc")
