@@ -96,6 +96,62 @@ def getCheckinRecord():
         app.logger.info(f"getCheckinRecord kết thúc")
 
 
+# GET "api/checkin/list"
+@EmployeeCheckinRoute.route("/list/v2", methods=["POST"])
+@jwt_required()
+def getCheckinRecordV2():
+    app.logger.info(f"getCheckinRecord v2 bắt đầu")
+    try:
+        claims = get_jwt()
+        id = claims["id"]
+        jsonRequestData = request.get_json()
+        Keyword = (
+            jsonRequestData["Keyword"] if "Keyword" in jsonRequestData else None)
+        DateFrom = (jsonRequestData["DateFrom"]
+                    if "DateFrom" in jsonRequestData else None)
+        DateTo = (jsonRequestData["DateTo"]
+                  if "DateTo" in jsonRequestData else None)
+        Page = (jsonRequestData["Page"]
+                  if "Page" in jsonRequestData else 1)
+        PageSize = (jsonRequestData["PageSize"]
+                  if "PageSize" in jsonRequestData else 50)
+        result = AttendanceStatistic.QueryManyV2(
+            DateFrom=DateFrom, DateTo=DateTo, Keyword=Keyword, Page=Page, PageSize=PageSize)
+        # data = AttendanceStatisticSchema(many=True).dump(result)
+        count = result.total
+        data = AttendanceStatisticSchema(many=True).dump(result.items)
+
+        # dataList = list(map(lambda key: dataDict[key], dataDict.keys()))
+        app.logger.info(f"getCheckinRecord v2 thành công")
+        return {
+            "Status": 1,
+            "Description": f"",
+            "ResponseData": {
+                "Statistics": data,
+                "Total": count
+            },
+        }, 200
+    except ProjectException as pEx:
+        db.session.rollback()
+        app.logger.exception(
+            f"getCheckinRecord v2 thất bại. Có exception[{str(pEx)}]")
+        return {
+            "Status": 0,
+            "Description": f"{str(pEx)}",
+            "ResponseData": None,
+        }, 200
+    except Exception as ex:
+        db.session.rollback()
+        app.logger.exception(
+            f"getCheckinRecord v2 thất bại. Có exception[{str(ex)}]")
+        return {
+            "Status": 0,
+            "Description": f"Có lỗi ở máy chủ.",
+            "ResponseData": None,
+        }, 200
+    finally:
+        app.logger.info(f"getCheckinRecord v2 kết thúc")
+
 # PUT  "api/checkin/summary"
 @EmployeeCheckinRoute.route("/summary", methods=["POST"])
 @jwt_required()

@@ -1,9 +1,10 @@
 from datetime import datetime
-
-from flask import Blueprint
+import io
+import mimetypes
+from flask import Blueprint, send_file, send_from_directory
 from flask import current_app as app
 from flask import request
-from pandas import *
+import pandas
 from sqlalchemy import select
 from werkzeug.datastructures import ImmutableMultiDict
 from werkzeug.utils import secure_filename
@@ -17,6 +18,7 @@ from src.extension import ProjectException
 from src.jwt import get_jwt_identity, jwt_required, get_jwt
 from src.middlewares.token_required import admin_required
 import numpy as np
+from os import path, curdir
 
 Employee = Blueprint("employee", __name__)
 ALLOWED_EXTENSIONS = {'xlsx', 'xls', 'csv'}
@@ -389,9 +391,6 @@ def GetManyEmployee():
         )
 
         data = pageObject.items
-
-        print(pageObject.items)
-
         employees = [employeeInfoSchema.dump(d) for d in data]
 
         for employee in employees:
@@ -468,7 +467,7 @@ def importData():
         filename = secure_filename(fileRequest.filename)
         fileExtension = GetFileExtensionFromFileNam(filename)
         if fileExtension in ['xlsx', 'xls']:
-            excel_data = read_excel(
+            excel_data = pandas.read_excel(
                 fileRequest, sheet_name="Data", header=3)
             if (excel_data.empty):
                 raise ProjectException("Không có dữ liệu.")
@@ -477,9 +476,21 @@ def importData():
             for i in range(rowCount):
                 employee = EmployeeModel()
                 employee.Code = str(int(excel_data.iat[i, 0]))
+                if isnull(excel_data.iat[i, 1]):
+                    raise ProjectException(
+                        f"Ô H{i + 4 + 1} bị trống, chưa có Họ & tên đệm.")
                 employee.LastName = excel_data.iat[i, 1]
+                if isnull(excel_data.iat[i, 2]):
+                    raise ProjectException(
+                        f"Ô H{i + 4 + 1} bị trống, chưa có tên")
                 employee.FirstName = excel_data.iat[i, 2]
+                if isnull(excel_data.iat[i, 3]):
+                    raise ProjectException(
+                        f"Ô H{i + 4 + 1} bị trống, chưa có ngày sinh.")
                 employee.DateOfBirth = excel_data.iat[i, 3]
+                if isnull(excel_data.iat[i, 3]):
+                    raise ProjectException(
+                        f"Ô H{i + 4 + 1} bị trống, chưa có giới tính.")
                 employee.Gender = excel_data.iat[i, 4] == 1
                 employee.Address = excel_data.iat[i, 5]
                 employee.JoinDate = excel_data.iat[i, 6]
@@ -497,10 +508,9 @@ def importData():
                 if EmployeeModel.query.filter_by(Email=employee.Email).first():
                     continue
                 db.session.add(employee)
-        elif fileExtension == 'xls':
-            pass
         elif fileExtension == 'csv':
-            csv_data = read_csv(fileRequest, header=0)
+            csv_data = pandas.read_csv(fileRequest, header=0)
+            raise ProjectException(f"Không hỗ trợ file có phần mở rộng .{fileExtension}")
         app.logger.info("Importing EmployeeModel successful")
         db.session.commit()
         return {
@@ -530,6 +540,47 @@ def importData():
         }, 200
     finally:
         app.logger.info("Importing EmployeeModel kết thúc")
+
+
+excelTemplatePath = path.join("..", "public", "templates", "Excel")
+
+# GET api/employee/import/templates
+
+
+@Employee.route("import/templates", methods=["GET", "POST"])
+@admin_required()
+def GetTemplate():
+    try:
+        app.logger.info("GetTemplate EmployeeModel bắt đầu")
+        claims = get_jwt()
+        id = claims['id']
+        return send_from_directory(excelTemplatePath, "Employee.xlsx", as_attachment=True)
+        return {
+            "Status": 1,
+            "Description": None,
+            "ResponseData": None,
+        }, 200
+
+    except ProjectException as ex:
+        db.session.rollback()
+        app.logger.info(
+            f"Importing EmployeeModel thất bại. Có exception[{str(ex)}]")
+        return {
+            "Status": 0,
+            "Description": f"{ex}",
+            "ResponseData": None,
+        }, 200
+    except Exception as ex:
+        db.session.rollback()
+        app.logger.info(
+            f"GetTemplate EmployeeModel thất bại. Có exception[{str(ex)}]")
+        return {
+            "Status": 0,
+            "Description": f"Có lỗi ở máy chủ.",
+            "ResponseData": None,
+        }, 200
+    finally:
+        app.logger.info("GetTemplate EmployeeModel kết thúc")
 
 
 def CheckIfFileAllowed(filename):
