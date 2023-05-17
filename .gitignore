@@ -136,4 +136,6 @@ public/static/*.yml
 public/static/*.pkl
 public/export
 
-.vscode/
+.vscode
+
+public/static/*.yml
