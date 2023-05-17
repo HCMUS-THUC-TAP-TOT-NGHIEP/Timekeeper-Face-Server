@@ -8,7 +8,7 @@ from sqlalchemy import func, select
 
 from src.authentication.model import UserModel
 from src.db import db
-from src.department.model import DepartmentModel, departmentListSchema, departmentSchema
+from src.department.model import DepartmentModel, departmentListSchema, departmentSchema, vDepartment
 from src.employee.model import EmployeeModel, employeeInfoListSchema
 from src.extension import object_as_dict
 from src.jwt import get_jwt_identity, jwt_required
@@ -30,11 +30,7 @@ def GetDepartmentList():
             page = int(args["Page"])
         if "PerPage" in args:
             perPage = int(args["PerPage"])
-        query = select(DepartmentModel.Id, DepartmentModel.Name, DepartmentModel.ManagerId, func.concat(EmployeeModel.LastName, " ", EmployeeModel.FirstName).label("ManagerName"),            DepartmentModel.Status,)\
-            .select_from(DepartmentModel)\
-            .join(EmployeeModel, DepartmentModel.ManagerId == EmployeeModel.Id, isouter=True,)\
-            .where(DepartmentModel.Status == "1")\
-            .order_by(DepartmentModel.Id)
+        query = select(vDepartment)
         if page and perPage:
             data = db.paginate(query, page=page, per_page=perPage)
             departmentList = departmentListSchema.dump(data.items)
@@ -65,7 +61,7 @@ def GetDepartmentList():
             f"GetDepartmentList thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Truy vấn danh sách phòng ban không thành công.",
+            "Description": f"Có lỗi ở máy chủ.",
             "ResponseData": None,
         }, 200
 
