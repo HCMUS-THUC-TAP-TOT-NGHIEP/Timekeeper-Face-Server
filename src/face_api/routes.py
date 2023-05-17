@@ -8,14 +8,15 @@ from src.db import db
 from src.jwt import get_jwt_identity, jwt_required
 from src.middlewares.token_required import admin_required
 from src.extension import ProjectException
-from src.face_api.model import *
-
-# from config import Config
+from src.face_api.actions import *
 from src.employee.model import EmployeeModel, employeeInfoSchema
+from src.employee_checkin.EmployeeCheckin import EmployeeCheckin, employeeCheckinSchema, employeeCheckinListSchema
 from sqlalchemy import func, select
 
-RAW_PATH = "./public/datasets/raw"
-TRAIN_PATH = "./public/datasets/processed"
+# RAW_PATH = "./public/datasets/raw"
+# TRAIN_PATH = "./public/datasets/processed"
+RAW_PATH = Config.RAW_PATH
+TRAIN_PATH = Config.TRAIN_PATH
 
 FaceApi = Blueprint("face", __name__)
 
@@ -29,6 +30,7 @@ FaceApi = Blueprint("face", __name__)
 
 # POST api/face/register
 @FaceApi.route("/register", methods=["POST"])
+@admin_required()
 def register():
     try:
         app.logger.info("register bắt đầu.")
@@ -96,9 +98,27 @@ def recognition():
     try:
         app.logger.info("recognition bắt đầu.")
         jsonRequestData = request.get_json()
+        # region: Khai báo
+
         Picture = (
             jsonRequestData["Picture"] if "Picture" in jsonRequestData else None
         )
+        AttendanceTime = (
+            jsonRequestData["AttendanceTime"] if "AttendanceTime" in jsonRequestData else datetime.now()
+        )
+
+        #endregion
+        
+        #region validation
+
+        if not Picture or len(Picture) == 0:
+            raise ProjectException("Yêu cầu không hợp lệ do không cung cấp hình ảnh.")        
+        if not AttendanceTime :
+            raise ProjectException("Yêu cầu không hợp lệ do thời gian nhận diện không có hoặc không hợp lệ.")
+        
+        #endregion
+
+        RecognitionMethod = 1
         img = base64ToOpenCV(Picture)
         Id = get_id_from_img_face(img)
 
@@ -108,7 +128,28 @@ def recognition():
             )
         
         employee = EmployeeModel.query.filter(EmployeeModel.Id == Id).first()
-        name = f"{employee.FirstName}_{employee.LastName}"
+        if not employee:
+            raise ValueError(f"Không tìm thấy nhân viên mã {Id}")
+        name = f"{employee.LastName} {employee.FirstName}"
+        # latestCheckin = EmployeeCheckin.query.filter_by(and_(
+        #     func.extract('epoch',
+        #         Time,
+        #         AttendanceTime
+        #     ) > 5
+        # )).first()
+        # if not latestCheckin:
+        employeeCheckin = EmployeeCheckin()
+        employeeCheckin.Method = RecognitionMethod
+        employeeCheckin.MethodText = "Khuôn mặt"
+        employeeCheckin.EmployeeId = employee.Id
+        employeeCheckin.Time = AttendanceTime
+        employeeCheckin.EvidenceId = None
+        employeeCheckin.LogType = 0
+        employeeCheckin.CreatedAt = datetime.now()
+        employeeCheckin.CreatedBy = 0
+        employeeCheckin.ModifiedAt = datetime.now()
+        employeeCheckin.ModifiedBy = 0
+        db.session.add(employeeCheckin)
 
         app.logger.info("EmployeeID:" + str(Id))
 
@@ -117,8 +158,8 @@ def recognition():
 
         img = cv2.imread(img_path)
         str_img = openCVToBase64(img)
+        db.session.commit()
         app.logger.info(f"Recognition thành công nhân viên Id[{Id}]")
-
         return {
             "Status": 1,
             "Description": "Nhận diện thành công.",
@@ -128,8 +169,6 @@ def recognition():
                 "Img": str_img
             },
         }
-            
-
     except ProjectException as pEx:
         app.logger.error(f"Nhận diện khuôn mặt thất bại. Có exception[{str(pEx)}]")
         return {

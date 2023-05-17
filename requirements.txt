@@ -14,9 +14,15 @@ gunicorn
 opencv-contrib-python
 opencv-python
 Pillow
-numpy
-Click
-cmake
-boost
-dlib
-face-recognition
+marshmallow
+marshmallow-sqlalchemy
+pandas
+xlwt 
+xlsxwriter
+openpyxl
+xlrd
+
+#google drive api
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib

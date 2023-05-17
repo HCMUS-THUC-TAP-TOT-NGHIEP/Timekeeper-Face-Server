@@ -21,10 +21,11 @@ class EmployeeModel(db.Model):
     Position = Column(String())
     Email = Column(String())
     MobilePhone = Column(String())
-    CreatedBy = Column(Integer(), nullable=False)
-    CreatedAt = Column(DateTime(), nullable=False)
-    ModifiedBy = Column(Integer(), nullable=False)
-    ModifiedAt = Column(DateTime(), nullable=False)
+    CreatedBy = Column(Integer())
+    CreatedAt = Column(DateTime())
+    ModifiedBy = Column(Integer())
+    ModifiedAt = Column(DateTime())
+    Code = Column(String(), nullable=True)
 
 
 class EmployeeInfoSchema(marshmallow.Schema):
@@ -42,6 +43,7 @@ class EmployeeInfoSchema(marshmallow.Schema):
             "Position",
             "Email",
             "MobilePhone",
+            "DepartmentName"
         )
 
 

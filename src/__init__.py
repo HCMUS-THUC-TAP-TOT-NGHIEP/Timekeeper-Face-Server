@@ -25,6 +25,9 @@ def create_app(config_class=Config):
     jwt.init_app(app)
     cors.init_app(app)
     marshmallow.init_app(app)
+
+    app.static_folder = "public"
+
     log_type = app.config["LOG_TYPE"]
     if log_type == "stream":
         pass
@@ -60,8 +63,8 @@ def create_app(config_class=Config):
 
     @app.after_request
     def after_request(response):
-        text_response = response.data
         try:
+            text_response = response.data
             if response.data:
                 text_response = (
                     json.dumps(json.loads(response.data), indent=4)
@@ -69,7 +72,7 @@ def create_app(config_class=Config):
                     .decode("utf-8")
                 )
         except Exception as e:
-            text_response = str(text_response).encode("utf-8").decode("utf-8")
+            text_response = str(response).encode("utf-8").decode("utf-8")
         finally:
             Thread(
                 app.logger.info(
@@ -106,7 +109,7 @@ def create_app(config_class=Config):
     from src.designation.routes import Designation as designation_bp
 
     app.register_blueprint(designation_bp, url_prefix="/api/designation")
-    from src.employee_checkin.routes import EmployeeCheckin as employee_checkin_bp
+    from src.employee_checkin.routes import EmployeeCheckinRoute as employee_checkin_bp
 
     app.register_blueprint(employee_checkin_bp, url_prefix="/api/checkin")
     from src.face_api.routes import FaceApi as face_api_bp
@@ -126,11 +129,27 @@ def create_app(config_class=Config):
         }
 
     @app.errorhandler(404)
-    def page_not_found(error):
+    def error404Handle(error):
         app.logger.error(f"Không hỗ trợ [{request}]. [{error}]")
         return {
             "Status": 0,
             "Description": f"Không hỗ trợ {request}",
+            "ResponseData": None,
+        }, 200
+
+    @app.errorhandler(405)
+    def error405Handle(error):
+        return {
+            "Status": 0,
+            "Description": f"Không hỗ trợ {request}",
+            "ResponseData": None,
+        }, 200
+    @app.errorhandler(401) #UNAUTHORIZED
+    def error401Handle(error):
+        app.logger.error(f"UNAUTHORIZED: [{error}]")
+        return {
+            "Status": 401,
+            "Description": f"Phiên làm việc đã hết hạn, vui lòng đăng nhập lại",
             "ResponseData": None,
         }, 200
 

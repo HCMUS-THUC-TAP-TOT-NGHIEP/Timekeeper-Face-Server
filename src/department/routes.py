@@ -16,7 +16,7 @@ from src.middlewares.token_required import admin_required
 
 Department = Blueprint("department", __name__)
 
-
+# api/department/list
 @Department.route("/list", methods=["GET"])
 @admin_required()
 def GetDepartmentList():
@@ -51,7 +51,7 @@ def GetDepartmentList():
         return {
             "Status": 1,
             "Description": None,
-            "ResponseData": [dict(r) for r in departmentList],
+            "ResponseData": [r._asdict() for r in departmentList],
         }, 200
     except Exception as ex:
         app.logger.info(f"GetDepartmentList thất bại. Có exception[{str(ex)}]")
