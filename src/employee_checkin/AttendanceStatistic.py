@@ -103,13 +103,11 @@ class AttendanceStatisticV2(db.Model):
                         AttendanceStatisticV2.Date.between(DateFrom, DateTo)
                     )).distinct()\
                     .order_by(AttendanceStatisticV2.Date, AttendanceStatisticV2.Id, AttendanceStatisticV2.Time)
-            if not Page:
-                Page = 1
-            if not PageSize:
-                PageSize = 50
-            app.logger.info(query)
-            data = db.paginate(query, page=Page, per_page=PageSize)
-            return data
+            if Page and PageSize:
+                data = db.paginate(query, page=Page, per_page=PageSize)
+                return data
+            data = db.session.execute(query).all()
+            return {"items": list(map(lambda x: x._asdict()["AttendanceStatisticV2"], data)), "count": len(data)}
         except Exception as ex:
             app.logger.exception(
                 f"AttendanceStatisticV2.QueryMany failed. Exception[{ex}]")

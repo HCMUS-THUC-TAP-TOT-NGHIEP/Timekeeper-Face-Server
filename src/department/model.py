@@ -27,7 +27,7 @@ class DepartmentSchema(marshmallow.Schema):
             "Id",
             "Name",
             "ManagerId",
-            # "ManagerName",
+            "ManagerName",
             "Status",
         )
 
