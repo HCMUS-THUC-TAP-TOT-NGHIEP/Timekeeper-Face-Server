@@ -135,3 +135,5 @@ public/datasets/processed/*
 public/datasets/raw/*
 
 .vscode
+
+public/static/*.yml
