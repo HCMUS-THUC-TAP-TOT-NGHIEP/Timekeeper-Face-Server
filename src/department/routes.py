@@ -44,7 +44,7 @@ def GetDepartmentList():
                     "Total": total,
                 }
             }, 200
-        data = db.session.execute(query).all()
+        data = db.session.execute(query).scalars()
         departmentList = departmentListSchema.dump(data)
         app.logger.info("GetDepartmentList successfully.")
         return {

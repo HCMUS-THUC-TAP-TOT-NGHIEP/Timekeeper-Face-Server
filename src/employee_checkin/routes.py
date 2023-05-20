@@ -14,7 +14,8 @@ from src.extension import ProjectException
 from src.jwt import get_jwt_identity, jwt_required, get_jwt
 from src.middlewares.token_required import admin_required
 from sqlalchemy import and_, case, delete, func, insert, or_, select, DateTime, between
-from src.shift.model import ShiftAssignment, ShiftAssignmentDetail, ShiftModel, ShiftAssignmentType, TargetType, ShiftDetailModel, ShiftDetailSchema, vShiftDetail, DayInWeekEnum
+from src.shift.model import ShiftAssignment, ShiftAssignmentDetail, ShiftAssignmentType, TargetType, DayInWeekEnum
+from src.shift.ShiftModel import vShiftDetail, vShiftDetailSchema, ShiftDetailModel, ShiftDetailSchema , ShiftModel
 from src.config import Config
 from src.employee_checkin.Timesheet import Timesheet, timesheetListSchema, timesheetSchema, timesheetDetailListSchema, TimesheetDetail, timesheetDetailSchema, TimesheetDetailSchema
 

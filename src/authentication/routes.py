@@ -14,8 +14,10 @@ from src.jwt import (
     get_jwt,
     get_jwt_identity,
     jwt_required,
+    create_refresh_token
 )
 from sqlalchemy import or_, and_
+from src.config import Config
 
 Authentication = Blueprint("auth", __name__)
 
@@ -178,11 +180,25 @@ def login():
                 "IsAdmin": True if exist.Role == 1 else False,
             },
         )
+        refresh_token = create_refresh_token(
+            identity=identity,
+            additional_claims={
+                "id": exist.Id,
+                "username": exist.Username,
+                "email": exist.EmailAddress,
+                "IsAdmin": True if exist.Role == 1 else False,
+            }
+        )
         app.logger.info(f"login thành công tài khoản {email}.")
         return {
             "Status": 1,
             "Description": None,
-            "ResponseData": {"access_token": access_token},
+            "ResponseData": {
+                "access_token": access_token,
+                "access_expires": datetime.now().__add__(Config.JWT_ACCESS_TOKEN_EXPIRES),
+                "refresh_token": refresh_token,
+                "refresh_expires": datetime.now().__add__(Config.JWT_REFRESH_TOKEN_EXPIRES)
+            },
         }, 200
             
     except ProjectException as pEx:
