@@ -1,142 +1,147 @@
 from src.db import db
 from src import marshmallow
-from sqlalchemy import Column, Integer, String, DateTime, Time, ARRAY
+from sqlalchemy import Column, Integer, String, DateTime, Time, ARRAY, Boolean, Numeric
 from enum import Enum
+from datetime import datetime
 
 # MODELS
 
 
-class ShiftModel(db.Model):
-    __tablename__ = "Shift"
+# class ShiftModel(db.Model):
+#     __tablename__ = "Shift"
 
-    Id = Column(Integer(), primary_key=True)
-    Description = Column(String(), nullable=False)
-    ShiftType = Column(Integer(), nullable=False)
-    Status = Column(Integer())
-    CreatedBy = Column(Integer())
-    CreatedAt = Column(DateTime(), nullable=False)
-    ModifiedBy = Column(Integer())
-    ModifiedAt = Column(DateTime(), nullable=False)
+#     Id = Column(Integer(), primary_key=True)
+#     Description = Column(String(), nullable=False)
+#     ShiftType = Column(Integer())
+#     Status = Column(Integer(), default=1)
+#     CreatedBy = Column(Integer())
+#     CreatedAt = Column(DateTime(timezone=None), default=datetime.now())
+#     ModifiedBy = Column(Integer())
+#     ModifiedAt = Column(DateTime(timezone=None), default=datetime.now())
 
-    def __init__(self) -> None:
-        super().__init__()
-
-
-class ShiftDetailModel(db.Model):
-    __tablename__ = "ShiftDetail"
-    Id = Column(Integer(), primary_key=True)
-    ShiftId = Column(Integer(), nullable=False)
-    StartDate = Column(Time(), nullable=False)
-    EndDate = Column(Time(), nullable=False)
-    StartTime = Column(Time(), nullable=False)
-    FinishTime = Column(Time(), nullable=False)
-    BreakAt = Column(Time())
-    BreakEnd = Column(Time())
-    DayIndexList = Column(ARRAY(Integer))
-    Note = Column(String())
-    BreakMinutes = Column(Integer())
-    Status = Column(Integer())
-    CreatedBy = Column(Integer())
-    CreatedAt = Column(DateTime())
-    ModifiedBy = Column(Integer())
-    ModifiedAt = Column(DateTime())
+#     def __init__(self) -> None:
+#         super().__init__()
 
 
-class ShiftDetailSchema(marshmallow.Schema):
-    class Meta:
-        fields = (
-            "Id",
-            "ShiftId",
-            "StartDate",
-            "EndDate",
-            "StartTime",
-            "FinishTime",
-            "BreakAt",
-            "BreakEnd",
-            "DayIndexList",
-            "BreakMinutes",
-            "Status",
-            "Note",
-        )
+# class ShiftDetailModel(db.Model):
+#     __tablename__ = "ShiftDetail"
+#     Id = Column(Integer(), primary_key=True)
+#     ShiftId = Column(Integer(), nullable=False)
+#     StartTime = Column(Time())
+#     FinishTime = Column(Time())
+#     BreakAt = Column(Time())
+#     BreakEnd = Column(Time())
+#     Note = Column(String(), default='')
+#     BreakMinutes = Column(Integer(), default=0)
+#     Status = Column(Integer(), default=1)
+#     CreatedBy = Column(Integer())
+#     CreatedAt = Column(DateTime(timezone=None), default=datetime.now())
+#     ModifiedBy = Column(Integer())
+#     ModifiedAt = Column(DateTime(timezone=None), default=datetime.now())
+#     CheckinRequired = Column(Boolean(), default=True)
+#     CheckoutRequired = Column(Boolean(), default=True)
+#     HasBreak = Column(Boolean(), default=False)
+#     WorkingHour = Column(Numeric(precision=5, scale=2))
+#     WorkingDay = Column(Numeric(precision=5, scale=2))
 
 
-class ShiftTypeModel(db.Model):
-    __tablename__ = "ShiftType"
-
-    Id = Column(Integer(), primary_key=True)
-    Description = Column(String())
-    Status = Column(Integer())
-    CreatedBy = Column(Integer())
-    CreatedAt = Column(DateTime(), nullable=False)
-    ModifiedBy = Column(Integer())
-    ModifiedAt = Column(DateTime(), nullable=False)
-
-    def __init__(self) -> None:
-        super().__init__()
-
-
-class ShiftSchema(marshmallow.Schema):
-    class Meta:
-        fields = (
-            "Id",
-            "Description",
-            "StartTime",
-            "FinishTime",
-            "BreakAt",
-            "BreakEnd",
-            "Status",
-            "StatusText",
-            "StartDate",
-            "EndDate",
-            "CreatedAt",
-            "CreatedBy",
-            "ShiftType",
-            "ShiftTypeText",
-            "DayIndexList",
-            "Note",
-            "BreakMinutes"
-        )
+# class ShiftDetailSchema(marshmallow.Schema):
+#     class Meta:
+#         fields = (
+#             "Id",
+#             "ShiftId",
+#             "StartTime",
+#             "FinishTime",
+#             "BreakAt",
+#             "BreakEnd",
+#             "DayIndexList",
+#             "BreakMinutes",
+#             "Status",
+#             "CheckinRequired",
+#             "CheckoutRequired",
+#             "HasBreak",
+#             "WorkingHour",
+#             "WorkingDay",
+#         )
 
 
-class ShiftListResponseSchema(marshmallow.Schema):
-    class Meta:
-        fields = (
-            "Id",
-            "Description",
-            "StartTime",
-            "FinishTime",
-            "BreakAt",
-            "BreakEnd",
-            "Status",
-            "StatusText",
-            "StartDate",
-            "EndDate",
-            "DayIndexList",
-            "Note",
-        )
+# class ShiftTypeModel(db.Model):
+#     __tablename__ = "ShiftType"
+
+#     Id = Column(Integer(), primary_key=True)
+#     Description = Column(String())
+#     Status = Column(Integer(), default=1)
+#     CreatedBy = Column(Integer())
+#     CreatedAt = Column(DateTime(timezone=None), default=datetime.now())
+#     ModifiedBy = Column(Integer())
+#     ModifiedAt = Column(DateTime(timezone=None), default=datetime.now())
+
+#     def __init__(self) -> None:
+#         super().__init__()
 
 
-class ShiftTypeModelSchema(marshmallow.Schema):
-    class Meta:
-        fields = ("Id", "Description")
+# class ShiftSchema(marshmallow.Schema):
+#     class Meta:
+#         fields = (
+#             "Id",
+#             "Description",
+#             "StartTime",
+#             "FinishTime",
+#             "BreakAt",
+#             "BreakEnd",
+#             "Status",
+#             "StatusText",
+#             "StartDate",
+#             "EndDate",
+#             "CreatedAt",
+#             "CreatedBy",
+#             "ShiftType",
+#             "ShiftTypeText",
+#             "DayIndexList",
+#             "Note",
+#             "BreakMinutes"
+#         )
+
+
+# class ShiftListResponseSchema(marshmallow.Schema):
+#     class Meta:
+#         fields = (
+#             "Id",
+#             "Description",
+#             "StartTime",
+#             "FinishTime",
+#             "BreakAt",
+#             "BreakEnd",
+#             "Status",
+#             "StatusText",
+#             "StartDate",
+#             "EndDate",
+#             "DayIndexList",
+#             "Note",
+#         )
+
+
+# class ShiftTypeModelSchema(marshmallow.Schema):
+#     class Meta:
+#         fields = ("Id", "Description")
 
 
 class ShiftAssignment(db.Model):
     __tablename__ = "ShiftAssignment"
 
     Id = Column(Integer(), primary_key=True)
-    ShiftId = Column(Integer(), nullable=False)
-    ShiftDetailId = Column(Integer(), nullable=False)
-    StartDate = Column(DateTime(), nullable=False)
-    EndDate = Column(DateTime(), nullable=True)
-    AssignType = Column(Integer(), nullable=True)
-    Description = Column(String(), nullable=False)
-    Note = Column(String())
-    Status = Column(String())
+    ShiftId = Column(Integer())
+    ShiftDetailId = Column(Integer())
+    # StartDate = Column(DateTime())
+    # EndDate = Column(DateTime(), nullable=True)
+    # AssignType = Column(Integer(), nullable=True)
+    Description = Column(String())
+    Note = Column(String(), default='')
+    Status = Column(String(), default='1')
     CreatedBy = Column(Integer())
+    CreatedAt = Column(DateTime(timezone=None), default=datetime.now())
     ModifiedBy = Column(Integer())
-    CreatedAt = Column(DateTime())
-    ModifiedAt = Column(DateTime())
+    ModifiedAt = Column(DateTime(timezone=None), default=datetime.now())
 
 
 class ShiftAssignmentSchema(marshmallow.Schema):
@@ -145,15 +150,10 @@ class ShiftAssignmentSchema(marshmallow.Schema):
             "Id",
             "ShiftId",
             "Description",
-            "StartDate",
-            "EndDate",
-            "AssignType",
-            "ShiftDescription",
             "Note",
             "Status",
             "CreatedBy",
             "CreatedAt",
-            "AssignmentTypeName",
         )
 
 
@@ -161,15 +161,39 @@ class ShiftAssignmentDetail(db.Model):
     __tablename__ = "ShiftAssignmentDetail"
 
     Id = Column(Integer(), primary_key=True)
-    ShiftAssignmentId = Column(Integer(), nullable=False)
-    Target = Column(Integer(), nullable=False)
-    TargetType = Column(Integer(), nullable=False)
-    FinishAssignmentTime = Column(Time())
-    Status = Column(String())
+    ShiftAssignmentId = Column(Integer())
+    Target = Column(Integer())
+    TargetType = Column(Integer())
+    # FinishAssignmentTime = Column(Time())
+    Status = Column(String(), default='1')
     CreatedBy = Column(Integer())
+    CreatedAt = Column(DateTime(timezone=None), default=datetime.now())
     ModifiedBy = Column(Integer())
-    CreatedAt = Column(DateTime())
-    ModifiedAt = Column(DateTime())
+    ModifiedAt = Column(DateTime(timezone=None), default=datetime.now())
+    StartDate = Column(DateTime())
+    EndDate = Column(DateTime(), nullable=True)
+    ShiftId = Column(Integer())
+    ShiftDetailId = Column(Integer())
+    DaysInWeek = Column(ARRAY(Integer()))
+
+
+class ShiftAssignmentDetailSchema(marshmallow.Schema):
+    class Meta:
+        fields = (
+            "Id",
+            "ShiftAssignmentId",
+            "Target",
+            "TargetType",
+            "Note",
+            "Status",
+            "CreatedBy",
+            "CreatedAt",
+            "EndDate",
+            "StartDate",
+            "ShiftId",
+            "ShiftDetailId",
+            "DaysInWeek",
+        )
 
 
 class ShiftAssignmentType(db.Model):
@@ -184,12 +208,12 @@ class ShiftAssignmentType(db.Model):
     ModifiedAt = Column(DateTime())
 
 
-shiftSchema = ShiftSchema()
-shiftListSchema = ShiftSchema(many=True)
-shiftListResponseSchema = ShiftListResponseSchema(many=True)
+# shiftSchema = ShiftSchema()
+# shiftListSchema = ShiftSchema(many=True)
+# shiftListResponseSchema = ShiftListResponseSchema(many=True)
 
 Status = Enum("Status", ["Active", "Inactive"])
-TargetType = Enum("TargetType", ["Department", "Designation", "Employee"])
+TargetType = Enum("TargetType", ["Department", "Employee"])
 
 
 class Status:
@@ -201,35 +225,12 @@ class TargetType(Enum):
     Department = 1
     Employee = 2
 
-# region Views
-class vShiftDetail(db.Model):
-    __tablename__ = "vShiftDetail"
-    Id = Column(Integer(), primary_key=True)
-    ShiftId = Column(Integer(), nullable=False)
-    StartDate = Column(Time(), nullable=False)
-    EndDate = Column(Time(), nullable=False)
-    StartTime = Column(Time(), nullable=False)
-    FinishTime = Column(Time(), nullable=False)
-    BreakAt = Column(Time())
-    BreakEnd = Column(Time())
-    DayIndexList = Column(ARRAY(Integer))
-    Note = Column(String())
-    BreakMinutes = Column(Integer())
-    Status = Column(Integer())
-    CreatedBy = Column(Integer())
-    CreatedAt = Column(DateTime())
-    ModifiedBy = Column(Integer())
-    ModifiedAt = Column(DateTime())
-    Description = Column(String(), nullable=False)
-    ShiftType = Column(Integer(), nullable=False)
-
-# endregion
 
 class DayInWeekEnum(Enum):
-    Sun=0,
-    Mon=1,
-    Tue=2,
-    Wed=3,
-    Thur=4,
-    Fri=5,
-    Sat=6
+    Sun = 0,
+    Mon = 1,
+    Tue = 2,
+    Wed = 3,
+    Thur = 4,
+    Fri = 5,
+    Sat = 6
