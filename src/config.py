@@ -24,3 +24,15 @@ class Config:
     LOG_LEVEL= os.getenv("LOG_LEVEL") if os.getenv("LOG_LEVEL") else "INFO"
     LOG_DIR= os.getenv("LOG_DIR") if os.getenv("LOG_DIR") else ""
     APP_LOG_NAME= os.getenv("APP_LOG_NAME") if os.getenv("APP_LOG_NAME") else "log.log"
+
+    RAW_PATH = "./public/datasets/raw"
+    LOCAL_STORAGE = "./public/datasets/raw"
+    TRAIN_PATH = "./public/datasets/processed"
+    HAARCASCADEPATH = "./public/static/haarcascade_frontalface_default.xml"
+    PATH_MODEL_TRAIN = "./public/static/Trainner.yml"   
+
+    #region GG Drive Api
+    CREDENTIALS_PATH = os.getenv("CREDENTIALS_PATH") if os.getenv("CREDENTIALS_PATH") else "./public/gg_drive/credentials.json"
+    TOKEN_PATH = os.getenv("TOKEN_PATH") if os.getenv("TOKEN_PATH") else "./public/gg_drive/token.json"
+    #endregion
+

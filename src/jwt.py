@@ -18,7 +18,7 @@ jwt = JWTManager()
 blacklist = set()
 
 
-class TokenBlocklist(db.Model):
+class TokenBlockList(db.Model):
     __tablename__ = "TokenBlock"
 
     id = Column(Integer(), primary_key=True)
@@ -29,5 +29,5 @@ class TokenBlocklist(db.Model):
 @jwt.token_in_blocklist_loader
 def check_if_token_revoked(jwt_header, jwt_payload: dict) -> bool:
     jti = jwt_payload["jti"]
-    token = db.session.query(TokenBlocklist.id).filter_by(jti=jti).scalar()
+    token = db.session.query(TokenBlockList.id).filter_by(jti=jti).scalar()
     return token is not None

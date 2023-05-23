@@ -42,6 +42,7 @@ class EmployeeInfoSchema(marshmallow.Schema):
             "Position",
             "Email",
             "MobilePhone",
+            "DepartmentName"
         )
 
 

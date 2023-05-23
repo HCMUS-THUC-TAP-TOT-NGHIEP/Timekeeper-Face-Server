@@ -23,8 +23,7 @@ def admin_required():
                         Status=0,
                         Description="Yêu cầu tài khoản có quyền quản trị viên",
                         ResponseData=None,
-                    ),
-                    403,
+                    ), 200
                 )
         return decorator
     return wrapper
