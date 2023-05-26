@@ -9,7 +9,7 @@ from src.db import db
 from src.extension import ProjectException
 from src.jwt import get_jwt_identity, jwt_required 
 from src.middlewares.token_required import admin_required
-from src.employee.model import EmployeeModel, EmployeeInfoSchema, employeeInfoListSchema
+from src.employee.model import EmployeeModel, EmployeeSchema, employeeInfoListSchema
 from src.department.model import DepartmentModel, departmentListSchema
 from sqlalchemy import or_, func, String
 

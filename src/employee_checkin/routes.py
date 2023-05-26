@@ -1,23 +1,34 @@
-from datetime import datetime, date, timedelta
+from datetime import date, datetime, timedelta
 
 from flask import Blueprint
-from flask import current_app as app, send_from_directory
-from flask import request
+from flask import current_app as app
+from flask import request, send_from_directory
+from sqlalchemy import (DateTime, and_, between, case, delete, func, insert,
+                        or_, select)
 
 from src.authentication.model import UserModel
+from src.config import Config
 from src.db import db
 from src.employee.model import (EmployeeModel, employeeInfoListSchema,
                                 employeeInfoSchema)
-from src.employee_checkin.EmployeeCheckin import EmployeeCheckin, employeeCheckinListSchema
-from src.employee_checkin.AttendanceStatistic import AttendanceStatistic, AttendanceStatisticSchema, AttendanceStatisticV2
+from src.employee_checkin.AttendanceStatistic import (
+    AttendanceStatistic, AttendanceStatisticSchema, AttendanceStatisticV2)
+from src.employee_checkin.EmployeeCheckin import (EmployeeCheckin,
+                                                  employeeCheckinListSchema)
+from src.employee_checkin.Timesheet import (Timesheet, TimesheetDetail,
+                                            TimesheetDetailSchema,
+                                            timesheetDetailListSchema,
+                                            timesheetDetailSchema,
+                                            timesheetListSchema,
+                                            timesheetSchema)
 from src.extension import ProjectException
-from src.jwt import get_jwt_identity, jwt_required, get_jwt
+from src.jwt import get_jwt, get_jwt_identity, jwt_required
 from src.middlewares.token_required import admin_required
-from sqlalchemy import and_, case, delete, func, insert, or_, select, DateTime, between
-from src.shift.model import ShiftAssignment, ShiftAssignmentDetail, ShiftAssignmentType, TargetType, DayInWeekEnum
-from src.shift.ShiftModel import vShiftDetail, vShiftDetailSchema, ShiftDetailModel, ShiftDetailSchema , ShiftModel
-from src.config import Config
-from src.employee_checkin.Timesheet import Timesheet, timesheetListSchema, timesheetSchema, timesheetDetailListSchema, TimesheetDetail, timesheetDetailSchema, TimesheetDetailSchema
+from src.shift.model import (DayInWeekEnum, ShiftAssignment,
+                             ShiftAssignmentDetail, ShiftAssignmentType,
+                             TargetType)
+from src.shift.ShiftModel import (ShiftDetailModel, ShiftDetailSchema,
+                                  ShiftModel, vShiftDetail, vShiftDetailSchema)
 
 EmployeeCheckinRoute = Blueprint("/checkin", __name__)
 
@@ -299,7 +310,7 @@ def getTimeSheetList():
     finally:
         app.logger.info(f"getTimeSheetList kết thúc")
 
-# POST api/checkin/timesheet/create
+# POST api/checkin/timesheet
 @EmployeeCheckinRoute.route("/timesheet", methods=["POST"])
 @admin_required()
 def createTimeSheet():
@@ -316,13 +327,16 @@ def createTimeSheet():
                   if "DateTo" in jsonRequestData else None)
         DepartmentList = (jsonRequestData["DepartmentList"]
                   if "DepartmentList" in jsonRequestData else [])
+                  
         #region validate
+
         if not Name or not Name.strip():
             raise ProjectException("Yêu cầu không hợp lệ, do chưa cung cấp tên báo cáo.")
         if not DateFrom:
             raise ProjectException("Yêu cầu không hợp lệ, do chưa cung cấp ngày bắt đầu báo cáo.")
         if not DateTo:
             raise ProjectException("Yêu cầu không hợp lệ, do chưa cung cấp ngày kết thúc báo cáo.")
+
         #endregion
 
         newTimeSheet = Timesheet()
@@ -344,9 +358,12 @@ def createTimeSheet():
         checkinRecordList = AttendanceStatisticV2.QueryMany(DateFrom=DateFrom, DateTo=DateTo)["items"]
         # if (len(checkinRecordList) == 0):
             # raise ProjectException("")
-        if(len(DepartmentList) == 0):
-            employeeList = EmployeeModel.query.all()
-        # employeeList = employeeInfoListSchema().dump(data)
+        query = db.select(EmployeeModel)
+        if len(DepartmentList) > 0:
+            query = query.where(EmployeeModel.DepartmentId.in_(DepartmentList))
+        employeeList = db.session.execute(query).scalars()
+            
+        # employeeList = employeeInfoListSchema.dump(data)
         delta = timedelta(days=1)     
         for employee in employeeList:
             currentDate = date.fromisoformat(DateFrom)
@@ -356,14 +373,12 @@ def createTimeSheet():
                 times = list()
                 checkinRecords = list(filter(lambda x: x.Id == employee.Id and x.Date == currentDate, checkinRecordList))
                 counts = checkinRecords.__len__()
-                if not counts: pass
-                else:
-                    timeSheetDetail.EmployeeId = employee.Id
-                    timeSheetDetail.Date = currentDate
-                    timeSheetDetail.CheckinTime =  checkinRecords[0].Time if counts > 0 else None
-                    timeSheetDetail.CheckoutTime = checkinRecords[1].Time if counts > 1 else None
-                    timeSheetDetail.TimesheetId = newTimeSheet.Id
-                    db.session.add(timeSheetDetail)
+                timeSheetDetail.EmployeeId = employee.Id
+                timeSheetDetail.Date = currentDate
+                timeSheetDetail.CheckinTime =  checkinRecords[0].Time if counts > 0 else None
+                timeSheetDetail.CheckoutTime = checkinRecords[1].Time if counts > 1 else None
+                timeSheetDetail.TimesheetId = newTimeSheet.Id
+                db.session.add(timeSheetDetail)
                 currentDate+=delta
 
         # endregion
@@ -373,8 +388,7 @@ def createTimeSheet():
         return {
             "Status": 1,
             "Description": f"",
-            "ResponseData": {
-            },
+            "ResponseData": { "Id": newTimeSheet.Id },
         }, 200
     except ProjectException as pEx:
         db.session.rollback()
@@ -398,7 +412,7 @@ def createTimeSheet():
         app.logger.info(f"getTimeSheetList kết thúc")
 
 # GET api/checkin/timesheet-detail
-@EmployeeCheckinRoute.route("/timesheet-details", methods=["GET"])
+@EmployeeCheckinRoute.route("/timesheet/detail", methods=["GET"])
 @admin_required()
 def getTimesheetDetails():
     try:
@@ -407,7 +421,7 @@ def getTimesheetDetails():
         id = claims["id"]
         requestData = request.args
         TimesheetId = (
-            requestData["TimesheetId"] if "TimesheetId" in requestData else None)
+            requestData["Id"] if "Id" in requestData else None)
         #region validate
         if not TimesheetId:
             raise ProjectException("Yêu cầu không hợp lệ, do chưa cung cấp mã báo cáo.")
@@ -417,13 +431,17 @@ def getTimesheetDetails():
             raise ProjectException(f"Không tìm thấy bảng phân ca mã {TimesheetId}.")
         data = exist.QueryDetails()
         detailList = TimesheetDetailSchema(many=True).dump(data)
+        # detailList = []
+        
+
         app.logger.info(f"getTimesheetDetails thành công")
         return {
             "Status": 1,
             "Description": None,
             "ResponseData": {
                 "Detail": detailList,
-                "TimesheetId": TimesheetId
+                "Timesheet": timesheetSchema.dump(exist),
+                "Total": len(detailList)
             },
         }, 200
     except ProjectException as pEx:

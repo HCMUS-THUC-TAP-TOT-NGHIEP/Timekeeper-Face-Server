@@ -28,7 +28,7 @@ class EmployeeModel(db.Model):
     Code = Column(String(), nullable=True)
 
 
-class EmployeeInfoSchema(marshmallow.Schema):
+class EmployeeSchema(marshmallow.Schema):
     class Meta:
         fields = (
             "Id",
@@ -47,5 +47,5 @@ class EmployeeInfoSchema(marshmallow.Schema):
         )
 
 
-employeeInfoSchema = EmployeeInfoSchema()
-employeeInfoListSchema = EmployeeInfoSchema(many=True)
+employeeInfoSchema = EmployeeSchema()
+employeeInfoListSchema = EmployeeSchema(many=True)

@@ -57,12 +57,12 @@ class Timesheet(db.Model):
     def QueryDetails(self, EmployeeId=None, DepartmentId=None, Date=None):
         try:
             app.logger.info(f"Timesheet.QueryDetails start. ")
-            condition = TimesheetDetail.TimesheetId == self.Id
-            query = db.select(TimesheetDetail)
+            condition = vTimesheetDetail.TimesheetId == self.Id
+            query = db.select(vTimesheetDetail)
             if condition:
                 query = query.where(condition)
             data = db.session.execute(query).all()
-            return list(map(lambda x: x._asdict()["TimesheetDetail"], data))
+            return list(map(lambda x: x._asdict()["vTimesheetDetail"], data))
         except Exception as ex:
             app.logger.exception(
                 f"Timesheet.QueryDetails failed. Exception[{ex}]")
@@ -99,10 +99,33 @@ class TimesheetDetail(db.Model):
         super().__init__()
 
 
+class vTimesheetDetail(db.Model):
+    __tablename__ = "vTimesheetDetail"
+
+    Id = Column(BigInteger(), primary_key=True)
+    Date = Column(Date(), nullable=False)
+    TimesheetId = Column(BigInteger(), nullable=False)
+    EmployeeId = Column(Integer(), nullable=False)
+    EmployeeName = Column(String())
+    Department = Column(String())
+    CheckinTime = Column(Time())
+    CheckoutTime = Column(Time())
+    ShiftAssignmentId = Column(Integer())
+    ShiftId = Column(Integer())
+    EmployeeCheckinId = Column(Integer())
+    StartTime = Column(Time())
+    FinishTime = Column(Time())
+    BreakAt = Column(Time())
+    BreakEnd = Column(Time())
+
+    def __init__(self) -> None:
+        super().__init__()
+
+
 class TimesheetDetailSchema(marshmallow.Schema):
     class Meta:
         fields = ("Id", "TimesheetId", "EmployeeId", "Date", "CheckinTime", "CheckoutTime", "StartTime",
-                  "FinishTime", "BreakAt", "BreakEnd", "ShiftAssignmentId", "ShiftId", "EmployeeCheckinId")
+                  "FinishTime", "BreakAt", "BreakEnd", "ShiftAssignmentId", "ShiftId", "EmployeeCheckinId", "EmployeeName", "Department")
 
 
 timesheetSchema = TimesheetSchema()
