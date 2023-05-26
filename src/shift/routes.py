@@ -11,7 +11,7 @@ from src.authentication.model import UserModel
 from src.db import db
 from src.department.model import DepartmentModel, DepartmentSchema
 from src.designation.model import Designation
-from src.employee.model import EmployeeModel, EmployeeInfoSchema
+from src.employee.model import EmployeeModel, EmployeeSchema
 from src.extension import ProjectException, object_as_dict
 from src.jwt import get_jwt, get_jwt_identity, jwt_required
 from src.middlewares.token_required import admin_required
@@ -22,7 +22,8 @@ from src.shift.model import (
     ShiftAssignmentType,
     Status,
     TargetType,
-    ShiftAssignmentDetailSchema
+    ShiftAssignmentDetailSchema,
+    vShiftAssignmentDetail
 )
 from src.shift.ShiftModel import (
     vShiftDetail,
@@ -448,13 +449,10 @@ def AssignShift():
         startDate = jsonRequestData["StartDate"] if "StartDate" in jsonRequestData else None
         endDate = jsonRequestData["EndDate"] if "EndDate" in jsonRequestData else None
         daysInWeek = jsonRequestData["DaysInWeek"] if "DaysInWeek" in jsonRequestData else None
+        assignmentType = jsonRequestData["AssignmentType"] if "AssignmentType" in jsonRequestData else None
 
         # endregion
         # region validate
-
-        # user = UserModel.query.filter_by(Id=id).first()
-        # if user is None:
-        #     raise ProjectException("Máy chủ không tìm thấy người dùng " + email)
 
         if not description:
             raise ProjectException(
@@ -471,21 +469,23 @@ def AssignShift():
             raise ProjectException(f"Không tìm thấy ngày kết thúc trong truy vấn.")
         if not daysInWeek or not len(daysInWeek):
             raise ProjectException(f"Không tìm thấy ngày trong tuần được áp dụng bảng phân ca trong truy vấn.")
-        if not len(employeeList) and not len(departmentList):
-            raise ProjectException(f"Không tìm thấy nhân viên hay phòng ban được áp dụng bảng phân ca trong truy vấn.")
+        if not assignmentType:
+            raise ProjectException(f"Không tìm thấy kiểu phân ca cho bảng phân ca trong truy vấn.")
 
+        targetArray = list()
+        if assignmentType == TargetType.Employee.value:
+            if not len(employeeList):
+                raise ProjectException(f"Không tìm thấy các nhân viên được áp dụng bảng phân ca trong truy vấn.")
+            targetArray = employeeList
+        elif assignmentType == TargetType.Department.value:
+            if not len(departmentList):
+                raise ProjectException(f"Không tìm thấy các  phòng ban được áp dụng bảng phân ca trong truy vấn.")
+            targetArray = departmentList
         # endregion
 
 
         # region Kiểm tra có bị lồng phân ca không.
 
-        
-
-        # targetArray = list()
-        # if assignType == 1:
-        #     targetArray = departmentList
-        # elif assignType == 2:
-        #     targetArray = employeeList
         # CheckIfExist(
         #     assignType=assignType, shiftDetail=shiftDetail, targetList=targetArray
         # )
@@ -496,10 +496,12 @@ def AssignShift():
 
         newShiftAssignment = ShiftAssignment()
         newShiftAssignment.Description = description
-        # newShiftAssignment.ShiftId = shiftId
-        # newShiftAssignment.ShiftDetailId = shiftDetail.Id
-        # newShiftAssignment.StartDate = shiftDetail.StartDate
-        # newShiftAssignment.EndDate = shiftDetail.EndDate
+        newShiftAssignment.TargetType = assignmentType
+        newShiftAssignment.ShiftId = shiftId
+        newShiftAssignment.DaysInWeek = daysInWeek
+        newShiftAssignment.ShiftDetailId = shiftDetail.Id
+        newShiftAssignment.StartDate = startDate
+        newShiftAssignment.EndDate = endDate
         newShiftAssignment.Note = note
         newShiftAssignment.CreatedBy = id
         newShiftAssignment.ModifiedBy = id
@@ -514,40 +516,19 @@ def AssignShift():
         # region Thêm chi tiết phân ca mới
 
         values = []
-        for department in departmentList:
+        for target in targetArray:
             values.append(
                 {
                     "ShiftAssignmentId": newShiftAssignment.Id,
-                    "Target": department,
-                    "TargetType": TargetType.Department.value,
-                    "EndDate": endDate,
-                    "StartDate": startDate,
-                    "DaysInWeek": daysInWeek,
-                    "ShiftId": shiftId,
-                    "ShiftDetailId": shiftDetail.Id,
+                    "Target": target,
                     "CreatedAt": datetime.now(),
                     "ModifiedAt": datetime.now(),
                     "CreatedBy": id,
                     "ModifiedBy": id,
                 }
             )
-        for employee in employeeList:
-            values.append(
-                {
-                    "ShiftAssignmentId": newShiftAssignment.Id,
-                    "Target": employee,
-                    "TargetType": TargetType.Employee.value,
-                    "EndDate": endDate,
-                    "StartDate": startDate,
-                    "DaysInWeek": daysInWeek,
-                    "ShiftId": shiftId,
-                    "ShiftDetailId": shiftDetail.Id,
-                    "CreatedAt": datetime.now(),
-                    "ModifiedAt": datetime.now(),
-                    "CreatedBy": id,
-                    "ModifiedBy": id,
-                }
-            )
+        
+
         if len(values) == 0:
             db.session.rollback()
             app.logger.info("AssignShift thành công")
@@ -659,44 +640,53 @@ def getShiftAssignmentList():
         #     )
         #     .order_by(ShiftAssignment.StartDate, ShiftAssignment.Id)
         # ).all()
-        data = []
-        shiftAssignmentList = db.session.execute(select(ShiftAssignment)).scalars()
 
-        for shiftAssignment in shiftAssignmentList:
-            temp = dict()
-            temp["Id"]=shiftAssignment.Id
-            temp["Description"]=shiftAssignment.Description
-            shiftAssignmentDetail = ShiftAssignmentDetail.query.filter_by(ShiftAssignmentId=shiftAssignment.Id).first()
-            shiftDetail = vShiftDetail.query.filter_by(Id=shiftAssignmentDetail.ShiftId).first()
-            temp["StartDate"] = shiftAssignmentDetail.StartDate
-            temp["EndDate"] = shiftAssignmentDetail.EndDate
-            temp["Shift"] = shiftDetail.Description
-            query = select(DepartmentModel)\
-                    .where(and_(ShiftAssignmentDetail.ShiftAssignmentId == shiftAssignment.Id
-                        ,ShiftAssignmentDetail.TargetType== TargetType.Department.value
-                        ,ShiftAssignmentDetail.Target == DepartmentModel.Id)
-                    )
-            # query = select(DepartmentModel)
-            print(query)
-            departmentList = db.session.execute(query).scalars()
-            # select(EmployeeModel.Id, func.concat(EmployeeModel.LastName, " ", EmployeeModel.FirstName).label("EmployeeName"))\
-            query = select(EmployeeModel)\
-                    .where(and_( ShiftAssignmentDetail.ShiftAssignmentId == shiftAssignment.Id
-                        , ShiftAssignmentDetail.TargetType == TargetType.Employee.value
-                        ,  ShiftAssignmentDetail.Target == EmployeeModel.Id)
-                    )
-            employeeList = db.session.execute(query).scalars()
-            temp["DepartmentList"] = list(map(lambda x: x.Name ,departmentList))
-            temp["EmployeeList"] = list(map(lambda x: x.LastName + " " + x.FirstName ,employeeList))
+        #region khai bao
+
+        args = request.args
+        page = None
+        pageSize = None
+        if "Page" in args:
+            page = int(args["Page"])
+        if "PageSize" in args:
+            pageSize = int(args["PageSize"])
+
+        #endregion
+
+        data = []
+        # shiftAssignmentList = db.session.execute(select(ShiftAssignment)).scalars()
+        result = ShiftAssignment.QueryMany(Page=page, PerPage=pageSize)
+        shiftAssignmentList = result["Items"]
+        total = result["Total"]
+
+        for assignment in shiftAssignmentList:
+            temp = ShiftAssignmentSchema().dump(assignment)
+            temp["EmployeeList"] = []
+            temp["DepartmentList"] = []
+            if assignment["TargetType"] == TargetType.Employee.value:
+                EmployeeList = db.session.execute(
+                    db.select(vShiftAssignmentDetail.EmployeeName)
+                    .where(and_(vShiftAssignmentDetail.Id == assignment["Id"], vShiftAssignmentDetail.TargetType ==  TargetType.Employee.value))
+                ).scalars().all()
+                temp["EmployeeList"] = EmployeeList
+            elif assignment["TargetType"] == TargetType.Department.value:
+                DepartmentList = db.session.execute(
+                    db.select(vShiftAssignmentDetail.DepartmentName)
+                    .where(and_(vShiftAssignmentDetail.Id == assignment["Id"], vShiftAssignmentDetail.TargetType == TargetType.Department.value))
+                ).scalars().all()
+                temp["DepartmentList"] = DepartmentList
+            else: pass
             data.append(temp)
-            
+
+
         app.logger.exception(f"getShiftAssignmentList thành công.")
         return {
             "Status": 1,
             "Description": None,
             "ResponseData": {
                 "ShiftAssignmentList": data,
-                "Total": len(data)
+                # ShiftAssignmentSchema(many=True).dump(shiftAssignmentList),
+                "Total": total
             }
         }, 200
     except ProjectException as pEx:
@@ -737,96 +727,14 @@ def getShiftAssignmentDetail():
         # endregion
 
         id = jsonRequestData["Id"]
-        # shiftAssignment = db.session.execute(
-        #     select(
-        #         ShiftAssignmentType.Name.label("AssignmentTypeName"),
-        #         ShiftAssignment,
-        #         ShiftDetailModel,
-        #     )
-        #     .select_from(ShiftAssignment)
-        #     .join(
-        #         ShiftDetailModel,
-        #         ShiftDetailModel.Id == ShiftAssignment.ShiftDetailId,
-        #         isouter=True,
-        #     )
-        #     .where(
-        #         and_(
-        #             ShiftAssignment.Id == id,
-        #             ShiftAssignment.AssignType == ShiftAssignmentType.Id,
-        #         )
-        #     )
-        # ).first()
-        # shiftAssignmentDetail = db.session.execute(
-        #     select(
-        #         ShiftAssignmentDetail.Id,
-        #         ShiftAssignmentDetail.Target,
-        #         ShiftAssignmentDetail.TargetType,
-        #         case(
-        #             (ShiftAssignmentDetail.TargetType == 1, DepartmentModel.Name),
-        #             else_=EmployeeModel.LastName + " " + EmployeeModel.FirstName,
-        #         ).label("TargetDescription"),
-        #     )
-        #     .select_from(ShiftAssignmentDetail)
-        #     .join(
-        #         DepartmentModel,
-        #         and_(
-        #             ShiftAssignmentDetail.TargetType == 1,
-        #             ShiftAssignmentDetail.Target == DepartmentModel.Id,
-        #         ),
-        #         isouter=True,
-        #     )
-        #     .join(
-        #         EmployeeModel,
-        #         and_(
-        #             ShiftAssignmentDetail.TargetType == 2,
-        #             ShiftAssignmentDetail.Target == EmployeeModel.Id,
-        #         ),
-        #         isouter=True,
-        #     )
-        #     .where(
-        #         and_(
-        #             ShiftAssignmentDetail.ShiftAssignmentId == id,
-        #             ShiftAssignmentDetail.Status == "1",
-        #         )
-        #     )
-        # ).all()
-        # detailDict = [r._asdict() for r in shiftAssignmentDetail]
-        # response = {
-        #     "Assignment": ShiftAssignmentSchema().dump(
-        #         shiftAssignment["ShiftAssignment"],
-        #     ),
-        #     "ShiftDetail": ShiftDetailSchema().dump(
-        #         shiftAssignment["ShiftDetailModel"]
-        #     ),
-        # }
-        # response["Assignment"]["AssignmentTypeName"] = shiftAssignment[
-        #     "AssignmentTypeName"
-        # ]
-        # response["AssignmentDetail"] = detailDict
-
         assignment = ShiftAssignment.query.filter_by(Id=id).first()
         if not assignment:
             raise PorjectException(f"Không tìm thấy bảng phân ca có mã f{Id}")
-        assignmentDetail = ShiftAssignmentDetail.query.filter_by(ShiftAssignmentId=id).first()
+        assignmentDetail = assignment.QueryDetails()
         if not assignmentDetail:
             raise PorjectException(f"Không tìm thấy thông tin chi tiết của bảng phân ca có mã f{Id}")
-        shiftDetail = vShiftDetail.query.filter_by(Id=assignmentDetail.ShiftId).first()
-        query = select(DepartmentModel)\
-                    .where(and_(
-                        ShiftAssignmentDetail.ShiftAssignmentId == assignment.Id
-                        ,ShiftAssignmentDetail.TargetType== TargetType.Department.value
-                        ,ShiftAssignmentDetail.Target == DepartmentModel.Id)
-                    )
         
-        departmentList = db.session.execute(query).scalars()
-        query = select(EmployeeModel)\
-                .where(and_(
-                     ShiftAssignmentDetail.ShiftAssignmentId == assignment.Id
-                    , ShiftAssignmentDetail.TargetType == TargetType.Employee.value
-                    , ShiftAssignmentDetail.Target == EmployeeModel.Id)
-                )
-        employeeList = db.session.execute(query).scalars()
-        
+        shiftDetail = vShiftDetail.query.filter_by(Id=assignment.ShiftId).first()
 
         app.logger.info("getShiftAssignmentDetails thành công")
         return {
@@ -834,10 +742,9 @@ def getShiftAssignmentDetail():
             "Description": None,
             "ResponseData": {
                 "Assignment": ShiftAssignmentSchema().dump(assignment),
-                "AssignmentDetail": ShiftAssignmentDetailSchema().dump(assignmentDetail),
                 "ShiftDetail": vShiftDetailSchema().dump(shiftDetail),
-                "DepartmentList": DepartmentSchema(many=True).dump(departmentList),
-                "EmployeeList": EmployeeInfoSchema(many=True).dump(employeeList)
+                "DepartmentList":assignmentDetail["DepartmentList"],
+                "EmployeeList": assignmentDetail["EmployeeList"]
             },
         }, 200
     except ProjectException as pEx:
@@ -942,164 +849,64 @@ def UpdateAssignment():
         startDate = jsonRequestData["StartDate"] if "StartDate" in jsonRequestData else None
         endDate = jsonRequestData["EndDate"] if "EndDate" in jsonRequestData else None
         daysInWeek = jsonRequestData["DaysInWeek"] if "DaysInWeek" in jsonRequestData else None
+        assignmentType = jsonRequestData["AssignmentType"] if "AssignmentType" in jsonRequestData else None
 
         shiftAssignment = ShiftAssignment.query.filter_by(Id=assignmentId).first()
         if not shiftAssignment:
             raise ProjectException("Không tìm thấy bảng phân ca.")
             
-        shiftAssignmentDetailList = db.session.scalars(
-            select(ShiftAssignmentDetail).where(
+        detailTargetList = db.session.execute(
+            select(ShiftAssignmentDetail.Target).where(
                 and_(
                     ShiftAssignmentDetail.ShiftAssignmentId == assignmentId,
                     ShiftAssignmentDetail.Status == "1",
                 )
             )
-        ).all()
-        if not shiftAssignmentDetailList:
+        ).scalars().all()
+        if not detailTargetList:
             raise ProjectException("Không tìm thấy bảng phân ca.")        
 
         if description and description != shiftAssignment.Description:
             shiftAssignment.Description = description
         if note and note != shiftAssignment.Note:
             shiftAssignment.Note = note
+        if shiftId and shiftId != shiftAssignment.ShiftId:
+            shiftAssignment.ShiftId = shiftId
+            shiftDetail = ShiftDetailModel.query.filter_by(ShiftId=shiftId).first()
+            shiftAssignment.shiftDetailId = shiftDetail.Id
+        if endDate and endDate != shiftAssignment.EndDate:
+            shiftAssignment.EndDate = endDate
+        if startDate and startDate != shiftAssignment.StartDate:
+            shiftAssignment.StartDate = startDate
+        if daysInWeek and daysInWeek != shiftAssignment.DaysInWeek:
+            shiftAssignment.DaysInWeek = daysInWeek
         insertArray = []
-        restArray = []
-        for detail in shiftAssignmentDetailList:
-            if detail.TargetType == TargetType.Employee.value and detail.Target not in EmployeeList:
-                detail.EndDate = datime.now()
-                detail.ModifiedAt = datetime.now()
-                detail.ModifiedBy = id
-            elif detail.TargetType == TargetType.Department.value and detail.Target not in DepartmentList:
-                detail.EndDate = datime.now()
-                detail.ModifiedAt = datetime.now()
-                detail.ModifiedBy = id
-            else:
-                if daysInWeek and detail.DaysInWeek != daysInWeek:
-                    detail.DaysInWeek = daysInWeek
-                restArray.append({"Target": detail.Target, "TargetType": detail.TargetType})
-        restEmp = list(map(lambda x: x["Target"] ,list(filter(lambda x: x["TargetType"] == TargetType.Employee.value, restArray))))
-        restDep = list(map(lambda x: x["Target"], list(filter(lambda x: x["TargetType"] == TargetType.Department.value, restArray))))
-        for emp in EmployeeList:
-            if emp not in restEmp:
-                insertArray.append( {
-                    "ShiftAssignmentId": assignmentId,
-                    "Target": emp,
-                    "TargetType": TargetType.Employee.value,
-                    "EndDate": endDate,
-                    "StartDate": startDate,
-                    "DaysInWeek": daysInWeek,
-                    "ShiftId": shiftId,
-                    "ShiftDetailId": shiftDetail.Id,
-                    "CreatedAt": datetime.now(),
-                    "ModifiedAt": datetime.now(),
-                    "CreatedBy": id,
-                    "ModifiedBy": id,
-                })
-        for dep in DepartmentList:
-            if dep not in restDep:
-                insertArray.append( {
-                    "ShiftAssignmentId": assignmentId,
-                    "Target": dep,
-                    "TargetType": TargetType.Department.value,
-                    "EndDate": endDate,
-                    "StartDate": startDate,
-                    "DaysInWeek": daysInWeek,
-                    "ShiftId": shiftId,
-                    "ShiftDetailId": shiftDetail.Id,
-                    "CreatedAt": datetime.now(),
-                    "ModifiedAt": datetime.now(),
-                    "CreatedBy": id,
-                    "ModifiedBy": id,
-                })
+        removeArray = []
+        if assignmentType and assignmentType != shiftAssignment.TargetType:
+            shiftAssignment.TargetType = assignmentType
+            removeArray.append(detailTargetList)
+            insertArray.append(EmployeeList if assignmentType == 1 else DepartmentList if assignmentType == 2 else [])
+        else:
+            if assignmentType == TargetType.Employee.value:
+                removeArray = list(filter(lambda x: x not in EmployeeList , detailTargetList ))
+                insertIdArray = list(filter(lambda x: x not in detailTargetList, EmployeeList))
+                
+            elif assignmentType == TargetType.Department.value:
+                removeArray = list(filter(lambda x: x not in detailTargetList, DepartmentList))
+                insertIdArray = list(filter(lambda x: x not in detailTargetList, EmployeeList))     
+                pass
 
-        
-
-        # if assignType == 1:  # Phân ca theo phòng ban vị trí
-        #     deleteArray = list(
-        #         filter(lambda x: (x.Target not in departmentId), shiftAssignmentDetail)
-        #     )
-        #     temp = list(map(lambda x: x.Target, shiftAssignmentDetail))
-        #     insertArray = list(filter(lambda x: x not in temp, departmentId))
-        #     # insertArray = list(
-        #     #     map(
-        #     #         lambda x: {
-        #     #             "ShiftAssignmentId": assignmentId,
-        #     #             "Target": x,
-        #     #             "TargetType": TargetType.Department.value,
-        #     #             "CreatedAt": datetime.now(),
-        #     #             "ModifiedAt": datetime.now(),
-        #     #             "CreatedBy": id,
-        #     #             "ModifiedBy": id,
-        #     #             "FinishAssignmentTime": shiftDetail.EndDate,
-        #     #         },
-        #     #         temp2,
-        #     #     )
-        #     # )
-        # elif assignType == 2:  # Phân ca theo nhân viên
-        #     deleteArray = list(
-        #         filter(lambda x: (x.Target not in employeeId), shiftAssignmentDetail)
-        #     )
-        #     temp = list(map(lambda x: x.Target, shiftAssignmentDetail))
-        #     insertArray = list(filter(lambda x: x not in temp, employeeId))
-            # insertArray = list(
-            #     map(
-            #         lambda x: {
-            #             "ShiftAssignmentId": assignmentId,
-            #             "Target": x,
-            #             "TargetType": TargetType.Employee.value,
-            #             "CreatedAt": datetime.now(),
-            #             "ModifiedAt": datetime.now(),
-            #             "CreatedBy": id,
-            #             "ModifiedBy": id,
-            #             "FinishAssignmentTime": shiftDetail.EndDate,
-            #         },
-            #         temp2,
-            #     )
-            # )
-        # else:
-        #     raise ProjectException(f'Chưa hỗ trợ loại phân ca có mã "{assignType}"')
-        # if len(insertArray) + len(deleteArray) == 0 and hasSomeChanges == False:
-        #     raise ProjectException("Không có sự thay đổi ở đối tượng được phân công.")
-        # if len(deleteArray) != 0:
-        #     for x in deleteArray:
-        #         x.Status = "0"
-        #         x.FinishAssignmentTime = datetime.now()
-        #         x.ModifiedAt = datetime.now()
-        #         x.ModifiedBy = id
-        #     db.session.flush()
-            # db.session.execute(
-            #     delete(ShiftAssignmentDetail).where(
-            #         or_(*[ShiftAssignmentDetail.Id == x.Id for x in deleteArray])
-            #     )
-            # )
-        # if len(insertArray) != 0:
-            # CheckIfExist(
-            #     assignType=assignType, shiftDetail=shiftDetail, targetList=insertArray
-            # )
-            # insertObjectArray = list(
-            #     map(
-            #         lambda x: {
-            #             "ShiftAssignmentId": assignmentId,
-            #             "Target": x,
-            #             "TargetType": assignType,
-            #             "CreatedAt": datetime.now(),
-            #             "ModifiedAt": datetime.now(),
-            #             "CreatedBy": id,
-            #             "ModifiedBy": id,
-            #             "FinishAssignmentTime": shiftDetail.EndDate,
-            #         },
-            #         insertArray,
-            #     )
-            # )
+        if len(removeArray):
+            # ShiftAssignmentDetail.DisableBulk(removeArray)
+            shiftAssignment.RemoveBulkByTargets(removeArray)
         if len(insertArray):
-            db.session.execute(insert(ShiftAssignmentDetail), insertArray)
-            db.session.flush()
+            shiftAssignment.InsertBulkByTarget(insertArray)
 
         db.session.commit()
         app.logger.info(f"UpdateAssignment [{assignmentId}] thành công")
         return {
             "Status": 1,
-            "Description": None,
+            "Description": "Đã cập nhật",
             "ResponseData": None,
         }, 200
     except ProjectException as pEx:

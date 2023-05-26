@@ -1,6 +1,6 @@
 from src.db import db
 from src import marshmallow
-from sqlalchemy import Column, Integer, String, DateTime, Time, ARRAY, Boolean, Numeric
+from sqlalchemy import Column, Integer, String, DateTime, Time, ARRAY, Boolean, Numeric, Date
 from enum import Enum
 from flask import current_app as app
 from src.extension import ProjectException
