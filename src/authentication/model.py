@@ -2,15 +2,18 @@ from src.db import db
 from sqlalchemy import Column, Integer, String, SmallInteger, DateTime
 from datetime import datetime
 from src import marshmallow
+from werkzeug.security import generate_password_hash, check_password_hash
+
 # MODELS
 
+
 class UserModel(db.Model):
-    __tablename__ = 'User'
-    
+    __tablename__ = "User"
+
     Id = Column(Integer(), primary_key=True)
     EmailAddress = Column(String(), unique=True, nullable=False)
     PasswordHash = Column(String(), nullable=False)
-    UserName = Column(String())
+    Username = Column(String())
     EmployeeId = Column(Integer())
     Status = Column(SmallInteger())
     Role = Column(Integer())
@@ -18,24 +21,28 @@ class UserModel(db.Model):
     CreatedBy = Column(Integer())
     ModifiedAt = Column(DateTime())
     ModifiedBy = Column(Integer())
+    Name = Column(String())
 
-    def __init__(self, email, password, salt, employee_id, status, role=None):
-        self.EmailAddress = email
-        self.PasswordHash = password
-        self.PasswordSalt = salt
-        self.EmployeeId = employee_id
-        self.Status = status
-        self.Role = role if role is not None else -1
-        self.CreatedBy = 0
-        self.CreatedAt = datetime.now()
-        self.ModifiedBy = 0
-        self.ModifiedAt = datetime.now()
+    @property
+    def password(self):
+        raise AttributeError("password is not a readable attribute")
+    @password.setter
+    def password(self, value):
+        self.PasswordHash = generate_password_hash(value)
+    def verify_password(self, password):
+        return check_password_hash(self.PasswordHash, password)
 
-#SCHEMA
+    def __init__(self) -> None:
+        super().__init__()
+
+
+# SCHEMA
+
 
 class UserSchema(marshmallow.Schema):
     class Meta:
-        fields=("Id", "EmailAddress", "UserName", "EmployeeId", "Status", "Role")
+        fields = ("Id", "EmailAddress", "Username", "EmployeeId", "Status", "Role")
+
 
 user_schema = UserSchema()
 userList_schema = UserSchema(many=True)

@@ -1,66 +1,68 @@
 import time
-from datetime import datetime, time
+from datetime import datetime
 
 from flask import Blueprint
 from flask import current_app as app
 from flask import request
 from flask_json import json_response
-from sqlalchemy import and_, case, delete, func, insert, select, or_
+from sqlalchemy import and_, case, delete, func, insert, or_, select
 
 from src.authentication.model import UserModel
 from src.db import db
-from src.department.model import DepartmentModel
+from src.department.model import DepartmentModel, DepartmentSchema
 from src.designation.model import Designation
-from src.employee.model import EmployeeModel
+from src.employee.model import EmployeeModel, EmployeeSchema
 from src.extension import ProjectException, object_as_dict
-from src.jwt import get_jwt_identity, jwt_required
+from src.jwt import get_jwt, get_jwt_identity, jwt_required
 from src.middlewares.token_required import admin_required
 from src.shift.model import (
     ShiftAssignment,
     ShiftAssignmentDetail,
     ShiftAssignmentSchema,
     ShiftAssignmentType,
-    ShiftModel,
-    ShiftTypeModelSchema,
     Status,
     TargetType,
-    shiftListResponseSchema,
-    shiftListSchema,
+    ShiftAssignmentDetailSchema,
+    vShiftAssignmentDetail
 )
+from src.shift.ShiftModel import (
+    vShiftDetail,
+    ShiftDetailModel,
+     vShiftDetailSchema,   
+    shiftListResponseSchema,
+    shiftSchema,
+    shiftListSchema,
+    ShiftDetailSchema,
+    ShiftModel, 
+    ShiftTypeModel,
+    ShiftTypeModelSchema)
 
 Shift = Blueprint("shift", __name__)
 
+#region Ca làm việc
 
+# GET api/shift/list
 @Shift.route("/list", methods=["GET"])
+@admin_required()
 def GetShiftList():
     try:
-        args = request.args.to_dict()
-        page = 1
-        perPage = 10
+        args = request.args
+        page = None
+        pageSize = None
         if "Page" in args:
             page = int(args["Page"])
-        if "PerPage" in args:
-            perPage = int(args["PerPage"])
-
-        shiftList = db.session.execute(
-            select(
-                ShiftModel.Id,
-                ShiftModel.Description,
-                ShiftModel.StartTime,
-                ShiftModel.FinishTime,
-                ShiftModel.BreakAt,
-                ShiftModel.BreakEnd,
-                ShiftModel.Status,
-            )
-            .select_from(ShiftModel)
-            .order_by(ShiftModel.Id)
-        ).all()
+        if "PageSize" in args:
+            pageSize = int(args["PageSize"])
+        data = vShiftDetail.QueryMany(Page=page, PageSize=pageSize)
 
         app.logger.info(f"GetShiftList thành công.")
         return {
             "Status": 1,
             "Description": None,
-            "ResponseData": shiftListResponseSchema.dump(shiftList),
+            "ResponseData": {
+                "ShiftList": vShiftDetailSchema(many=True).dump(data["items"]),
+                "Total": data["total"]
+            },
         }, 200
     except ProjectException as pEx:
         app.logger.exception(f"GetShiftList thất bại. Có exception[{str(pEx)}]")
@@ -73,66 +75,119 @@ def GetShiftList():
         app.logger.exception(f"GetShiftList thất bại. {ex}")
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở server. Không tìm thấy ca làm việc nào",
+            "Description": f"Có lỗi ở máy chủ.",
             "ResponseData": None,
         }, 200
 
 
-# @Shift.route("/type/list", methods=["GET"])
-# def GetShiftTypeList():
-#     try:
-#         shiftTypeList = ShiftTypeModel.query.all()
-#         app.logger.info(f"GetShiftList thành công.")
-#         return {
-#             "Status": 1,
-#             "Description": None,
-#             "ResponseData": ShiftTypeModelSchema(many=True).dump(shiftTypeList),
-#         }, 200
+# GET api/shift/type/list
+@Shift.route("/type/list", methods=["GET"])
+def GetShiftTypeList():
+    try:
+        app.logger.info("GetShiftTypeList bắt đầu")
+        shiftTypeList = ShiftTypeModel.query.all()
+        app.logger.info(f"GetShiftList thành công.")
+        return {
+            "Status": 1,
+            "Description": None,
+            "ResponseData": ShiftTypeModelSchema(many=True).dump(shiftTypeList),
+        }, 200
 
-# except Exception as ex:
-#     app.logger.error(f"GetShiftTypeList thất bại. {ex}")
-#     return {
-#         "Status": 0,
-#         "Description": f"Có lỗi ở server.",
-#         "ResponseData": None,
-#     }, 400
+    except Exception as ex:
+        app.logger.error(f"GetShiftTypeList thất bại. {ex}")
+        return {
+            "Status": 0,
+            "Description": f"Có lỗi ở server.",
+            "ResponseData": None,
+        }, 400
+    finally:
+        app.logger.info("GetShiftTypeList kết thúc.")
 
 
+# POST api/shift/create
 @Shift.route("/create", methods=["POST"])
 @admin_required()
 def createNewShift():
     try:
+        app.logger.info("createNewShift starts. Bắt đầu tạo ca làm việc")
+        claims = get_jwt()
+        id = claims["id"]
         jsonRequestData = request.get_json()
-        email = get_jwt_identity()
 
-        # region validate
-        if "Description" not in jsonRequestData:
-            raise ProjectException("Không tìm thấy tên ca làm việc")
-        if "StartTime" not in jsonRequestData:
-            raise ProjectException("Không tìm thấy giờ checkin")
-        if "FinishTime" not in jsonRequestData:
-            raise ProjectException("Không tìm thấy giờ checkout")
+        # region Khai báo
+
+        Description = (
+            jsonRequestData["Description"] if "Description" in jsonRequestData else None
+        )
+        ShiftType = (
+            jsonRequestData["ShiftType"] if "ShiftType" in jsonRequestData else None
+        )
+        StartDate = (
+            jsonRequestData["StartDate"] if "StartDate" in jsonRequestData else None
+        )
+        EndDate = jsonRequestData["EndDate"] if "EndDate" in jsonRequestData else None
+        StartTime = (
+            jsonRequestData["StartTime"] if "StartTime" in jsonRequestData else None
+        )
+        FinishTime = (
+            jsonRequestData["FinishTime"] if "FinishTime" in jsonRequestData else None
+        )
+        HasBreak = jsonRequestData["HasBreak"] if "HasBreak" in jsonRequestData else False
+        BreakAt = jsonRequestData["BreakAt"] if "BreakAt" in jsonRequestData else None
+        BreakEnd = (
+            jsonRequestData["BreakEnd"] if "BreakEnd" in jsonRequestData else None
+        )
+        WorkingHour = jsonRequestData["WorkingHour"] if "WorkingHour" in jsonRequestData else 0
+        WorkingDay = jsonRequestData["WorkingDay"] if "WorkingDay" in jsonRequestData else 0
 
         # endregion
 
-        Description = jsonRequestData["Description"]
-        StartTime = jsonRequestData["StartTime"]
-        FinishTime = jsonRequestData["FinishTime"]
-        BreakAt = jsonRequestData["BreakAt"]
-        BreakEnd = jsonRequestData["BreakEnd"]
+        # region validation
+
+        if not Description or not Description.strip():
+            raise ProjectException("Chưa cung cấp tên ca làm việc")
+        if not ShiftType:
+            raise ProjectException("Chưa cung cấp loại ca làm việc")
+        # if not StartDate:
+        #     raise ProjectException("Chưa cung cấp ngày bắt đầu")
+        if not StartTime:
+            raise ProjectException("Chưa cung cấp tên giờ checkin")
+        if not FinishTime:
+            raise ProjectException("Chưa cung cấp tên giờ checkout")
+        if (BreakAt and not BreakEnd) or (not BreakAt and BreakEnd):
+            raise ProjectException(
+                f"Chưa cung cấp đủ thông tin giờ nghỉ. Bắt đầu {BreakAt}, kết thúc {BreakEnd}."
+            )
+
+        # endregion
 
         newShift = ShiftModel()
         newShift.Description = Description
-        newShift.StartTime = StartTime
-        newShift.FinishTime = FinishTime
-        newShift.BreakAt = BreakAt
-        newShift.BreakEnd = BreakEnd
-        newShift.Status = 1
+        newShift.ShiftType = ShiftType
         newShift.CreatedAt = datetime.now()
         newShift.ModifiedAt = datetime.now()
-        newShift.CreatedBy = 0
-        newShift.ModifiedBy = 0
+        newShift.Status = 1
+        newShift.CreatedBy = id
+        newShift.ModifiedBy = id
         db.session.add(newShift)
+        db.session.flush()
+        db.session.refresh(newShift)
+
+        shiftDetail = ShiftDetailModel()
+        shiftDetail.ShiftId = newShift.Id
+        shiftDetail.StartTime = StartTime
+        shiftDetail.FinishTime = FinishTime
+        shiftDetail.BreakAt = BreakAt
+        shiftDetail.BreakEnd = BreakEnd
+        shiftDetail.Status = 1
+        shiftDetail.HasBreak = HasBreak
+        shiftDetail.WorkingDay = WorkingDay
+        shiftDetail.WorkingHour = WorkingHour
+        shiftDetail.CreatedAt = datetime.now()
+        shiftDetail.ModifiedAt = datetime.now()
+        shiftDetail.CreatedBy = id
+        shiftDetail.ModifiedBy = id
+        db.session.add(shiftDetail)
         db.session.commit()
         app.logger.info("createNewShift thành công")
         return {
@@ -153,17 +208,24 @@ def createNewShift():
         app.logger.exception(f"createNewShift thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ. Không thể thêm ca làm việc mới",
+            "Description": f"Có lỗi ở máy chủ.",
             "ResponseData": None,
         }, 200
+    finally:
+        app.logger.info("createNewShift finishes. Kết thúc tạo ca làm việc")
 
 
+# DELETE api/shift
 @Shift.route("/", methods=["DELETE"])
 @admin_required()
 def deleteShift():
     try:
         jsonRequestData = request.get_json()
-        email = get_jwt_identity()
+        identity = get_jwt_identity()
+        email = identity["email"]
+        username = identity["username"]
+        claims = get_jwt()
+        id = claims["id"]
 
         # region validate
 
@@ -175,9 +237,16 @@ def deleteShift():
 
         # endregion
 
-        result = db.session.execute(
-            delete(ShiftModel).where(ShiftModel.Id.in_(jsonRequestData["IdList"]))
-        )
+        # result = db.session.execute(
+        #     delete(ShiftModel).where(ShiftModel.Id.in_(jsonRequestData["IdList"]))
+        # )
+        shiftList = db.session.execute(
+            db.select(ShiftModel).where(ShiftModel.Id.in_(jsonRequestData["IdList"]))
+        ).scalars()
+        for shift in shiftList:
+            shift.Status = 0
+            shift.ModifiedBy = id
+            shift.ModifiedAt = datetime.now()
         db.session.commit()
         app.logger.info("deleteShift thành công")
         return {
@@ -190,7 +259,7 @@ def deleteShift():
         app.logger.exception(f"deleteShift thất bại. Có exception[{str(pEx)}]")
         return {
             "Status": 0,
-            "Description": f"Không thể xóa ca làm việc. {pEx}",
+            "Description": f"{pEx}",
             "ResponseData": None,
         }, 200
     except Exception as ex:
@@ -198,48 +267,94 @@ def deleteShift():
         app.logger.exception(f"deleteShift thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ. Không thể xóa ca làm việc",
+            "Description": f"Có lỗi ở máy chủ.",
             "ResponseData": None,
         }, 200
 
 
+# PUT api/shift
 @Shift.route("/update", methods=["PUT"])
 @admin_required()
 def updateShift():
     try:
+        app.logger.info("updateShift bắt đầu.")
+        claims = get_jwt()
+        id = claims["id"]
         jsonRequestData = request.get_json()
-        email = get_jwt_identity()
+
+        shiftId = int(jsonRequestData["Id"]) if "Id" in jsonRequestData else None
+        Description = (
+            jsonRequestData["Description"] if "Description" in jsonRequestData else None
+        )
+        StartTime = (
+            jsonRequestData["StartTime"] if "StartTime" in jsonRequestData else None
+        )
+        FinishTime = (
+            jsonRequestData["FinishTime"] if "FinishTime" in jsonRequestData else None
+        )
+        HasBreak = jsonRequestData["HasBreak"] if "HasBreak" in jsonRequestData else None
+        BreakAt = jsonRequestData["BreakAt"] if "BreakAt" in jsonRequestData else None
+        BreakEnd = (
+            jsonRequestData["BreakEnd"] if "BreakEnd" in jsonRequestData else None
+        )
+        WorkingDay = jsonRequestData["WorkingDay"] if "WorkingDay" in jsonRequestData else None
+        WorkingHour = jsonRequestData["WorkingHour"] if "WorkingHour" in jsonRequestData else None
 
         # region validate
 
-        if "Id" not in jsonRequestData:
+        if not shiftId:
             raise ProjectException("Không tìm thấy mã ca làm việc trong request.")
 
         # endregion
 
-        shiftId = jsonRequestData["Id"]
-        shift = db.session.execute(
-            db.select(ShiftModel).filter_by(Id=shiftId)
-        ).scalar_one_or_none()
+        #region validate
+
+        shift = ShiftModel.query.filter_by(Id = shiftId).first()
 
         if not shift:
             raise ProjectException(f"Không tồn tại ca làm việc Id [{shiftId}]")
-        hasSomeChanges = False
-
-        for key in jsonRequestData:
-            if getattr(shift, key) != jsonRequestData[key]:
-                hasSomeChanges = True
-                setattr(shift, key, jsonRequestData[key])
-        if not hasSomeChanges:
-            raise ProjectException(
-                f"Không thông tin thay đổi trong ca làm việc Id[{shiftId}]"
+        shiftDetail = db.session.execute(
+            select(ShiftDetailModel).where(
+                and_(ShiftDetailModel.ShiftId == shiftId, ShiftDetailModel.Status == 1)
             )
+        ).scalar()
+        if not shiftDetail:
+            raise ProjectException(
+                f"Không tồn tại thông tin chi tiết ca làm việc Id [{shiftId}]"
+            )
+        
+        #endregion
+
+        if Description and shift.Description != Description:
+            shift.Description = Description
+        if StartTime and shiftDetail.StartTime != StartTime:
+            shiftDetail.StartTime = StartTime
+        if FinishTime and shiftDetail.FinishTime != FinishTime:
+            shiftDetail.FinishTime = FinishTime
+        if HasBreak:
+            if shiftDetail.BreakAt != BreakAt:
+                shiftDetail.BreakAt = BreakAt
+            if shiftDetail.BreakEnd != BreakEnd:
+                shiftDetail.BreakEnd = BreakEnd
+        else:
+            shiftDetail.BreakEnd = None
+            shiftDetail.BreakAt = None
+        shiftDetail.HasBreak = HasBreak
+        shiftDetail.WorkingHour = WorkingHour
+        shiftDetail.WorkingDay = WorkingDay
+        shiftDetail.ModifiedAt = datetime.now()
+        shiftDetail.ModifiedBy = id
+        shift.ModifiedBy = id
+        shift.ModifiedAt = datetime.now()
         db.session.commit()
         app.logger.info(f"updateShift Id[{shiftId}] thành công")
         return {
             "Status": 1,
             "Description": None,
-            "ResponseData": None,
+            "ResponseData": {
+                "Shift": shiftSchema.dump(shift),
+                "Detail": ShiftDetailSchema().dump(shiftDetail),
+            },
         }, 200
 
     except ProjectException as pEx:
@@ -247,7 +362,7 @@ def updateShift():
         app.logger.exception(f"UpdateShift thất bại. Có exception[{str(pEx)}]")
         return {
             "Status": 0,
-            "Description": f"Không thể cập nhật ca làm việc. {pEx}",
+            "Description": f"{pEx}",
             "ResponseData": None,
         }, 200
 
@@ -256,104 +371,169 @@ def updateShift():
         app.logger.exception(f"UpdateShift thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ. Không thể cập nhật ca làm việc",
+            "Description": f"Có lỗi ở máy chủ.",
             "ResponseData": None,
         }, 200
+    finally:
+        app.logger.info("updateShift kết thúc.")
 
+# POST api/shif/detail
+@Shift.route("/detail", methods=["GET"])
+@admin_required()
+def GetShiftDetail():
+    try:
+        app.logger.info(f"GetShiftDetail bắt đầu")
+        claims = get_jwt()
+        id = claims["id"]
+        args = request.args
+        Id = int(args["Id"]) if "Id" in args else None
+        if not Id:
+            raise ProjectException(f"Không tìm thấy mã ca làm việc {Id} trong yêu cầu.")
 
+        existShift = ShiftModel.query.filter_by(Id=Id).first()
+        if not existShift:
+            raise ProjectException(f"Ca làm việc {Id} không được tìm thấy trong hệ thống.")
+        shiftDetail = db.session.execute(select(ShiftDetailModel)
+                                        .where(and_(ShiftDetailModel.ShiftId == Id, ShiftDetailModel.Status ==1))
+                                        ).scalar()
+        app.logger.info(f"GetShiftDetail mã ca làm việc [{Id}] thành công")
+        return {
+            "Status": 1,
+            "Description": None,
+            "ResponseData": {
+                "Shift": shiftSchema.dump(existShift),
+                "Detail": ShiftDetailSchema().dump(shiftDetail)
+            },
+        }, 200
+    except ProjectException as pEx:
+        app.logger.exception(f"GetShiftDetail thất bại. Có exception[{str(pEx)}]")
+        return {
+            "Status": 0,
+            "Description": f"{pEx}",
+            "ResponseData": None,
+        }, 200
+    except Exception as ex:
+        app.logger.exception(f"GetShiftDetail thất bại. Có exception[{str(ex)}]")
+        return {
+            "Status": 0,
+            "Description": f"Có lỗi ở máy chủ.",
+            "ResponseData": None,
+        }, 200
+    finally:
+        app.logger.info(f"GetShiftDetail kết thúc")
+
+#endregion
+
+#region Phân ca làm việc
+
+# POST api/shift/assignment
 @Shift.route("/assignment", methods=["POST"])
 @admin_required()
 def AssignShift():
     try:
+        app.logger.info("AssignShift bắt đầu")
         jsonRequestData = request.get_json()
-        email = get_jwt_identity()
-        # region validate
-
-        user = UserModel.query.filter_by(EmailAddress=email).first()
-        if user is None:
-            raise ProjectException("Máy chủ không tìm thấy người dùng " + email)
-
-        if "Description" not in jsonRequestData:
-            raise ProjectException(
-                "Máy chủ không tìm thấy tiêu đề hay mô tả của ca làm việc."
-            )
-        if "AssignType" not in jsonRequestData:
-            raise ProjectException("Máy chủ không tìm kiểu phân ca.")
-        if "ShiftId" not in jsonRequestData:
-            raise ProjectException("Máy chủ không tìm thấy loại ca.")
-        if "StartDate" not in jsonRequestData:
-            raise ProjectException("Máy chủ không tìm thấy ngày bắt đầu.")
-
-        # endregion
+        identity = get_jwt_identity()
+        email = identity["email"]
+        username = identity["username"]
+        claims = get_jwt()
+        id = claims["id"]
 
         # region Khai báo
 
-        description = jsonRequestData["Description"]
-        assignType = jsonRequestData["AssignType"]
-        shiftId = jsonRequestData["ShiftId"]
-        startDate = jsonRequestData["StartDate"]
-        endDate = (
-            None if "EndDate" not in jsonRequestData else jsonRequestData["EndDate"]
-        )
-        departmentList = (
-            []
-            if "DepartmentId" not in jsonRequestData
-            else jsonRequestData["DepartmentId"]
-        )
-        employeeList = (
-            [] if "EmployeeId" not in jsonRequestData else jsonRequestData["EmployeeId"]
-        )
-        note = "" if "Note" not in jsonRequestData else jsonRequestData["Note"]
+        description = jsonRequestData["Description"] if "Description" in jsonRequestData else None
+        shiftId = jsonRequestData["ShiftId"] if "ShiftId" in jsonRequestData else None
+        departmentList = jsonRequestData["DepartmentList"] if "DepartmentList" in jsonRequestData else []
+        employeeList = jsonRequestData["EmployeeList"] if "EmployeeList" in jsonRequestData else []
+        note = jsonRequestData["Note"] if "Note" in jsonRequestData else ""
+        startDate = jsonRequestData["StartDate"] if "StartDate" in jsonRequestData else None
+        endDate = jsonRequestData["EndDate"] if "EndDate" in jsonRequestData else None
+        daysInWeek = jsonRequestData["DaysInWeek"] if "DaysInWeek" in jsonRequestData else None
+        assignmentType = jsonRequestData["AssignmentType"] if "AssignmentType" in jsonRequestData else None
+
+        # endregion
+        # region validate
+
+        if not description:
+            raise ProjectException(
+                "Không tìm thấy tên bảng phân ca trong truy vấn."
+            )
+        if not shiftId:
+            raise ProjectException(f"Không tìm thấy mã ca làm việc trong truy vấn")
+        shiftDetail = ShiftDetailModel.query.filter_by(ShiftId=shiftId).first()
+        if not shiftDetail:
+            raise ProjectException(f"Không tìm thấy ca làm việc có mã {shiftId}")
+        if not startDate:
+            raise ProjectException(f"Không tìm thấy ngày bắt đầu trong truy vấn.")
+        if not endDate:
+            raise ProjectException(f"Không tìm thấy ngày kết thúc trong truy vấn.")
+        if not daysInWeek or not len(daysInWeek):
+            raise ProjectException(f"Không tìm thấy ngày trong tuần được áp dụng bảng phân ca trong truy vấn.")
+        if not assignmentType:
+            raise ProjectException(f"Không tìm thấy kiểu phân ca cho bảng phân ca trong truy vấn.")
+
+        targetArray = list()
+        if assignmentType == TargetType.Employee.value:
+            if not len(employeeList):
+                raise ProjectException(f"Không tìm thấy các nhân viên được áp dụng bảng phân ca trong truy vấn.")
+            targetArray = employeeList
+        elif assignmentType == TargetType.Department.value:
+            if not len(departmentList):
+                raise ProjectException(f"Không tìm thấy các  phòng ban được áp dụng bảng phân ca trong truy vấn.")
+            targetArray = departmentList
+        # endregion
+
+
+        # region Kiểm tra có bị lồng phân ca không.
+
+        # CheckIfExist(
+        #     assignType=assignType, shiftDetail=shiftDetail, targetList=targetArray
+        # )
 
         # endregion
 
         # region Thêm phân ca mới
 
-        newShift = ShiftAssignment()
-        newShift.Description = description
-        newShift.AssignType = assignType
-        newShift.ShiftId = shiftId
-        newShift.StartDate = datetime.strptime(startDate, "%Y-%m-%d")
-        newShift.EndDate = datetime.strptime(endDate, "%Y-%m-%d")
-        newShift.Note = note
-        newShift.CreatedBy = user.Id
-        newShift.ModifiedBy = user.Id
-        newShift.CreatedAt = datetime.now()
-        newShift.ModifiedAt = datetime.now()
-        db.session.add(newShift)
+        newShiftAssignment = ShiftAssignment()
+        newShiftAssignment.Description = description
+        newShiftAssignment.TargetType = assignmentType
+        newShiftAssignment.ShiftId = shiftId
+        newShiftAssignment.DaysInWeek = daysInWeek
+        newShiftAssignment.ShiftDetailId = shiftDetail.Id
+        newShiftAssignment.StartDate = startDate
+        newShiftAssignment.EndDate = endDate
+        newShiftAssignment.Note = note
+        newShiftAssignment.CreatedBy = id
+        newShiftAssignment.ModifiedBy = id
+        newShiftAssignment.CreatedAt = datetime.now()
+        newShiftAssignment.ModifiedAt = datetime.now()
+        db.session.add(newShiftAssignment)
         db.session.flush()
-        db.session.refresh(newShift)
+        db.session.refresh(newShiftAssignment)
 
         # endregion
 
         # region Thêm chi tiết phân ca mới
 
         values = []
-        for department in departmentList:
+        for target in targetArray:
             values.append(
                 {
-                    "Id": newShift.Id,
-                    "Target": department,
-                    "TargetType": TargetType.Department.value,
+                    "ShiftAssignmentId": newShiftAssignment.Id,
+                    "Target": target,
                     "CreatedAt": datetime.now(),
                     "ModifiedAt": datetime.now(),
+                    "CreatedBy": id,
+                    "ModifiedBy": id,
                 }
             )
-        for employee in employeeList:
-            values.append(
-                {
-                    "Id": newShift.Id,
-                    "Target": employee,
-                    "TargetType": TargetType.Employee.value,
-                    "CreatedAt": datetime.now(),
-                    "ModifiedAt": datetime.now(),
-                }
-            )
+        
+
         if len(values) == 0:
             db.session.rollback()
             app.logger.info("AssignShift thành công")
             return {
-                "Status": 1,
+                "Status": 0,
                 "Description": f"Không thể tạo phân ca do chưa có đối tượng được phân ca.",
                 "ResponseData": None,
             }, 200
@@ -366,51 +546,148 @@ def AssignShift():
         return {
             "Status": 1,
             "Description": None,
-            "ResponseData": {"Id": newShift.Id},
+            "ResponseData": {"Id": newShiftAssignment.Id},
         }, 200
     except ProjectException as pEx:
         app.logger.exception(f"AssignShift thất bại. Có exception[{str(pEx)}]")
         return {
             "Status": 0,
-            "Description": f"Không thể phân ca làm việc.",
+            "Description": f"{pEx}",
             "ResponseData": None,
         }, 200
     except Exception as ex:
         app.logger.exception(f"AssignShift thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Không thể phân ca làm việc.",
+            "Description": f"Xảy ra lỗi ở máy chủ. Không thể phân ca làm việc.",
             "ResponseData": None,
         }, 200
+    finally:
+        app.logger.info("AssignShift kết thúc")
 
 
+def CheckIfExist(assignType: int, targetList: list, shiftDetail: ShiftDetailModel):
+    targetArray = targetList
+    for target in targetArray:
+        existAssignmentList = db.session.execute(
+            select(
+                ShiftAssignmentDetail.Target,
+                ShiftDetailModel.StartDate,
+                ShiftDetailModel.EndDate,
+            )
+            .select_from(ShiftAssignmentDetail)
+            .join(
+                ShiftAssignment,
+                and_(
+                    ShiftAssignment.AssignType == assignType,
+                    ShiftAssignmentDetail.ShiftAssignmentId == ShiftAssignment.Id,
+                ),
+            )
+            .join(
+                ShiftDetailModel,
+                and_(ShiftAssignment.ShiftDetailId == ShiftDetailModel.Id),
+            )
+            .where(
+                and_(
+                    ShiftAssignment.AssignType == assignType,
+                    ShiftAssignmentDetail.Status == "1",
+                    ShiftAssignmentDetail.Target == target,
+                )
+            )
+        ).all()
+        for existAssignment in existAssignmentList:
+            if not (
+                existAssignment.StartDate > shiftDetail.EndDate
+                or shiftDetail.StartDate > existAssignment.EndDate
+            ):
+                content = ""
+                if assignType == 1:
+                    department = DepartmentModel.query.filter_by(Id=target).first()
+                    content = f"phòng ban {department.Name} ({target})"
+                elif assignType == 2:
+                    employee = EmployeeModel.query.filter_by(Id=target).first()
+                    content = (
+                        f"nhân viên {employee.LastName} {employee.FirstName} ({target})"
+                    )
+                raise ProjectException(f"Phân ca {content} bị lồng.")
+
+
+# GET api/shift/assignment/list
 @Shift.route("/assignment/list", methods=["GET"])
 @admin_required()
 def getShiftAssignmentList():
     try:
-        shiftAssignmentList = db.session.execute(
-            select(
-                ShiftAssignment.Id,
-                ShiftAssignment.ShiftId,
-                ShiftAssignment.Description,
-                ShiftAssignment.StartDate,
-                ShiftAssignment.EndDate,
-                ShiftAssignment.AssignType,
-                ShiftAssignment.Note,
-                ShiftAssignment.Status,
-                ShiftAssignment.CreatedBy,
-                ShiftAssignment.CreatedAt,
-                ShiftModel.Description.label("ShiftDescription"),
-            )
-            .select_from(ShiftAssignment)
-            .join(ShiftModel, ShiftAssignment.ShiftId == ShiftModel.Id)
-            .order_by(ShiftAssignment.StartDate, ShiftAssignment.Id)
-        ).all()
+        app.logger.info("getShiftAssignmentList bắt đầu")
+        # shiftAssignmentList = db.session.execute(
+        #     select(
+        #         ShiftAssignment.Id,
+        #         ShiftAssignment.ShiftId,
+        #         ShiftAssignment.Description,
+        #         ShiftAssignment.StartDate,
+        #         ShiftAssignment.EndDate,
+        #         ShiftAssignment.AssignType,
+        #         ShiftAssignment.Note,
+        #         ShiftAssignment.Status,
+        #         ShiftAssignment.CreatedBy,
+        #         ShiftAssignment.CreatedAt,
+        #         ShiftModel.Description.label("ShiftDescription"),
+        #         ShiftDetailModel.DayIndexList,
+        #     )
+        #     .select_from(ShiftAssignment)
+        #     .join(ShiftModel, ShiftAssignment.ShiftId == ShiftModel.Id)
+        #     .join(
+        #         ShiftDetailModel, ShiftAssignment.ShiftDetailId == ShiftDetailModel.Id
+        #     )
+        #     .order_by(ShiftAssignment.StartDate, ShiftAssignment.Id)
+        # ).all()
+
+        #region khai bao
+
+        args = request.args
+        page = None
+        pageSize = None
+        if "Page" in args:
+            page = int(args["Page"])
+        if "PageSize" in args:
+            pageSize = int(args["PageSize"])
+
+        #endregion
+
+        data = []
+        # shiftAssignmentList = db.session.execute(select(ShiftAssignment)).scalars()
+        result = ShiftAssignment.QueryMany(Page=page, PerPage=pageSize)
+        shiftAssignmentList = result["Items"]
+        total = result["Total"]
+
+        for assignment in shiftAssignmentList:
+            temp = ShiftAssignmentSchema().dump(assignment)
+            temp["EmployeeList"] = []
+            temp["DepartmentList"] = []
+            if assignment["TargetType"] == TargetType.Employee.value:
+                EmployeeList = db.session.execute(
+                    db.select(vShiftAssignmentDetail.EmployeeName)
+                    .where(and_(vShiftAssignmentDetail.Id == assignment["Id"], vShiftAssignmentDetail.TargetType ==  TargetType.Employee.value))
+                ).scalars().all()
+                temp["EmployeeList"] = EmployeeList
+            elif assignment["TargetType"] == TargetType.Department.value:
+                DepartmentList = db.session.execute(
+                    db.select(vShiftAssignmentDetail.DepartmentName)
+                    .where(and_(vShiftAssignmentDetail.Id == assignment["Id"], vShiftAssignmentDetail.TargetType == TargetType.Department.value))
+                ).scalars().all()
+                temp["DepartmentList"] = DepartmentList
+            else: pass
+            data.append(temp)
+
+
         app.logger.exception(f"getShiftAssignmentList thành công.")
         return {
             "Status": 1,
             "Description": None,
-            "ResponseData": [dict(r) for r in shiftAssignmentList],
+            "ResponseData": {
+                "ShiftAssignmentList": data,
+                # ShiftAssignmentSchema(many=True).dump(shiftAssignmentList),
+                "Total": total
+            }
         }, 200
     except ProjectException as pEx:
         app.logger.exception(
@@ -430,12 +707,16 @@ def getShiftAssignmentList():
             "Description": f"Có lỗi ở máy chủ. Không thể truy cập được thông tin phân ca",
             "ResponseData": None,
         }, 200
+    finally:
+        app.logger.info("getShiftAssignmentList kết thúc")
 
 
+# POST api/shift/assignment/detail
 @Shift.route("/assignment/detail", methods=["POST"])
 @admin_required()
 def getShiftAssignmentDetail():
     try:
+        app.logger.info("getShiftAssignmentDetail bắt đầu")
         jsonRequestData = request.get_json()
 
         # region validate
@@ -446,62 +727,25 @@ def getShiftAssignmentDetail():
         # endregion
 
         id = jsonRequestData["Id"]
-        shiftAssignment = db.session.execute(
-            select(
-                ShiftAssignment.Id,
-                ShiftAssignment.ShiftId,
-                ShiftAssignment.StartDate,
-                ShiftAssignment.EndDate,
-                ShiftAssignment.Note,
-                ShiftAssignment.Description,
-                ShiftAssignment.CreatedAt,
-                ShiftAssignment.CreatedBy,
-                ShiftAssignment.AssignType,
-                ShiftAssignmentType.Name.label("AssignmentTypeName"),
-            ).where(
-                and_(
-                    ShiftAssignment.Id == id,
-                    ShiftAssignment.AssignType == ShiftAssignmentType.Id,
-                )
-            )
-        ).first()
-        shiftAssignmentDetail = db.session.execute(
-            select(
-                ShiftAssignmentDetail.Id,
-                ShiftAssignmentDetail.Target,
-                ShiftAssignmentDetail.TargetType,
-                case(
-                    (ShiftAssignmentDetail.TargetType == 1, DepartmentModel.Name),
-                    else_=EmployeeModel.FirstName + " " + EmployeeModel.LastName,
-                ).label("TargetDescription"),
-            )
-            .select_from(ShiftAssignmentDetail)
-            .join(
-                DepartmentModel,
-                and_(
-                    ShiftAssignmentDetail.TargetType == 1,
-                    ShiftAssignmentDetail.Target == DepartmentModel.Id,
-                ),
-                isouter=True,
-            )
-            .join(
-                EmployeeModel,
-                and_(
-                    ShiftAssignmentDetail.TargetType == 2,
-                    ShiftAssignmentDetail.Target == EmployeeModel.Id,
-                ),
-                isouter=True,
-            )
-            .where(ShiftAssignmentDetail.Id == id)
-        ).all()
-        detailDict = [dict(r) for r in shiftAssignmentDetail]
-        response = ShiftAssignmentSchema().dump(shiftAssignment)
-        response["Detail"] = detailDict
+        assignment = ShiftAssignment.query.filter_by(Id=id).first()
+        if not assignment:
+            raise PorjectException(f"Không tìm thấy bảng phân ca có mã f{Id}")
+        assignmentDetail = assignment.QueryDetails()
+        if not assignmentDetail:
+            raise PorjectException(f"Không tìm thấy thông tin chi tiết của bảng phân ca có mã f{Id}")
+        
+        shiftDetail = vShiftDetail.query.filter_by(Id=assignment.ShiftId).first()
+
         app.logger.info("getShiftAssignmentDetails thành công")
         return {
             "Status": 1,
             "Description": None,
-            "ResponseData": response,
+            "ResponseData": {
+                "Assignment": ShiftAssignmentSchema().dump(assignment),
+                "ShiftDetail": vShiftDetailSchema().dump(shiftDetail),
+                "DepartmentList":assignmentDetail["DepartmentList"],
+                "EmployeeList": assignmentDetail["EmployeeList"]
+            },
         }, 200
     except ProjectException as pEx:
         app.logger.exception(
@@ -519,11 +763,14 @@ def getShiftAssignmentDetail():
             "Description": f"Có lỗi ở máy chủ. Không thể truy cập được thông tin phân ca",
             "ResponseData": None,
         }, 200
+    finally:
+        app.logger.info("getShiftAssignmentDetail kết thúc")
 
 
+# POST api/shift/assignment/all-type
 @Shift.route("/assignment/all-type", methods=["GET", "POST"])
 @jwt_required()
-def GetAssignmentTypes():
+def GetAssignmentType():
     try:
         shiftAssignmentTypeList = db.session.execute(
             select(
@@ -534,7 +781,7 @@ def GetAssignmentTypes():
                 ShiftAssignmentType.CreatedBy,
             ).where(ShiftAssignmentType.Status == Status.Active)
         ).all()
-        response = [dict(r) for r in shiftAssignmentTypeList]
+        response = [r._asdict() for r in shiftAssignmentTypeList]
         app.logger.info("GetAssignmentTypes thành công")
         return {
             "Status": 1,
@@ -557,11 +804,17 @@ def GetAssignmentTypes():
         }, 200
 
 
+# POST api/shift/assignment/update
 @Shift.route("/assignment/update", methods=["POST"])
 @admin_required()
 def UpdateAssignment():
     try:
-        email = get_jwt_identity()
+        app.logger.info(f"UpdateAssignment bắt đầu")
+        identity = get_jwt_identity()
+        email = identity["email"]
+        username = identity["username"]
+        claims = get_jwt()
+        id = claims["id"]
         jsonRequestData = request.get_json()
 
         # region validate
@@ -571,106 +824,89 @@ def UpdateAssignment():
 
         # endregion
 
-        id = jsonRequestData["Id"]
+        assignmentId = jsonRequestData["Id"]
         description = (
             None
             if "Description" not in jsonRequestData
             else jsonRequestData["Description"]
         )
         note = None if "Note" not in jsonRequestData else jsonRequestData["Note"]
-        assignType = (
+        DepartmentList = (
             None
-            if "AssignType" not in jsonRequestData
-            else jsonRequestData["AssignType"]
+            if "DepartmentList" not in jsonRequestData
+            else jsonRequestData["DepartmentList"]
         )
-        departmentId = (
+        EmployeeList = (
             None
-            if "DepartmentId" not in jsonRequestData
-            else jsonRequestData["DepartmentId"]
+            if "EmployeeList" not in jsonRequestData
+            else jsonRequestData["EmployeeList"]
         )
-        employeeId = (
+        shiftId = (
             None
-            if "EmployeeId" not in jsonRequestData
-            else jsonRequestData["EmployeeId"]
+            if "ShiftId" not in jsonRequestData
+            else jsonRequestData["ShiftId"]
         )
+        startDate = jsonRequestData["StartDate"] if "StartDate" in jsonRequestData else None
+        endDate = jsonRequestData["EndDate"] if "EndDate" in jsonRequestData else None
+        daysInWeek = jsonRequestData["DaysInWeek"] if "DaysInWeek" in jsonRequestData else None
+        assignmentType = jsonRequestData["AssignmentType"] if "AssignmentType" in jsonRequestData else None
 
-        endDate = (
-            None if "EndDate" not in jsonRequestData else jsonRequestData["EndDate"]
-        )
+        shiftAssignment = ShiftAssignment.query.filter_by(Id=assignmentId).first()
+        if not shiftAssignment:
+            raise ProjectException("Không tìm thấy bảng phân ca.")
+            
+        detailTargetList = db.session.execute(
+            select(ShiftAssignmentDetail.Target).where(
+                and_(
+                    ShiftAssignmentDetail.ShiftAssignmentId == assignmentId,
+                    ShiftAssignmentDetail.Status == "1",
+                )
+            )
+        ).scalars().all()
+        if not detailTargetList:
+            raise ProjectException("Không tìm thấy bảng phân ca.")        
 
-        shiftAssignment = db.session.scalars(
-            select(ShiftAssignment).where(ShiftAssignment.Id == id)
-        ).first()
-        shiftAssignmentDetail = db.session.scalars(
-            select(ShiftAssignmentDetail).where(ShiftAssignmentDetail.Id == id)
-        ).all()
         if description and description != shiftAssignment.Description:
             shiftAssignment.Description = description
         if note and note != shiftAssignment.Note:
             shiftAssignment.Note = note
+        if shiftId and shiftId != shiftAssignment.ShiftId:
+            shiftAssignment.ShiftId = shiftId
+            shiftDetail = ShiftDetailModel.query.filter_by(ShiftId=shiftId).first()
+            shiftAssignment.shiftDetailId = shiftDetail.Id
         if endDate and endDate != shiftAssignment.EndDate:
             shiftAssignment.EndDate = endDate
-        deleteArray = []
+        if startDate and startDate != shiftAssignment.StartDate:
+            shiftAssignment.StartDate = startDate
+        if daysInWeek and daysInWeek != shiftAssignment.DaysInWeek:
+            shiftAssignment.DaysInWeek = daysInWeek
         insertArray = []
-        if assigntype == 1: # Phân ca theo phòng ban vị trí
-            temp = list(
-                filter(
-                    lambda x: (x.Target not in departmentId), shiftAssignmentDetail
-                )
-            )
-            deleteArray = list(map(lambda x: x.Target, temp))
-            temp = list(map(lambda x: x.Target, shiftAssignmentDetail))
-            temp2 = list(filter(lambda x: x not in temp, departmentId))
-            insertArray = list(
-                map(
-                    lambda x: {
-                        "Id": id,
-                        "Target": x,
-                        "TargetType": TargetType.Department.value,
-                        "CreatedAt": datetime.now(),
-                        "ModifiedAt": datetime.now(),
-                    },
-                    temp2,
-                )
-            )
-        elif assigntype == 2: # Phân ca theo nhân viên
-            temp = list(
-                    filter(
-                        lambda x: (x.Target not in employeeId), shiftAssignmentDetail
-                    )
-                )
-            deleteArray = list(map(lambda x: x.Target, temp))
-            temp = list(map(lambda x: x.Target, shiftAssignmentDetail))
-            temp2 = list(filter(lambda x: x not in temp, employeeId))
-            insertArray = list(
-                map(
-                    lambda x: {
-                        "Id": id,
-                        "Target": x,
-                        "TargetType": TargetType.Employee.value,
-                        "CreatedAt": datetime.now(),
-                        "ModifiedAt": datetime.now(),
-                    },
-                    temp2,
-                )
-            )
+        removeArray = []
+        if assignmentType and assignmentType != shiftAssignment.TargetType:
+            shiftAssignment.TargetType = assignmentType
+            removeArray.append(detailTargetList)
+            insertArray.append(EmployeeList if assignmentType == 1 else DepartmentList if assignmentType == 2 else [])
         else:
-            raise ProjectException(f'Chưa hỗ trợ loại phân ca có mã "{other}"')
-        if len(insertArray) + len(deleteArray) == 0:
-            raise ProjectException("Không có sự thay đổi ở đối tượng được phân công.")
-        if len(deleteArray) != 0:
-            db.session.execute(
-                delete(ShiftAssignmentDetail).where(
-                    or_(*[ShiftAssignmentDetail.Target == x for x in deleteArray])
-                )
-            )
-        if len(insertArray) != 0:
-            db.session.execute(insert(ShiftAssignmentDetail), insertArray)
+            if assignmentType == TargetType.Employee.value:
+                removeArray = list(filter(lambda x: x not in EmployeeList , detailTargetList ))
+                insertIdArray = list(filter(lambda x: x not in detailTargetList, EmployeeList))
+                
+            elif assignmentType == TargetType.Department.value:
+                removeArray = list(filter(lambda x: x not in detailTargetList, DepartmentList))
+                insertIdArray = list(filter(lambda x: x not in detailTargetList, EmployeeList))     
+                pass
+
+        if len(removeArray):
+            # ShiftAssignmentDetail.DisableBulk(removeArray)
+            shiftAssignment.RemoveBulkByTargets(removeArray)
+        if len(insertArray):
+            shiftAssignment.InsertBulkByTarget(insertArray)
+
         db.session.commit()
-        app.logger.info(f"UpdateAssignment [{id}] thành công")
+        app.logger.info(f"UpdateAssignment [{assignmentId}] thành công")
         return {
             "Status": 1,
-            "Description": None,
+            "Description": "Đã cập nhật",
             "ResponseData": None,
         }, 200
     except ProjectException as pEx:
@@ -678,7 +914,7 @@ def UpdateAssignment():
         app.logger.exception(f"UpdateAssignment thất bại. Có exception[{str(pEx)}]")
         return {
             "Status": 0,
-            "Description": f"Không thể cập nhật được phân ca. {pEx}",
+            "Description": f"{pEx}",
             "ResponseData": None,
         }, 200
     except Exception as ex:
@@ -686,6 +922,10 @@ def UpdateAssignment():
         app.logger.exception(f"UpdateAssignment thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ. Không thể cập nhật được phân ca.",
+            "Description": f"Có lỗi ở máy chủ.",
             "ResponseData": None,
         }, 200
+    finally:
+        app.logger.info(f"UpdateAssignment kết thúc")
+
+#endregion
