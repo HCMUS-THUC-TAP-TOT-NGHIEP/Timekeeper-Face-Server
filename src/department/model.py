@@ -21,13 +21,26 @@ class DepartmentModel(db.Model):
         super().__init__()
 
 
+class vDepartment(db.Model):
+    __tablename__ = 'vDepartment'
+    Id = Column(Integer(), primary_key=True)
+    Name = Column(String(), nullable=False)
+    ManagerId = Column(Integer())
+    ManagerName = Column(String())
+    Status = Column(String(1), nullable=False)
+    CreatedBy = Column(Integer(), nullable=False)
+    CreatedAt = Column(DateTime(), nullable=False)
+    ModifiedBy = Column(Integer(), nullable=False)
+    ModifiedAt = Column(DateTime(), nullable=False)
+
+
 class DepartmentSchema(marshmallow.Schema):
     class Meta:
         fields = (
             "Id",
             "Name",
             "ManagerId",
-            # "ManagerName",
+            "ManagerName",
             "Status",
         )
 

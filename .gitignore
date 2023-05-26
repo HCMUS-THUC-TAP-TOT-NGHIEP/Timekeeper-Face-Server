@@ -134,4 +134,4 @@ dmypy.json
 public/datasets/processed/*
 public/datasets/raw/*
 
-.vscode
+.vscode/

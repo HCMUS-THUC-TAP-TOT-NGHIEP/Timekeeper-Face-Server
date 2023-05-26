@@ -8,7 +8,7 @@ from sqlalchemy import func, select
 
 from src.authentication.model import UserModel
 from src.db import db
-from src.department.model import DepartmentModel, departmentListSchema, departmentSchema
+from src.department.model import DepartmentModel, departmentListSchema, departmentSchema, vDepartment
 from src.employee.model import EmployeeModel, employeeInfoListSchema
 from src.extension import object_as_dict
 from src.jwt import get_jwt_identity, jwt_required
@@ -17,47 +17,51 @@ from src.middlewares.token_required import admin_required
 Department = Blueprint("department", __name__)
 
 # api/department/list
+
+
 @Department.route("/list", methods=["GET"])
 @admin_required()
 def GetDepartmentList():
     try:
         args = request.args.to_dict()
-        page = 1
-        perPage = 10
+        page = None
+        perPage = None
         if "Page" in args:
             page = int(args["Page"])
         if "PerPage" in args:
             perPage = int(args["PerPage"])
-        departmentList = db.session.execute(
-            select(
-                DepartmentModel.Id,
-                DepartmentModel.Name,
-                DepartmentModel.ManagerId,
-                func.concat(EmployeeModel.FirstName, " ", EmployeeModel.LastName).label(
-                    "ManagerName"
-                ),
-                DepartmentModel.Status,
-            )
-            .select_from(DepartmentModel)
-            .join(
-                EmployeeModel,
-                DepartmentModel.ManagerId == EmployeeModel.Id,
-                isouter=True,
-            )
-            .where(DepartmentModel.Status == "1")
-            .order_by(DepartmentModel.Id)
-        ).all()
+        query = select(vDepartment)
+        if page and perPage:
+            data = db.paginate(query, page=page, per_page=perPage)
+            departmentList = departmentListSchema.dump(data.items)
+            total = data.total
+            app.logger.info("GetDepartmentList successfully.")
+            return {
+                "Status": 1,
+                "Description": None,
+                "ResponseData": {
+                    "DepartmentList": departmentList,
+                    "Total": total,
+                }
+            }, 200
+        data = db.session.execute(query).scalars()
+        departmentList = departmentListSchema.dump(data)
         app.logger.info("GetDepartmentList successfully.")
         return {
             "Status": 1,
             "Description": None,
-            "ResponseData": [r._asdict() for r in departmentList],
+            "ResponseData": {
+                "DepartmentList": departmentList,
+                "Total": len(departmentList)
+            },
         }, 200
+
     except Exception as ex:
-        app.logger.info(f"GetDepartmentList thất bại. Có exception[{str(ex)}]")
+        app.logger.info(
+            f"GetDepartmentList thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Truy vấn danh sách phòng ban không thành công.",
+            "Description": f"Có lỗi ở máy chủ.",
             "ResponseData": None,
         }, 200
 
@@ -113,7 +117,8 @@ def AddNewDepartment():
         }, 200
     except Exception as ex:
         db.session.rollback()
-        app.logger.exception(f"AddNewDepartment thất bại. Có exception[{str(ex)}]")
+        app.logger.exception(
+            f"AddNewDepartment thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
             "Description": f"Thêm phòng ban mới không thành công. {str(ex)}",
@@ -169,7 +174,8 @@ def UpdateDepartment():
         }
     except Exception as ex:
         db.session.rollback()
-        app.logger.exception(f"UpdateDepartment thất bại. Có exception[{str(ex)}]")
+        app.logger.exception(
+            f"UpdateDepartment thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
             "Description": f"Cập nhật phòng ban mới không thành công. {str(ex)}",
@@ -228,7 +234,8 @@ def DeleteOneDepartment():
         print(departmentSchema.dump(department))
         db.session.delete(department)
         db.session.commit()
-        app.logger.info(f"DeleteOneDepartment Id[{departmentId}] thành công.")
+        app.logger.info(
+            f"DeleteOneDepartment Id[{departmentId}] thành công.")
         return {
             "Status": 1,
             "Description": None,

@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-
+from datetime import datetime, timedelta
 load_dotenv()
 
 
@@ -15,24 +15,34 @@ class Config:
     MAIL_USE_SSL = os.getenv("MAIL_USE_SSL").lower() in ("true", "1", "t")
     CLIENT_URL = os.getenv("CLIENT_URL")
     SECRET_KEY = os.getenv("JWT_SECRET_KEY")
-    JWT_ACCESS_TOKEN_EXPIRES = int(os.getenv("TIME_TOKEN"))
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(
+        hours=(int(os.getenv("JWT_ACCESS_TOKEN_EXPIRES")) if os.getenv("JWT_ACCESS_TOKEN_EXPIRES") else 60))
+    JWT_REFRESH_TOKEN_EXPIRES = timedelta(hours=(int(os.getenv(
+        "REFRESH_TOKEN_EXPIRES")) if os.getenv("REFRESH_TOKEN_EXPIRES") else 24))
+    REFRESH_TOKEN_BEFORE = timedelta(minutes=int(
+        os.getenv("REFRESH_TOKEN_BEFORE"))if os.getenv("REFRESH_TOKEN_BEFORE") else 10)
     JWT_ALGORITHM = (
         os.getenv("JWT_ALGORITHM") if os.getenv("JWT_ALGORITHM") else "HS256"
     )
     JSON_AS_ASCII = False
-    LOG_TYPE= os.getenv("LOG_TYPE") if os.getenv("LOG_TYPE") else "stream"
-    LOG_LEVEL= os.getenv("LOG_LEVEL") if os.getenv("LOG_LEVEL") else "INFO"
-    LOG_DIR= os.getenv("LOG_DIR") if os.getenv("LOG_DIR") else ""
-    APP_LOG_NAME= os.getenv("APP_LOG_NAME") if os.getenv("APP_LOG_NAME") else "log.log"
+    LOG_TYPE = os.getenv("LOG_TYPE") if os.getenv("LOG_TYPE") else "stream"
+    LOG_LEVEL = os.getenv("LOG_LEVEL") if os.getenv("LOG_LEVEL") else "INFO"
+    LOG_DIR = os.getenv("LOG_DIR") if os.getenv("LOG_DIR") else ""
+    APP_LOG_NAME = os.getenv("APP_LOG_NAME") if os.getenv(
+        "APP_LOG_NAME") else "log.log"
 
     RAW_PATH = "./public/datasets/raw"
     LOCAL_STORAGE = "./public/datasets/raw"
     TRAIN_PATH = "./public/datasets/processed"
     HAARCASCADEPATH = "./public/static/haarcascade_frontalface_default.xml"
-    PATH_MODEL_TRAIN = "./public/static/Trainner.yml"   
+    PATH_MODEL_TRAIN = "./public/static/Trainner.yml"
 
-    #region GG Drive Api
-    CREDENTIALS_PATH = os.getenv("CREDENTIALS_PATH") if os.getenv("CREDENTIALS_PATH") else "./public/gg_drive/credentials.json"
-    TOKEN_PATH = os.getenv("TOKEN_PATH") if os.getenv("TOKEN_PATH") else "./public/gg_drive/token.json"
-    #endregion
+    EXCELTEMPLATEPATH = '../public/templates/Excel'
 
+    # region GG Drive Api
+    CREDENTIALS_PATH = os.getenv("CREDENTIALS_PATH") if os.getenv(
+        "CREDENTIALS_PATH") else "./public/gg_drive/credentials.json"
+    TOKEN_PATH = os.getenv("TOKEN_PATH") if os.getenv(
+        "TOKEN_PATH") else "./public/gg_drive/token.json"
+
+    # endregion
