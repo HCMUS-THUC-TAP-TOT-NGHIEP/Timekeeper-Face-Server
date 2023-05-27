@@ -27,6 +27,29 @@ class EmployeeModel(db.Model):
     ModifiedAt = Column(DateTime())
     Code = Column(String(), nullable=True)
 
+class vEmployeeModel(db.Model):
+    __tablename__ = "vEmployeeDetail"
+
+    Id = Column(Integer(), primary_key=True)
+    FirstName = Column(String(), nullable=False)
+    LastName = Column(String(), nullable=False)
+    DateOfBirth = Column(DateTime(), nullable=False)
+    Gender = Column(Boolean(), nullable=False)
+    Address = Column(String(), nullable=False)
+    JoinDate = Column(DateTime(), nullable=False)
+    LeaveDate = Column(DateTime())
+    DepartmentId = Column(Integer())
+    DepartmentName = Column(String())
+    Position = Column(String())
+    Email = Column(String())
+    MobilePhone = Column(String())
+    CreatedBy = Column(Integer())
+    CreatedAt = Column(DateTime())
+    ModifiedBy = Column(Integer())
+    ModifiedAt = Column(DateTime())
+    Code = Column(String(), nullable=True)
+
+
 
 class EmployeeSchema(marshmallow.Schema):
     class Meta:
