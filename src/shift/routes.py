@@ -618,28 +618,6 @@ def CheckIfExist(assignType: int, targetList: list, shiftDetail: ShiftDetailMode
 def getShiftAssignmentList():
     try:
         app.logger.info("getShiftAssignmentList bắt đầu")
-        # shiftAssignmentList = db.session.execute(
-        #     select(
-        #         ShiftAssignment.Id,
-        #         ShiftAssignment.ShiftId,
-        #         ShiftAssignment.Description,
-        #         ShiftAssignment.StartDate,
-        #         ShiftAssignment.EndDate,
-        #         ShiftAssignment.AssignType,
-        #         ShiftAssignment.Note,
-        #         ShiftAssignment.Status,
-        #         ShiftAssignment.CreatedBy,
-        #         ShiftAssignment.CreatedAt,
-        #         ShiftModel.Description.label("ShiftDescription"),
-        #         ShiftDetailModel.DayIndexList,
-        #     )
-        #     .select_from(ShiftAssignment)
-        #     .join(ShiftModel, ShiftAssignment.ShiftId == ShiftModel.Id)
-        #     .join(
-        #         ShiftDetailModel, ShiftAssignment.ShiftDetailId == ShiftDetailModel.Id
-        #     )
-        #     .order_by(ShiftAssignment.StartDate, ShiftAssignment.Id)
-        # ).all()
 
         #region khai bao
 
@@ -654,7 +632,6 @@ def getShiftAssignmentList():
         #endregion
 
         data = []
-        # shiftAssignmentList = db.session.execute(select(ShiftAssignment)).scalars()
         result = ShiftAssignment.QueryMany(Page=page, PerPage=pageSize)
         shiftAssignmentList = result["Items"]
         total = result["Total"]
@@ -822,8 +799,6 @@ def UpdateAssignment():
         if "Id" not in jsonRequestData:
             raise ProjectException("Không tìm thấy thông tin mã phân ca")
 
-        # endregion
-
         assignmentId = jsonRequestData["Id"]
         description = (
             None
@@ -851,6 +826,8 @@ def UpdateAssignment():
         daysInWeek = jsonRequestData["DaysInWeek"] if "DaysInWeek" in jsonRequestData else None
         assignmentType = jsonRequestData["TargetType"] if "TargetType" in jsonRequestData else None
 
+        # endregion
+
         shiftAssignment = ShiftAssignment.query.filter_by(Id=assignmentId).first()
         if not shiftAssignment:
             raise ProjectException("Không tìm thấy bảng phân ca.")
@@ -863,8 +840,6 @@ def UpdateAssignment():
                 )
             )
         ).scalars().all()
-        # if not detailTargetList:
-        #     raise ProjectException("Không tìm thấy bảng phân ca.")        
 
         if description and description != shiftAssignment.Description:
             shiftAssignment.Description = description
@@ -880,12 +855,12 @@ def UpdateAssignment():
             shiftAssignment.StartDate = startDate
         if daysInWeek and daysInWeek != shiftAssignment.DaysInWeek:
             shiftAssignment.DaysInWeek = daysInWeek
-        insertArray = []
+        insertIdArray = []
         removeArray = []
         if assignmentType and assignmentType != shiftAssignment.TargetType:
             shiftAssignment.TargetType = assignmentType
             removeArray.extend(detailTargetList)
-            insertArray.extend(EmployeeList if assignmentType == 1 else DepartmentList if assignmentType == 2 else [])
+            insertIdArray.extend(EmployeeList if assignmentType == 1 else DepartmentList if assignmentType == 2 else [])
         else:
             if assignmentType == TargetType.Employee.value:
                 removeArray = list(filter(lambda x: x not in EmployeeList , detailTargetList ))
@@ -894,13 +869,12 @@ def UpdateAssignment():
             elif assignmentType == TargetType.Department.value:
                 removeArray = list(filter(lambda x: x not in DepartmentList, detailTargetList))
                 insertIdArray = list(filter(lambda x: x not in detailTargetList, DepartmentList))     
-                pass
 
         if len(removeArray):
             # ShiftAssignmentDetail.DisableBulk(removeArray)
             shiftAssignment.RemoveBulkByTargets(removeArray)
-        if len(insertArray):
-            shiftAssignment.InsertManyTargets(IdList=insertArray, userId=id)
+        if len(insertIdArray):
+            shiftAssignment.InsertManyTargets(IdList=insertIdArray, userId=id)
 
         db.session.commit()
         app.logger.info(f"UpdateAssignment [{assignmentId}] thành công")
