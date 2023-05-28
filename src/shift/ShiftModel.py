@@ -118,18 +118,18 @@ class vShiftDetail(db.Model):
     CheckoutRequired = Column(Boolean())
 
     @staticmethod
-    def QueryMany(Page=None, PageSize=None, Condition=None):
+    def QueryMany(Page=None, PageSize=None, Condition=None) -> dict:
         try:
             app.logger.info(f"vShiftDetail.QueryMany bắt đầu")
             if PageSize and Page and PageSize > 0 and Page > 0:
-                data = db.paginate(db.select(vShiftDetail),
+                data = db.paginate(db.select(vShiftDetail).order_by(vShiftDetail.Id),
                                    page=Page, per_page=PageSize)
                 return {
                     "items": data.items,
                     "total": data.total
                 }
             else:
-                data = vShiftDetail.query.all()
+                data = vShiftDetail.query.order_by(vShiftDetail.Id).all()
                 return {
                     "items": data,
                     "total": len(data)

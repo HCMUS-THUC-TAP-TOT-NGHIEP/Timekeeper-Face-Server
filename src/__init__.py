@@ -34,7 +34,7 @@ def create_app(config_class=Config):
     else:
         logger.addHandler(fileHandler)
 
-    app.logger.info("Connect to Database successfully!")
+    app.logger.info(f"Connect to Database {app.config['SQLALCHEMY_DATABASE_URI']} successfully!")
 
     @app.before_request
     def log_request_info():

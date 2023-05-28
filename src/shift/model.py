@@ -98,17 +98,18 @@ class ShiftAssignment(db.Model):
 
     def InsertManyTargets(self, IdList: list, userId: int) -> bool:
         try:
-            insertArray = []
-            for id in IdList:
-                insertArray.append({
-                    "Target": id,
-                    "ShiftAssignmentId": self.Id,
-                    "CreatedBy": userId,
-                    "ModifiedBy": userId,
-                })
-            result = db.session.execute(
-                insert(ShiftAssignmentDetail), insertArray)
-            print(result)
+            if len(IdList):
+                insertArray = []
+                for id in IdList:
+                    insertArray.append({
+                        "Target": id,
+                        "ShiftAssignmentId": self.Id,
+                        "CreatedBy": userId,
+                        "ModifiedBy": userId,
+                    })
+                result = db.session.execute(
+                    insert(ShiftAssignmentDetail), insertArray)
+                print(result)
             return True
         except Exception as ex:
             db.session.rollback()
@@ -120,11 +121,12 @@ class ShiftAssignment(db.Model):
 
     def RemoveBulkByTargets(self, TargetList: []) -> bool:
         try:
-            query = delete(ShiftAssignmentDetail).where(and_(ShiftAssignmentDetail.ShiftAssignmentId == self.Id,
-                                                             ShiftAssignmentDetail.Target.in_(TargetList))
-                                                        )
-            result = db.session.execute(query)
-            print(result)
+            if len(TargetList):
+                query = delete(ShiftAssignmentDetail).where(and_(ShiftAssignmentDetail.ShiftAssignmentId == self.Id,
+                                                                ShiftAssignmentDetail.Target.in_(TargetList))
+                                                            )
+                result = db.session.execute(query)
+                print(result)
             return True
         except Exception as ex:
             db.session.rollback()
@@ -169,10 +171,11 @@ class ShiftAssignmentDetail(db.Model):
     @staticmethod
     def RemoveBulkByIds(IdList: []) -> bool:
         try:
-            query = delete(ShiftAssignmentDetail).where(
-                ShiftAssignmentDetail.Id.in_(IdList))
-            result = db.session.execute(query)
-            print(result)
+            if len(IdList):
+                query = delete(ShiftAssignmentDetail).where(
+                    ShiftAssignmentDetail.Id.in_(IdList))
+                result = db.session.execute(query)
+                print(result)
             return True
         except Exception as ex:
             db.session.rollback()

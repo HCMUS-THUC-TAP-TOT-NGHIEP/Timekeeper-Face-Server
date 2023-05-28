@@ -849,7 +849,7 @@ def UpdateAssignment():
         startDate = jsonRequestData["StartDate"] if "StartDate" in jsonRequestData else None
         endDate = jsonRequestData["EndDate"] if "EndDate" in jsonRequestData else None
         daysInWeek = jsonRequestData["DaysInWeek"] if "DaysInWeek" in jsonRequestData else None
-        assignmentType = jsonRequestData["AssignmentType"] if "AssignmentType" in jsonRequestData else None
+        assignmentType = jsonRequestData["TargetType"] if "TargetType" in jsonRequestData else None
 
         shiftAssignment = ShiftAssignment.query.filter_by(Id=assignmentId).first()
         if not shiftAssignment:
@@ -863,8 +863,8 @@ def UpdateAssignment():
                 )
             )
         ).scalars().all()
-        if not detailTargetList:
-            raise ProjectException("Không tìm thấy bảng phân ca.")        
+        # if not detailTargetList:
+        #     raise ProjectException("Không tìm thấy bảng phân ca.")        
 
         if description and description != shiftAssignment.Description:
             shiftAssignment.Description = description
@@ -884,23 +884,23 @@ def UpdateAssignment():
         removeArray = []
         if assignmentType and assignmentType != shiftAssignment.TargetType:
             shiftAssignment.TargetType = assignmentType
-            removeArray.append(detailTargetList)
-            insertArray.append(EmployeeList if assignmentType == 1 else DepartmentList if assignmentType == 2 else [])
+            removeArray.extend(detailTargetList)
+            insertArray.extend(EmployeeList if assignmentType == 1 else DepartmentList if assignmentType == 2 else [])
         else:
             if assignmentType == TargetType.Employee.value:
                 removeArray = list(filter(lambda x: x not in EmployeeList , detailTargetList ))
                 insertIdArray = list(filter(lambda x: x not in detailTargetList, EmployeeList))
                 
             elif assignmentType == TargetType.Department.value:
-                removeArray = list(filter(lambda x: x not in detailTargetList, DepartmentList))
-                insertIdArray = list(filter(lambda x: x not in detailTargetList, EmployeeList))     
+                removeArray = list(filter(lambda x: x not in DepartmentList, detailTargetList))
+                insertIdArray = list(filter(lambda x: x not in detailTargetList, DepartmentList))     
                 pass
 
         if len(removeArray):
             # ShiftAssignmentDetail.DisableBulk(removeArray)
             shiftAssignment.RemoveBulkByTargets(removeArray)
         if len(insertArray):
-            shiftAssignment.InsertBulkByTarget(insertArray)
+            shiftAssignment.InsertManyTargets(IdList=insertArray, userId=id)
 
         db.session.commit()
         app.logger.info(f"UpdateAssignment [{assignmentId}] thành công")
