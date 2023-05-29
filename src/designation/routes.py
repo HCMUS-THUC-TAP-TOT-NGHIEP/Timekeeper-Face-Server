@@ -36,6 +36,6 @@ def GetDesignationList():
         app.logger.exception(f"GetDesignationList thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ. Không thể truy cập được thông tin vị trí.",
+            "Description": f"Xảy ra lỗi ở máy chủ. Không thể truy cập được thông tin vị trí.",
             "ResponseData": None,
         }, 200

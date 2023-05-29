@@ -61,7 +61,7 @@ def GetDepartmentList():
             f"GetDepartmentList thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ.",
+            "Description": f"Xảy ra lỗi ở máy chủ.",
             "ResponseData": None,
         }, 200
 

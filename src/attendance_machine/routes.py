@@ -38,7 +38,7 @@ def LoadDepartment():
         app.logger.error(f"LoadDepartment thất bại. Có exception[{ex}]")
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ. Đăng ký khuôn mặt không thành công",
+            "Description": f"Xảy ra lỗi ở máy chủ. Đăng ký khuôn mặt không thành công",
             "ResponseData": None,
         }, 200
 
@@ -80,7 +80,7 @@ def LoadEmployeeList():
         app.logger.error(f"LoadEmployeeList thất bại. Có exception[{ex}]")
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ.",
+            "Description": f"Xảy ra lỗi ở máy chủ.",
             "ResponseData": None,
         }, 200
 
@@ -126,6 +126,6 @@ def LoadEmployeeList2():
         app.logger.error(f"LoadEmployeeList thất bại. Có exception[{ex}]")
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ.",
+            "Description": f"Xảy ra lỗi ở máy chủ.",
             "ResponseData": None,
         }, 200

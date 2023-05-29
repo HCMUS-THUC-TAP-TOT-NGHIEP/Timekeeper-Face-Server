@@ -1,6 +1,8 @@
 from functools import wraps
 
 from flask import Flask, jsonify
+from src.db import db
+from src.authentication.model import UserModel
 from src.jwt import (
     jwt,
     JWTManager,
@@ -15,7 +17,9 @@ def admin_required():
         def decorator(*args, **kwargs):
             verify_jwt_in_request()
             claims = get_jwt()
-            if claims["IsAdmin"]:
+            id = claims["id"]
+            user = UserModel.query.filter_by(Id=id).first()
+            if user and user.Role == 1:
                 return fn(*args, **kwargs)
             else:
                 return (
@@ -23,7 +27,7 @@ def admin_required():
                         Status=0,
                         Description="Yêu cầu tài khoản có quyền quản trị viên",
                         ResponseData=None,
-                    ), 200
+                    ), 401
                 )
         return decorator
     return wrapper

@@ -1,8 +1,12 @@
 from src.db import db
 from src import marshmallow
-from sqlalchemy import Column, Integer, String, SmallInteger, DateTime, Boolean, BigInteger, ARRAY, Date, Time
-from datetime import datetime
+from sqlalchemy import Column, Integer, String, SmallInteger, DateTime, Boolean, BigInteger, ARRAY, Date, Time, and_, between, func
+from datetime import datetime, time, timedelta, date
 from flask import current_app as app
+from src.shift.model import vShiftAssignmentDetail, ShiftModel
+from src.employee_checkin.AttendanceStatistic import AttendanceStatisticV2
+from src.employee.model import EmployeeModel
+from src.extension import ProjectException
 
 
 class Timesheet(db.Model):
@@ -54,22 +58,72 @@ class Timesheet(db.Model):
         finally:
             app.logger.exception(f"Timesheet.QueryMany finish. ")
 
-    def QueryDetails(self, EmployeeId=None, DepartmentId=None, Date=None):
+    def InsertTimesheetDetail(self) -> None:
         try:
-            app.logger.info(f"Timesheet.QueryDetails start. ")
-            condition = vTimesheetDetail.TimesheetId == self.Id
-            query = db.select(vTimesheetDetail)
-            if condition:
-                query = query.where(condition)
-            data = db.session.execute(query).all()
-            return list(map(lambda x: x._asdict()["vTimesheetDetail"], data))
+            #region query: ghi lại chi tiết chấm công
+            app.logger.info(f"Timesheet.InsertTimesheetDetail start. ")
+
+            if self.LockedStatus:
+                raise ProjectException(f"Bảng chấm công mã {self.Id} - {self.Name} không thể chỉnh sửa vì đã khóa. ")
+            DateFrom = self.DateFrom
+            DateTo = self.DateTo
+            DepartmentList = self.DepartmentList
+
+            checkinRecordList = AttendanceStatisticV2.QueryMany(DateFrom=DateFrom, DateTo=DateTo)["items"]
+            query = db.select(EmployeeModel)
+            if len(DepartmentList) > 0:
+                query = query.where(EmployeeModel.DepartmentId.in_(DepartmentList))
+            employeeList = db.session.execute(query).scalars()
+                
+            # employeeList = employeeInfoListSchema.dump(data)
+            db.session.execute(db.delete(TimesheetDetail).where(TimesheetDetail.TimesheetId == self.Id))
+            delta = timedelta(days=1)     
+            for employee in employeeList:
+                # currentDate = date.fromisoformat(DateFrom)
+                # endDate = date.fromisoformat(DateTo)
+                currentDate = DateFrom
+                endDate = DateTo
+                while currentDate <= endDate:
+                    timeSheetDetail = TimesheetDetail()
+                    checkinRecords = list(filter(lambda x: x.Id == employee.Id and x.Date == currentDate, checkinRecordList))
+                    counts = checkinRecords.__len__()
+                    timeSheetDetail.EmployeeId = employee.Id
+                    timeSheetDetail.Date = currentDate
+                    timeSheetDetail.CheckinTime =  checkinRecords[0].Time if counts > 0 else None
+                    timeSheetDetail.CheckoutTime = checkinRecords[1].Time if counts > 1 else None
+                    timeSheetDetail.TimesheetId = self.Id
+                    if timeSheetDetail.IncludeAssignment():
+                        db.session.add(timeSheetDetail)
+                    currentDate+=delta
+            # endregion
+            return
+        except ProjectException as pEx:
+            app.logger.exception(
+                f"Timesheet.InsertTimesheetDetail failed. Exception[{pEx}]")
+            raise pEx
         except Exception as ex:
             app.logger.exception(
-                f"Timesheet.QueryDetails failed. Exception[{ex}]")
+                f"Timesheet.InsertTimesheetDetail failed. Exception[{ex}]")
             raise Exception(
-                f"Timesheet.QueryDetails failed. Exception[{ex}]")
+                f"Timesheet.InsertTimesheetDetail failed. Exception[{ex}]")
         finally:
-            app.logger.exception(f"Timesheet.QueryDetails finish. ")
+            app.logger.exception(f"Timesheet.InsertTimesheetDetail finish. ")
+
+    def QueryDetails(self, EmployeeId=None, DepartmentId=None, Date=None):
+            try:
+                app.logger.info(f"Timesheet.QueryDetails start. ")
+                query = db.select(vTimesheetDetail).where(vTimesheetDetail.TimesheetId == self.Id)
+                data = db.session.execute(query).scalars().all()
+                # return list(map(lambda x: x._asdict()["vTimesheetDetail"], data))
+                return data
+            except Exception as ex:
+                app.logger.exception(
+                    f"Timesheet.QueryDetails failed. Exception[{ex}]")
+                raise Exception(
+                    f"Timesheet.QueryDetails failed. Exception[{ex}]")
+            finally:
+                app.logger.exception(f"Timesheet.QueryDetails finish. ")
+
 
 
 class TimesheetSchema(marshmallow.Schema):
@@ -94,10 +148,40 @@ class TimesheetDetail(db.Model):
     FinishTime = Column(Time())
     BreakAt = Column(Time())
     BreakEnd = Column(Time())
+    LateMinutes = Column(Integer(), default=0)
+    EarlyMinutes = Column(Integer(), default=0)
 
     def __init__(self) -> None:
         super().__init__()
 
+    def IncludeAssignment(self) -> bool:
+        try:
+            app.logger.exception(f"TimesheetDetail.IncludeAssignment start. ")
+            query = db.select(vShiftAssignmentDetail).where(and_(vShiftAssignmentDetail.EmployeeId == self.EmployeeId,
+                                                                 between(self.Date, vShiftAssignmentDetail.StartDate, vShiftAssignmentDetail.EndDate)))
+            result = db.session.execute(query).scalars().first()
+            if result:
+                self.ShiftAssignmentId = result.Id
+                self.ShiftId = result.ShiftId
+                self.BreakAt = result.BreakAt
+                self.BreakEnd = result.BreakEnd
+                self.StartTime = result.StartTime
+                self.FinishTime = result.FinishTime
+                if self.CheckinTime:
+                    self.LateMinutes = self.CheckinTime.minute - self.StartTime.minute
+                if self.CheckoutTime:
+                    self.EarlyMinutes = self.FinishTime.minute - self.CheckoutTime.minute
+                return True
+            return False
+        except Exception as ex:
+            app.logger.exception(
+                f"TimesheetDetail.IncludeAssignment failed. Exception[{ex}]")
+            raise Exception(
+                f"TimesheetDetail.IncludeAssignment failed. Exception[{ex}]")
+        finally:
+            app.logger.exception(f"TimesheetDetail.IncludeAssignment finish. ")
+
+    
 
 class vTimesheetDetail(db.Model):
     __tablename__ = "vTimesheetDetail"
@@ -117,6 +201,7 @@ class vTimesheetDetail(db.Model):
     FinishTime = Column(Time())
     BreakAt = Column(Time())
     BreakEnd = Column(Time())
+    ShiftName = Column(String(), default="")
 
     def __init__(self) -> None:
         super().__init__()
@@ -125,7 +210,7 @@ class vTimesheetDetail(db.Model):
 class TimesheetDetailSchema(marshmallow.Schema):
     class Meta:
         fields = ("Id", "TimesheetId", "EmployeeId", "Date", "CheckinTime", "CheckoutTime", "StartTime",
-                  "FinishTime", "BreakAt", "BreakEnd", "ShiftAssignmentId", "ShiftId", "EmployeeCheckinId", "EmployeeName", "Department")
+                  "FinishTime", "BreakAt", "BreakEnd", "ShiftAssignmentId", "ShiftId", "EmployeeCheckinId", "EmployeeName", "Department", "ShiftName")
 
 
 timesheetSchema = TimesheetSchema()

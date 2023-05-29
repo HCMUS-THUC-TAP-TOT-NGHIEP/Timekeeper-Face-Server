@@ -84,7 +84,7 @@ def register():
         app.logger.error(f"Đăng ký khuôn mặt thất bại. Có exception[{ex}]")
         return {
             "Status": 0,
-            "Description": f"3. Có lỗi ở máy chủ",
+            "Description": f"3. Xảy ra lỗi ở máy chủ",
             "ResponseData": None,
         }, 200
     finally:
@@ -180,6 +180,6 @@ def recognition():
         app.logger.error(f"Nhận diện khuôn mặt thất bại. Có exception[{ex}]")
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ. Nhận diện khuôn mặt không thành công",
+            "Description": f"Xảy ra lỗi ở máy chủ. Nhận diện khuôn mặt không thành công",
             "ResponseData": None,
         }, 200
