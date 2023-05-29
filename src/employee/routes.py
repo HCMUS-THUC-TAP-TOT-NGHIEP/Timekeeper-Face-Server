@@ -111,10 +111,6 @@ def CreateEmployee():
 
             raise Exception("Invalid MobilePhone. MobilePhone is not found.")
 
-        if "DepartmentId" not in jsonRequestData:
-
-            raise Exception("Invalid DepartmentId. DepartmentId is not found.")
-
         firstName = jsonRequestData["FirstName"]
 
         lastName = jsonRequestData["LastName"]
@@ -133,7 +129,7 @@ def CreateEmployee():
 
         MobilePhone = jsonRequestData["MobilePhone"]
 
-        DepartmentId = jsonRequestData["DepartmentId"]
+        DepartmentId = jsonRequestData["DepartmentId"] if "DepartmentId" in jsonRequestData else None
 
         if not isinstance(firstName, str) or not firstName or not firstName.strip():
 

@@ -117,11 +117,11 @@ def createNewShift():
         # region Khai báo
 
         Description = (
-            jsonRequestData["Description"] if "Description" in jsonRequestData else None
+            jsonRequestData["Description"] if "Description" in jsonRequestData else ""
         )
-        ShiftType = (
-            jsonRequestData["ShiftType"] if "ShiftType" in jsonRequestData else None
-        )
+        # ShiftType = (
+        #     jsonRequestData["ShiftType"] if "ShiftType" in jsonRequestData else None
+        # )
         StartDate = (
             jsonRequestData["StartDate"] if "StartDate" in jsonRequestData else None
         )
@@ -146,8 +146,8 @@ def createNewShift():
 
         if not Description or not Description.strip():
             raise ProjectException("Chưa cung cấp tên ca làm việc")
-        if not ShiftType:
-            raise ProjectException("Chưa cung cấp loại ca làm việc")
+        # if not ShiftType:
+        #     raise ProjectException("Chưa cung cấp loại ca làm việc")
         # if not StartDate:
         #     raise ProjectException("Chưa cung cấp ngày bắt đầu")
         if not StartTime:
@@ -163,7 +163,7 @@ def createNewShift():
 
         newShift = ShiftModel()
         newShift.Description = Description
-        newShift.ShiftType = ShiftType
+        # newShift.ShiftType = ShiftType
         newShift.CreatedAt = datetime.now()
         newShift.ModifiedAt = datetime.now()
         newShift.Status = 1
@@ -214,7 +214,6 @@ def createNewShift():
     finally:
         app.logger.info("createNewShift finishes. Kết thúc tạo ca làm việc")
 
-
 # DELETE api/shift
 @Shift.route("/", methods=["DELETE"])
 @admin_required()
@@ -237,17 +236,10 @@ def deleteShift():
 
         # endregion
 
-        # result = db.session.execute(
-        #     delete(ShiftModel).where(ShiftModel.Id.in_(jsonRequestData["IdList"]))
-        # )
         shiftList = db.session.execute(
             db.select(ShiftModel).where(ShiftModel.Id.in_(jsonRequestData["IdList"]))
-        ).scalars()
-        for shift in shiftList:
-            shift.Status = 0
-            shift.ModifiedBy = id
-            shift.ModifiedAt = datetime.now()
-        db.session.commit()
+        ).scalars().all()
+        ShiftModel.DeleteBulkByIds([shift.Id for shift in shiftList])
         app.logger.info("deleteShift thành công")
         return {
             "Status": 1,
@@ -255,7 +247,6 @@ def deleteShift():
             "ResponseData": None,
         }, 200
     except ProjectException as pEx:
-        db.session.rollback()
         app.logger.exception(f"deleteShift thất bại. Có exception[{str(pEx)}]")
         return {
             "Status": 0,
@@ -263,14 +254,12 @@ def deleteShift():
             "ResponseData": None,
         }, 200
     except Exception as ex:
-        db.session.rollback()
         app.logger.exception(f"deleteShift thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
             "Description": f"Có lỗi ở máy chủ.",
             "ResponseData": None,
         }, 200
-
 
 # PUT api/shift
 @Shift.route("/update", methods=["PUT"])
@@ -662,7 +651,6 @@ def getShiftAssignmentList():
             "Description": None,
             "ResponseData": {
                 "ShiftAssignmentList": data,
-                # ShiftAssignmentSchema(many=True).dump(shiftAssignmentList),
                 "Total": total
             }
         }, 200
