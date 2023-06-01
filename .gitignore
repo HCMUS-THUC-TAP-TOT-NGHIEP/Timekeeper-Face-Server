@@ -131,7 +131,7 @@ dmypy.json
 .pyre/
 /*.log*
 /*.env*
-public/datasets/processed/*
-public/datasets/raw/*
-
+public/datasets/*
+public/static/*.yml
+public/static/*.pkl
 .vscode/
