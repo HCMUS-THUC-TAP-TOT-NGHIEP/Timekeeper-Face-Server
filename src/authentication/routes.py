@@ -260,8 +260,6 @@ def request_reset_password():
             sender="admin",
             text_body="",
         )
-        print("clientUrl", clientUrl)
-        print("reset_link", reset_link)
         return {
             "Status": 1,
             "Description": None,

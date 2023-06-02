@@ -25,7 +25,10 @@ class EmployeeModel(db.Model):
     CreatedAt = Column(DateTime())
     ModifiedBy = Column(Integer())
     ModifiedAt = Column(DateTime())
-    Code = Column(String(), nullable=True)
+
+    def FullName(self):
+        return " ".join(self.LastName, self.FirstName)
+
 
 class vEmployeeModel(db.Model):
     __tablename__ = "vEmployeeDetail"
@@ -39,7 +42,6 @@ class vEmployeeModel(db.Model):
     JoinDate = Column(DateTime(), nullable=False)
     LeaveDate = Column(DateTime())
     DepartmentId = Column(Integer())
-    DepartmentName = Column(String())
     Position = Column(String())
     Email = Column(String())
     MobilePhone = Column(String())
@@ -47,8 +49,10 @@ class vEmployeeModel(db.Model):
     CreatedAt = Column(DateTime())
     ModifiedBy = Column(Integer())
     ModifiedAt = Column(DateTime())
-    Code = Column(String(), nullable=True)
+    DepartmentName = Column(String())
 
+    def FullName(self):
+        return " ".join([self.LastName, self.FirstName])
 
 
 class EmployeeSchema(marshmallow.Schema):
