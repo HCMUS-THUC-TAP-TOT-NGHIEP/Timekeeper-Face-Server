@@ -21,6 +21,11 @@ xlwt
 xlsxwriter
 openpyxl
 xlrd
+Tensorflow
+numpy
+mtcnn
+scikit-learn
+scipy
 
 #google drive api
 google-api-python-client

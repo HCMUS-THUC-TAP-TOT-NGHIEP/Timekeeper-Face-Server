@@ -13,13 +13,13 @@ from src.employee.model import EmployeeModel, employeeInfoSchema
 from src.employee_checkin.EmployeeCheckin import EmployeeCheckin, employeeCheckinSchema, employeeCheckinListSchema
 from sqlalchemy import func, select
 
-# RAW_PATH = "./public/datasets/raw"
-# TRAIN_PATH = "./public/datasets/processed"
-RAW_PATH = Config.RAW_PATH
-TRAIN_PATH = Config.TRAIN_PATH
+from src.face_api.train_v2 import train_facenet
+from src.face_api.architecture import *
+from src.face_api.detect import recog
 
 FaceApi = Blueprint("face", __name__)
 
+face_encoder = InceptionResNetV2()
 # Luôn luôn viết try ... except...
 # Ghi log:
 #  - Thông tin (thành công, thực hiện task gì đó): app.logger.info(str)
@@ -64,8 +64,8 @@ def register():
 
         # region quá trình trích xuất khuôn mặt và train ảnh
         # processed_faces(RAW_PATH)
-        train_model_face(RAW_PATH)
-
+        # train_model_face(RAW_PATH)
+        train_facenet(Config.LOCAL_STORAGE, face_encoder)
         #endregion
 
         return {
@@ -120,7 +120,7 @@ def recognition():
 
         RecognitionMethod = 1
         img = base64ToOpenCV(Picture)
-        Id = get_id_from_img_face(img)
+        Id = recog(img, face_encoder)
 
         if Id == None:
             raise ProjectException(
@@ -153,8 +153,8 @@ def recognition():
 
         app.logger.info("EmployeeID:" + str(Id))
 
-        list_img = os.listdir(os.path.join(Config.RAW_PATH, str(Id)))
-        img_path = os.path.join(Config.RAW_PATH, str(Id), list_img[0])
+        list_img = os.listdir(os.path.join(Config.LOCAL_STORAGE, str(Id)))
+        img_path = os.path.join(Config.LOCAL_STORAGE, str(Id), list_img[0])
 
         img = cv2.imread(img_path)
         str_img = openCVToBase64(img)

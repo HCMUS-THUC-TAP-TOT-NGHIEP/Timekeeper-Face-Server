@@ -26,7 +26,7 @@ def base64ToOpenCV(str_img):
 # lưu ảnh dạng png với đầu vào là mảng ảnh, id và tên vào datasets/raw/...
 def save_images(images, id, name):
     try:
-        path = os.path.join(os.getcwd(), "public", "datasets","raw",  f"{id}")
+        path = os.path.join(os.getcwd(), "public", "datasets",  f"{id}")
         if not os.path.isdir(path):
             os.makedirs(path)
         for i in range(len(images)):

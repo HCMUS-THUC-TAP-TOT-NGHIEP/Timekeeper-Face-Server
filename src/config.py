@@ -26,11 +26,10 @@ class Config:
     APP_LOG_NAME = os.getenv("APP_LOG_NAME") if os.getenv(
         "APP_LOG_NAME") else "log.log"
 
-    RAW_PATH = "./public/datasets/raw"
-    LOCAL_STORAGE = "./public/datasets/raw"
-    TRAIN_PATH = "./public/datasets/processed"
+    LOCAL_STORAGE = "./public/datasets"
     HAARCASCADEPATH = "./public/static/haarcascade_frontalface_default.xml"
     PATH_MODEL_TRAIN = "./public/static/Trainner.yml"
+    PATH_MODEL_FACENET = "./public/static/facenet_keras_weights.h5"
 
     EXCELTEMPLATEPATH = '../public/templates/Excel'
 
