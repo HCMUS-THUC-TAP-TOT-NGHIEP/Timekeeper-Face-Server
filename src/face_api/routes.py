@@ -14,8 +14,14 @@ from src.employee_checkin.EmployeeCheckin import EmployeeCheckin, employeeChecki
 from sqlalchemy import func, select
 from src.face_api.model import RecognitionData, RecognitionDataSchema
 import threading
+
+from src.face_api.train_v2 import train_facenet
+from src.face_api.architecture import *
+from src.face_api.detect import recog
+
 FaceApi = Blueprint("face", __name__)
 
+face_encoder = InceptionResNetV2()
 # Luôn luôn viết try ... except...
 # Ghi log:
 #  - Thông tin (thành công, thực hiện task gì đó): app.logger.info(str)
@@ -60,8 +66,8 @@ def register():
 
         # region quá trình trích xuất khuôn mặt và train ảnh
         # processed_faces(RAW_PATH)
-        train_model_face(RAW_PATH)
-
+        # train_model_face(RAW_PATH)
+        train_facenet(Config.LOCAL_STORAGE, face_encoder)
         #endregion
 
         return {
@@ -116,7 +122,7 @@ def recognition():
 
         RecognitionMethod = 1
         img = base64ToOpenCV(Picture)
-        Id = get_id_from_img_face(img)
+        Id = recog(img, face_encoder)
 
         if Id == None:
             raise ProjectException(
@@ -133,6 +139,8 @@ def recognition():
         t = threading.Thread(target=EmployeeCheckin.insert_one, args=(app._get_current_object(), Id, RecognitionMethod, "Khuôn mặt", AttendanceTime,  Picture.split(",")[1] , ) )
         t.start()
                 
+        app.logger.info("EmployeeID:" + str(Id))
+
         list_img = os.listdir(os.path.join(Config.LOCAL_STORAGE, str(Id)))
         img_path = os.path.join(Config.LOCAL_STORAGE, str(Id), list_img[0])
 
