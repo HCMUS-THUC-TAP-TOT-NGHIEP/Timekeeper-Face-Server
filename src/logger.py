@@ -70,11 +70,11 @@ logFormatter = LogFormatter(
 # fileHandler = RotatingFileHandler("log.log", backupCount=100, maxBytes=1024 * 1024, encoding="utf-8")
 # fileHandler.setFormatter(logFormatter)
 
-# fileHandler = TimedRotatingFileHandler(
-#     "log.log", when="D", backupCount=3, encoding="utf-8"
-# )
-fileHandler = EnhancedRotatingFileHandler(
-    filename="log.log", when="D", encoding="utf-8", backupCount=100, maxBytes=10 * 1024 * 1024,
+fileHandler = TimedRotatingFileHandler(
+    "log.log", when="D", backupCount=3, encoding="utf-8"
 )
+# fileHandler = EnhancedRotatingFileHandler(
+#     filename="log.log", when="D", encoding="utf-8", backupCount=100, maxBytes=10 * 1024 * 1024,
+# )
 fileHandler.setFormatter(logFormatter)
 fileHandler.suffix = "%Y-%m-%d"

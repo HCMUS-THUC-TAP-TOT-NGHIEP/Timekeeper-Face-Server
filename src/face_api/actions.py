@@ -26,7 +26,7 @@ def base64ToOpenCV(str_img):
 # lưu ảnh dạng png với đầu vào là mảng ảnh, id và tên vào datasets/raw/...
 def save_images(images, id, name):
     try:
-        path = os.path.join(os.getcwd(), "public", "datasets","raw",  f"{id}")
+        path = os.path.join(os.getcwd(), "public", "datasets",  f"{id}")
         if not os.path.isdir(path):
             os.makedirs(path)
         for i in range(len(images)):
@@ -55,34 +55,34 @@ def counter_img(path):
         raise Exception(f"counter_img failed. [exception{ex}]")
 
 
-# cắt khuôn mặt từ ảnh lưu vào processed
-def processed_faces(path_raw):
-    try:
-        detector = cv2.CascadeClassifier(Config.HAARCASCADEPATH)
-        # đọc các id đã có
-        for ID in os.listdir(path_raw):
-            # path_raw_id = path_raw + "/" + ID
-            path_raw_id = os.path.join(path_raw, ID) 
-            path_processed_id = path_raw_id.replace("raw", "processed")
-            # kiểm tra tồn tại của folder id
-            if not os.path.isdir(path_processed_id):
-                os.makedirs(path_processed_id)
+# # cắt khuôn mặt từ ảnh lưu vào processed
+# def processed_faces(path_raw):
+#     try:
+#         detector = cv2.CascadeClassifier(Config.HAARCASCADEPATH)
+#         # đọc các id đã có
+#         for ID in os.listdir(path_raw):
+#             # path_raw_id = path_raw + "/" + ID
+#             path_raw_id = os.path.join(path_raw, ID) 
+#             path_processed_id = path_raw_id.replace("raw", "processed")
+#             # kiểm tra tồn tại của folder id
+#             if not os.path.isdir(path_processed_id):
+#                 os.makedirs(path_processed_id)
 
-            # duyệt các ảnh trong thư mục id
-            for list in os.listdir(path_raw_id):
-                # img_path = path_raw_id + "/" + list
-                img_path = os.path.join(path_raw_id,list)
-                img = cv2.imread(img_path)
-                gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-                faces = detector.detectMultiScale(
-                    gray_img, 1.3, 5, minSize=(30, 30), flags=cv2.CASCADE_SCALE_IMAGE
-                )
-                for x, y, w, h in faces:
-                    path_processed = img_path.replace("raw", "processed")
-                    if not os.path.isdir(path_processed):
-                        cv2.imwrite(path_processed, gray_img[y : y + h, x : x + w])
-    except Exception as ex:
-        raise Exception(f"processed_faces failed. [exception{ex}]")
+#             # duyệt các ảnh trong thư mục id
+#             for list in os.listdir(path_raw_id):
+#                 # img_path = path_raw_id + "/" + list
+#                 img_path = os.path.join(path_raw_id,list)
+#                 img = cv2.imread(img_path)
+#                 gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+#                 faces = detector.detectMultiScale(
+#                     gray_img, 1.3, 5, minSize=(30, 30), flags=cv2.CASCADE_SCALE_IMAGE
+#                 )
+#                 for x, y, w, h in faces:
+#                     path_processed = img_path.replace("raw", "processed")
+#                     if not os.path.isdir(path_processed):
+#                         cv2.imwrite(path_processed, gray_img[y : y + h, x : x + w])
+#     except Exception as ex:
+#         raise Exception(f"processed_faces failed. [exception{ex}]")
 
 
 # láy ảnh và nhãn từ mục ảnh processed

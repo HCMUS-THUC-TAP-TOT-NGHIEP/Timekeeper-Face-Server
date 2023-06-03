@@ -13,11 +13,6 @@ from src.employee.model import EmployeeModel, employeeInfoSchema
 from src.employee_checkin.EmployeeCheckin import EmployeeCheckin, employeeCheckinSchema, employeeCheckinListSchema
 from sqlalchemy import func, select
 
-# RAW_PATH = "./public/datasets/raw"
-# TRAIN_PATH = "./public/datasets/processed"
-RAW_PATH = Config.RAW_PATH
-TRAIN_PATH = Config.TRAIN_PATH
-
 FaceApi = Blueprint("face", __name__)
 
 # Luôn luôn viết try ... except...
@@ -63,8 +58,7 @@ def register():
         #endregion
 
         # region quá trình trích xuất khuôn mặt và train ảnh
-        processed_faces(RAW_PATH)
-        train_model(TRAIN_PATH)
+        train_model(Config.LOCAL_STORAGE)
 
         #endregion
 
@@ -153,8 +147,8 @@ def recognition():
 
         app.logger.info("EmployeeID:" + str(Id))
 
-        list_img = os.listdir(os.path.join(Config.RAW_PATH, str(Id)))
-        img_path = os.path.join(Config.RAW_PATH, str(Id), list_img[0])
+        list_img = os.listdir(os.path.join(Config.LOCAL_STORAGE, str(Id)))
+        img_path = os.path.join(Config.LOCAL_STORAGE, str(Id), list_img[0])
 
         img = cv2.imread(img_path)
         str_img = openCVToBase64(img)
