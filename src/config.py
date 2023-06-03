@@ -35,6 +35,7 @@ class Config:
     HAARCASCADEPATH = "./public/static/haarcascade_frontalface_default.xml"
     PATH_MODEL_TRAIN = "./public/static/Trainner.yml"
     PATH_MODEL_FACENET = "./public/static/facenet_keras_weights.h5"
+    PATH_ENCODE = "./public/static/encodings.pkl"
 
     EXCELTEMPLATEPATH = '../public/templates/Excel'
 
