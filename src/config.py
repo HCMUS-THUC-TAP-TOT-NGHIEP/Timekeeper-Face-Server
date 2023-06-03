@@ -4,15 +4,19 @@ from datetime import datetime, timedelta
 load_dotenv()
 
 
-isProduction  =  os.environ['MODE'] == 'production'  if 'MODE' in os.environ else False
+isProduction = os.environ['MODE'] == 'production' if 'MODE' in os.environ else False
+
 
 class Config:
 
     FLASK_APP = "app.py"
     FLASK_DEBUG = bool(os.environ.get("DEBUG"))
-    SQLALCHEMY_DATABASE_URI = os.environ("DATABASE_URI") if isProduction else os.getenv("DATABASE_URI")
-    MAIL_SERVER = os.environ("MAIL_SERVER") if isProduction else os.getenv("MAIL_SERVER")
-    MAIL_PORT =  int(os.environ("MAIL_PORT")) if isProduction else int(os.getenv("MAIL_PORT"))
+    SQLALCHEMY_DATABASE_URI = os.environ(
+        "DATABASE_URI") if isProduction else os.getenv("DATABASE_URI")
+    MAIL_SERVER = os.environ(
+        "MAIL_SERVER") if isProduction else os.getenv("MAIL_SERVER")
+    MAIL_PORT = int(os.environ("MAIL_PORT")) if isProduction else int(
+        os.getenv("MAIL_PORT"))
     MAIL_USERNAME = os.getenv("MAIL_USERNAME")
     MAIL_PASSWORD = os.getenv("MAIL_PASSWORD")
     MAIL_USE_TLS = os.getenv("MAIL_USE_TLS").lower() in ("true", "1", "t")
