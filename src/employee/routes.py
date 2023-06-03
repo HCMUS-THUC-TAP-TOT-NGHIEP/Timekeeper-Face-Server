@@ -59,7 +59,6 @@ def GetEmployeeInfo():
 
         }, 200
 
-
 # POST api/employee/create
 @Employee.route("/create", methods=["POST"])
 @jwt_required()
@@ -223,7 +222,6 @@ def CreateEmployee():
 
         }, 200
 
-
 # PUT api/employee/update
 @Employee.route("/update", methods=["PUT"])
 @jwt_required()
@@ -290,8 +288,6 @@ def UpdateEmployeeInfo():
         }, 200
 
 # DELETE api/employee/
-
-
 @Employee.route("/", methods=["DELETE"])
 @jwt_required()
 def DeleteEmployee():
@@ -338,13 +334,10 @@ def DeleteEmployee():
             "ResponseData": None,
         }, 200
 
-
 # GET api/employee/many
-
 @Employee.route("/many", methods=["GET"])
 @admin_required()
 def GetManyEmployee():
-
     try:
         identity = get_jwt_identity()
         email = identity["email"]
@@ -407,7 +400,6 @@ def GetManyEmployee():
 
 
 # POST api/employee/import
-
 @Employee.route("/import", methods=["POST"])
 @admin_required()
 def importData():
@@ -503,7 +495,7 @@ def importData():
             f"Importing EmployeeModel thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ.",
+            "Description": f"Xảy ra lỗi ở máy chủ.",
             "ResponseData": None,
         }, 200
     finally:
@@ -513,8 +505,6 @@ def importData():
 excelTemplatePath = path.join("..", "public", "templates", "Excel")
 
 # GET api/employee/import/templates
-
-
 @Employee.route("import/templates", methods=["GET", "POST"])
 @admin_required()
 def GetTemplate():
@@ -523,12 +513,6 @@ def GetTemplate():
         claims = get_jwt()
         id = claims['id']
         return send_from_directory(excelTemplatePath, "Employee.xlsx", as_attachment=True)
-        return {
-            "Status": 1,
-            "Description": None,
-            "ResponseData": None,
-        }, 200
-
     except ProjectException as ex:
         db.session.rollback()
         app.logger.info(
@@ -544,12 +528,11 @@ def GetTemplate():
             f"GetTemplate EmployeeModel thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ.",
+            "Description": f"Xảy ra lỗi ở máy chủ.",
             "ResponseData": None,
         }, 200
     finally:
         app.logger.info("GetTemplate EmployeeModel kết thúc")
-
 
 def CheckIfFileAllowed(filename):
     if ('.' not in filename):
@@ -558,7 +541,6 @@ def CheckIfFileAllowed(filename):
     if extension not in ALLOWED_EXTENSIONS:
         return False
     return True
-
 
 def GetFileExtensionFromFileNam(filename):
     return filename.rsplit('.', 1)[1].lower() if '.' in filename else None

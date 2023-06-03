@@ -192,7 +192,7 @@ def AddNewUser():
         app.logger.exception(ex)
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ. \nKhông thể thêm user mới.",
+            "Description": f"Xảy ra lỗi ở máy chủ. \nKhông thể thêm user mới.",
             "ResponseData": None,
         }
 
@@ -244,7 +244,7 @@ def DeleteUser():
         app.logger.exception(ex)
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ. \nKhông thể xóa người dùng.",
+            "Description": f"Xảy ra lỗi ở máy chủ. \nKhông thể xóa người dùng.",
             "ResponseData": None,
         }
 
@@ -344,6 +344,6 @@ def UpdateUser():
         app.logger.exception(ex)
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ. \nKhông thể thay đổi thông tin người dùng.",
+            "Description": f"Xảy ra lỗi ở máy chủ. \nKhông thể thay đổi thông tin người dùng.",
             "ResponseData": None,
         }

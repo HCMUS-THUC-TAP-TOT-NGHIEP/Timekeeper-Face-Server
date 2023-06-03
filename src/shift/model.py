@@ -242,6 +242,13 @@ class vShiftAssignmentDetail(db.Model):
     DepartmentName = Column(String())
     DepartmentId = Column(Integer())
     EmployeeId = Column(Integer())
+    StartTime = Column(Time())
+    FinishTime = Column(Time())
+    BreakAt = Column(Time())
+    BreakEnd = Column(Time())
+    HasBreak = Column(Boolean())
+    WorkingHour = Column(Numeric(precision=10, scale=2))
+    WorkingDay = Column(Numeric(precision=10, scale=2))
 
 
 class ShiftAssignmentDetailSchema(marshmallow.Schema):

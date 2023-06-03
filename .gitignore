@@ -133,5 +133,6 @@ dmypy.json
 /*.env*
 public/datasets/*
 public/static/*.yml
-public/static/*.pkl
+public/static/*.pklpublic/export
+
 .vscode/

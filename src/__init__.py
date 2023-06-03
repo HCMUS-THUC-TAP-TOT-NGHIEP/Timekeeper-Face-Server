@@ -9,6 +9,8 @@ from flask_cors import CORS
 from threading import Thread
 from flask_marshmallow import Marshmallow
 from src.logger import logger, fileHandler
+import os
+import asyncio
 
 migrate = Migrate()
 cors = CORS()
@@ -18,6 +20,8 @@ marshmallow = Marshmallow()
 # init application
 def create_app(config_class=Config):
     app = Flask(__name__)
+    static_folder_root = os.path.join(os.path.dirname(os.path.abspath(__file__)),os.path.pardir, "public")
+    app._static_url_path = static_folder_root
     app.config.from_object(Config)
     mail.init_app(app)
     db.init_app(app)
@@ -25,8 +29,6 @@ def create_app(config_class=Config):
     jwt.init_app(app)
     cors.init_app(app)
     marshmallow.init_app(app)
-
-    app.static_folder = "public"
 
     log_type = app.config["LOG_TYPE"]
     if log_type == "stream":

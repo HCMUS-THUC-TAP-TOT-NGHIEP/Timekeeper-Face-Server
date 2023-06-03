@@ -1,6 +1,7 @@
+from threading import Thread
+import threading
 from datetime import date, datetime, timedelta
-
-from flask import Blueprint
+from flask import Blueprint, send_file
 from flask import current_app as app
 from flask import request, send_from_directory
 from sqlalchemy import (DateTime, and_, between, case, delete, func, insert,
@@ -29,7 +30,7 @@ from src.shift.model import (DayInWeekEnum, ShiftAssignment,
                              TargetType)
 from src.shift.ShiftModel import (ShiftDetailModel, ShiftDetailSchema,
                                   ShiftModel, vShiftDetail, vShiftDetailSchema)
-
+from src.utils.helpers import DeleteFile
 EmployeeCheckinRoute = Blueprint("/checkin", __name__)
 
 # POST "api/checkin"
@@ -103,12 +104,11 @@ def getCheckinRecord():
             f"getCheckinRecord thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ.",
+            "Description": f"Xảy ra lỗi ở máy chủ.",
             "ResponseData": None,
         }, 200
     finally:
         app.logger.info(f"getCheckinRecord kết thúc")
-
 
 # GET "api/checkin/list"
 @EmployeeCheckinRoute.route("/list/v2", methods=["POST"])
@@ -157,7 +157,7 @@ def getCheckinRecordV2():
             f"getCheckinRecord v2 thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ.",
+            "Description": f"Xảy ra lỗi ở máy chủ.",
             "ResponseData": None,
         }, 200
     finally:
@@ -219,7 +219,7 @@ def summary():
             f"summary thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ.",
+            "Description": f"Xảy ra lỗi ở máy chủ.",
             "ResponseData": None,
         }, 200
     finally:
@@ -256,7 +256,7 @@ def GetTemplate():
             f"GetTemplate timekeeper thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ.",
+            "Description": f"Xảy ra lỗi ở máy chủ.",
             "ResponseData": None,
         }, 400
     finally:
@@ -304,7 +304,7 @@ def getTimeSheetList():
             f"getTimeSheetList thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ.",
+            "Description": f"Xảy ra lỗi ở máy chủ.",
             "ResponseData": None,
         }, 200
     finally:
@@ -352,36 +352,7 @@ def createTimeSheet():
         db.session.add(newTimeSheet)
         db.session.flush()
         db.session.refresh(newTimeSheet)
-
-        #region query: ghi lại chi tiết chấm công
-        
-        checkinRecordList = AttendanceStatisticV2.QueryMany(DateFrom=DateFrom, DateTo=DateTo)["items"]
-        # if (len(checkinRecordList) == 0):
-            # raise ProjectException("")
-        query = db.select(EmployeeModel)
-        if len(DepartmentList) > 0:
-            query = query.where(EmployeeModel.DepartmentId.in_(DepartmentList))
-        employeeList = db.session.execute(query).scalars()
-            
-        # employeeList = employeeInfoListSchema.dump(data)
-        delta = timedelta(days=1)     
-        for employee in employeeList:
-            currentDate = date.fromisoformat(DateFrom)
-            endDate = date.fromisoformat(DateTo)
-            while currentDate <= endDate:
-                timeSheetDetail = TimesheetDetail()
-                times = list()
-                checkinRecords = list(filter(lambda x: x.Id == employee.Id and x.Date == currentDate, checkinRecordList))
-                counts = checkinRecords.__len__()
-                timeSheetDetail.EmployeeId = employee.Id
-                timeSheetDetail.Date = currentDate
-                timeSheetDetail.CheckinTime =  checkinRecords[0].Time if counts > 0 else None
-                timeSheetDetail.CheckoutTime = checkinRecords[1].Time if counts > 1 else None
-                timeSheetDetail.TimesheetId = newTimeSheet.Id
-                db.session.add(timeSheetDetail)
-                currentDate+=delta
-
-        # endregion
+        newTimeSheet.InsertTimesheetDetail()
         db.session.commit()
         app.logger.info(f"getCheckinRecord v2 thành công")
 
@@ -405,11 +376,103 @@ def createTimeSheet():
             f"getTimeSheetList thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ.",
+            "Description": f"Xảy ra lỗi ở máy chủ.",
             "ResponseData": None,
         }, 200
     finally:
         app.logger.info(f"getTimeSheetList kết thúc")
+
+# DELETE api/checkin/timesheet
+@EmployeeCheckinRoute.route("/timesheet", methods=["DELETE"])
+@admin_required()
+def DeleteTimesheet():
+    try:
+        app.logger.info(f"DeleteTimesheet bắt đầu")
+        jsonRequestData = request.get_json()
+        if "Id" not in jsonRequestData:
+            raise ProjectException("Yêu cầu không hợp lệ, do chưa cung cấp mã báo cáo.")
+        TimesheetId = jsonRequestData["Id"]
+        Timesheet.DeleteById(id=TimesheetId)
+        app.logger.info(f"DeleteTimesheet Id[{TimesheetId}] thành công.")
+        return {
+            "Status": 0,
+            "Description": None,
+            "ResponseData": {
+                Id: TimesheetId
+            },
+        }, 200
+
+    except ProjectException as pEx:
+        app.logger.exception(
+            f"DeleteTimesheet thất bại. Có exception[{str(pEx)}]")
+        return {
+            "Status": 0,
+            "Description": f"{str(pEx)}",
+            "ResponseData": None,
+        }, 200
+    except Exception as ex:
+        app.logger.exception(
+            f"DeleteTimesheet thất bại. Có exception[{str(ex)}]")
+        return {
+            "Status": 0,
+            "Description": f"Xảy ra lỗi ở máy chủ.",
+            "ResponseData": None,
+        }, 200
+    finally:
+        app.logger.info(f"DeleteTimesheet kết thúc")
+    
+
+# PUT api/checkin/timesheet
+@EmployeeCheckinRoute.route("/timesheet", methods=["PUT"])
+@admin_required()
+def UpdateTimesheet():
+    try:
+        app.logger.info(f"UpdateTimesheet bắt đầu.")
+        
+        jsonRequestData = request.get_json()
+        if "Id" not in jsonRequestData:
+            raise ProjectException("Yêu cầu không hợp lệ do chưa cung cấp định danh bảng phân ca.")
+
+        timesheetId = int(jsonRequestData["Id"])
+        # region validate
+        exist = Timesheet.query.filter_by(Id=timesheetId).first()
+        if not exist:
+            raise ProjectException(f"Không tìm thấy bảng phân ca có mã định dang {timesheetId}")
+        if exist.LockedStatus:
+            raise ProjectException(f"Bảng chấm công mã {self.Id} - {self.Name} không thể chỉnh sửa vì đã khóa. ")
+        exist.InsertTimesheetDetail()
+        db.session.commit()
+        app.logger.info(f"UpdateTimesheet thành công. ")
+
+        return {
+            "Status": 1,
+            "Description": f"Cập nhật bảng phân ca {exist.Name} thành công",
+            "ResponseData": None,
+        }, 200
+
+        #endregion
+        pass
+    except ProjectException as pEx:
+        db.session.rollback()
+        app.logger.exception(
+            f"UpdateTimesheet thất bại. Có exception[{str(pEx)}]")
+        return {
+            "Status": 0,
+            "Description": f"{str(pEx)}",
+            "ResponseData": None,
+        }, 200
+    except Exception as ex:
+        db.session.rollback()
+        app.logger.exception(
+            f"UpdateTimesheet thất bại. Có exception[{str(ex)}]")
+        return {
+            "Status": 0,
+            "Description": f"Xảy lỗi ở máy chủ.",
+            "ResponseData": None,
+        }, 200
+    finally:
+        app.logger.info(f"UpdateTimesheet kết thúc")
+
 
 # GET api/checkin/timesheet-detail
 @EmployeeCheckinRoute.route("/timesheet/detail", methods=["GET"])
@@ -426,7 +489,7 @@ def getTimesheetDetails():
         if not TimesheetId:
             raise ProjectException("Yêu cầu không hợp lệ, do chưa cung cấp mã báo cáo.")
         #endregion
-        exist = Timesheet.query.filter_by(Id=int(TimesheetId)).first()
+        exist = db.session.execute(db.select(Timesheet).where(Timesheet.Id == int(TimesheetId))).scalars().first()
         if not exist:
             raise ProjectException(f"Không tìm thấy bảng phân ca mã {TimesheetId}.")
         data = exist.QueryDetails()
@@ -459,8 +522,110 @@ def getTimesheetDetails():
             f"getTimesheetDetails thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ.",
+            "Description": f"Xảy ra lỗi ở máy chủ.",
             "ResponseData": None,
         }, 200
     finally:
         app.logger.info(f"getTimesheetDetails kết thúc")
+
+# POST api/checkin/timesheet/detail/report/export
+@EmployeeCheckinRoute.route("/timesheet/detail/export", methods=["POST"])
+@admin_required()
+def exportTimesheetDetailReport():
+    try:
+        app.logger.info(f"exportTimesheetDetailReport bắt đầu")
+        claims = get_jwt()
+        id = claims["id"]
+        requestData = request.args
+        TimesheetId = (
+            requestData["Id"] if "Id" in requestData else None)
+        #region validate
+        if not TimesheetId:
+            raise ProjectException("Yêu cầu không hợp lệ, do chưa cung cấp mã báo cáo.")
+        #endregion
+        exist = db.session.execute(db.select(Timesheet).where(Timesheet.Id == int(TimesheetId))).scalars().first()
+        if not exist:
+            raise ProjectException(f"Không tìm thấy bảng phân ca mã {TimesheetId}.")
+        data = exist.QueryDetails()
+        detailList = TimesheetDetailSchema(many=True).dump(data)
+
+
+
+        app.logger.info(f"exportTimesheetDetailReport thành công")
+        return {
+            "Status": 1,
+            "Description": None,
+            "ResponseData": {
+                "Detail": detailList,
+                "Timesheet": timesheetSchema.dump(exist),
+                "Total": len(detailList)
+            },
+        }, 200
+    except ProjectException as pEx:
+        db.session.rollback()
+        app.logger.exception(
+            f"exportTimesheetDetailReport thất bại. Có exception[{str(pEx)}]")
+        return {
+            "Status": 0,
+            "Description": f"{str(pEx)}",
+            "ResponseData": None,
+        }, 200
+    except Exception as ex:
+        db.session.rollback()
+        app.logger.exception(
+            f"exportTimesheetDetailReport thất bại. Có exception[{str(ex)}]")
+        return {
+            "Status": 0,
+            "Description": f"Xảy ra lỗi ở máy chủ.",
+            "ResponseData": None,
+        }, 200
+    finally:
+        app.logger.info(f"exportTimesheetDetailReport kết thúc")
+
+
+@EmployeeCheckinRoute.route("/timesheet/report/export", methods=["POST"])
+@admin_required()
+def exportTimesheetReport():
+    path=""
+    try:
+        app.logger.info(f"exportTimesheetReport bắt đầu")
+        claims = get_jwt()
+        id = claims["id"]
+        requestData = request.get_json()
+        TimesheetId = (
+            requestData["Id"] if "Id" in requestData else None)
+        #region validate
+        if not TimesheetId:
+            raise ProjectException("Yêu cầu không hợp lệ, do chưa cung cấp mã báo cáo.")
+        #endregion
+        exist = db.session.execute(db.select(Timesheet).where(Timesheet.Id == int(TimesheetId))).scalars().first()
+        if not exist:
+            raise ProjectException(f"Không tìm thấy bảng phân ca mã {TimesheetId}.")
+
+        path = exist.CreateTimesheetReport()      
+        response = send_file(path, as_attachment=True)
+        app.logger.info(f"exportTimesheetReport thành công")
+        return response
+    except ProjectException as pEx:
+        db.session.rollback()
+        app.logger.exception(
+            f"exportTimesheetReport thất bại. Có exception[{str(pEx)}]")
+        return {
+            "Status": 0,
+            "Description": f"{str(pEx)}",
+            "ResponseData": None,
+        }, 200
+    except Exception as ex:
+        db.session.rollback()
+        app.logger.exception(
+            f"exportTimesheetReport thất bại. Có exception[{str(ex)}]")
+        return {
+            "Status": 0,
+            "Description": f"Xảy ra lỗi ở máy chủ.",
+            "ResponseData": None,
+        }, 200
+    finally:
+        app.logger.info(f"getTimesheetDetails kết thúc")
+        #t = threading.Thread(target=DeleteFile, args=(path, datetime.now() + timedelta(seconds=3)))
+        #t.start()
+
