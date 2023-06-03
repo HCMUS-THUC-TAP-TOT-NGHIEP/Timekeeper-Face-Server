@@ -1,7 +1,6 @@
 Flask
 python-dotenv
 watchdog
-flask-cors
 Flask-Migrate
 psycopg2-binary
 Flask-Mail

@@ -3,7 +3,7 @@ import json
 from src.config import Config
 from flask_migrate import Migrate
 from src.db import db
-from src.jwt import jwt
+from src.jwt import jwt, get_jwt
 from src.email import mail
 from flask_cors import CORS
 from threading import Thread
@@ -34,7 +34,7 @@ def create_app(config_class=Config):
     else:
         logger.addHandler(fileHandler)
 
-    app.logger.info("Connect to Database successfully!")
+    app.logger.info(f"Connect to Database {app.config['SQLALCHEMY_DATABASE_URI']} successfully!")
 
     @app.before_request
     def log_request_info():
@@ -64,24 +64,38 @@ def create_app(config_class=Config):
     @app.after_request
     def after_request(response):
         try:
-            text_response = response.data
-            if response.data:
-                text_response = (
-                    json.dumps(json.loads(response.data), indent=4)
-                    .encode("utf-8")
-                    .decode("utf-8")
-                )
-        except Exception as e:
-            text_response = str(response).encode("utf-8").decode("utf-8")
-        finally:
-            Thread(
-                app.logger.info(
-                    "\nHeaders: %s\nResponse Body: %s",
-                    response.headers,
-                    text_response,
-                )
-            ).start()
-            return response
+            exp_timestamp = get_jwt()["exp"]
+            now = datetime.now()
+            target_timestamp = datetime.timestamp(now + timedelta(minutes=10))
+            app.logger.info(f"Check if refresh token {now}")
+            if target_timestamp > exp_timestamp:
+                access_token = create_access_token(identity=get_jwt_identity(), additional_claims=get_jwt())
+                set_access_cookies(response, access_token)
+                app.logger.info(f"Refresh token successfully {now}")
+        except (RuntimeError, KeyError):
+            # Case where there is not a valid JWT. Just return the original response
+            pass
+            # return response
+        finally: 
+            try:
+                text_response = response.data
+                if response.data:
+                    text_response = (
+                        json.dumps(json.loads(response.data), indent=4)
+                        .encode("utf-8")
+                        .decode("utf-8")
+                    )
+            except Exception as e:
+                text_response = str(response).encode("utf-8").decode("utf-8")
+            finally:
+                Thread(
+                    app.logger.info(
+                        "\nHeaders: %s\nResponse Body: %s",
+                        response.headers,
+                        text_response,
+                    )
+                ).start()
+                return response
 
     app.app_context().push()
 

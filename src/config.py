@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-
+from datetime import datetime, timedelta
 load_dotenv()
 
 
@@ -15,7 +15,12 @@ class Config:
     MAIL_USE_SSL = os.getenv("MAIL_USE_SSL").lower() in ("true", "1", "t")
     CLIENT_URL = os.getenv("CLIENT_URL")
     SECRET_KEY = os.getenv("JWT_SECRET_KEY")
-    JWT_ACCESS_TOKEN_EXPIRES = int(os.getenv("TIME_TOKEN"))
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(
+        hours=(int(os.getenv("JWT_ACCESS_TOKEN_EXPIRES")) if os.getenv("JWT_ACCESS_TOKEN_EXPIRES") else 60))
+    JWT_REFRESH_TOKEN_EXPIRES = timedelta(hours=(int(os.getenv(
+        "REFRESH_TOKEN_EXPIRES")) if os.getenv("REFRESH_TOKEN_EXPIRES") else 24))
+    REFRESH_TOKEN_BEFORE = timedelta(minutes=int(
+        os.getenv("REFRESH_TOKEN_BEFORE"))if os.getenv("REFRESH_TOKEN_BEFORE") else 10)
     JWT_ALGORITHM = (
         os.getenv("JWT_ALGORITHM") if os.getenv("JWT_ALGORITHM") else "HS256"
     )

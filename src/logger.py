@@ -74,7 +74,7 @@ fileHandler = TimedRotatingFileHandler(
     "log.log", when="D", backupCount=3, encoding="utf-8"
 )
 # fileHandler = EnhancedRotatingFileHandler(
-#     filename="log.log", when="D", encoding="utf-8", backupCount=100, maxBytes= 5 * 1024 * 1024 * 1024,
+#     filename="log.log", when="D", encoding="utf-8", backupCount=100, maxBytes=10 * 1024 * 1024,
 # )
 fileHandler.setFormatter(logFormatter)
 fileHandler.suffix = "%Y-%m-%d"

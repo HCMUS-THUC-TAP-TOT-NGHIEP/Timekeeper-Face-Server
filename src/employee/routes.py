@@ -12,7 +12,7 @@ from werkzeug.utils import secure_filename
 from src.authentication.model import UserModel
 from src.db import db
 from src.department.model import DepartmentModel
-from src.employee.model import (EmployeeModel, employeeInfoListSchema,
+from src.employee.model import (EmployeeModel, employeeInfoListSchema, vEmployeeModel,
                                 employeeInfoSchema)
 from src.extension import ProjectException
 from src.jwt import get_jwt_identity, jwt_required, get_jwt
@@ -35,9 +35,7 @@ def GetEmployeeInfo():
         username = identity["username"]
 
         employeeId = request.args.get("Id")
-        employee = db.session.execute(
-            db.select(EmployeeModel).filter_by(Id=employeeId)
-        ).scalar_one()
+        employee = vEmployeeModel.query.filter_by(Id=employeeId).first()
 
         if not employee:
             raise Exception(f"Employee {employeeId} not found.")
@@ -113,10 +111,6 @@ def CreateEmployee():
 
             raise Exception("Invalid MobilePhone. MobilePhone is not found.")
 
-        if "DepartmentId" not in jsonRequestData:
-
-            raise Exception("Invalid DepartmentId. DepartmentId is not found.")
-
         firstName = jsonRequestData["FirstName"]
 
         lastName = jsonRequestData["LastName"]
@@ -135,7 +129,7 @@ def CreateEmployee():
 
         MobilePhone = jsonRequestData["MobilePhone"]
 
-        DepartmentId = jsonRequestData["DepartmentId"]
+        DepartmentId = jsonRequestData["DepartmentId"] if "DepartmentId" in jsonRequestData else None
 
         if not isinstance(firstName, str) or not firstName or not firstName.strip():
 
@@ -352,26 +346,19 @@ def DeleteEmployee():
 def GetManyEmployee():
 
     try:
-
         identity = get_jwt_identity()
-
         email = identity["email"]
-
         username = identity["username"]
-
         args = request.args.to_dict()
 
         # region validate
 
         user = db.session.execute(
-
             db.select(UserModel).filter_by(EmailAddress=email)
-
         ).scalar_one_or_none()
 
         if not user:
-
-            raise Exception(f"No account found for email address[{email}]")
+            raise ProjectException(f"No account found for email address[{email}]")
 
         # endregion
 
@@ -380,13 +367,9 @@ def GetManyEmployee():
         page = int(args["Page"]) if "Page" in args else 1
 
         pageObject = db.paginate(
-
             db.select(EmployeeModel)
-
             .order_by(EmployeeModel.Id, EmployeeModel.JoinDate),
-
             per_page=perPage,
-
             page=page
         )
 
@@ -406,35 +389,20 @@ def GetManyEmployee():
                 continue
 
         return {
-
             "Status": 1,
-
             "Description": None,
-
             "ResponseData": {
-
                 "EmployeeList": employees,
-
                 "Total": pageObject.total
-
             },
-
         }, 200
-
     except Exception as ex:
-
         app.logger.info(
-
             f"GetManyEMployee thất bại. Có exception[{str(ex)}]")
-
         return {
-
             "Status": 0,
-
             "Description": f"Truy vấn danh sách nhân viên không thành công.",
-
             "ResponseData": None,
-
         }, 200
 
 
