@@ -443,7 +443,6 @@ def UpdateTimesheet():
         exist.InsertTimesheetDetail()
         db.session.commit()
         app.logger.info(f"UpdateTimesheet thành công. ")
-
         return {
             "Status": 1,
             "Description": f"Cập nhật bảng phân ca {exist.Name} thành công",

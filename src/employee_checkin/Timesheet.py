@@ -211,6 +211,9 @@ class Timesheet(db.Model):
                             row.append( float("NAN"))
                             count_no_timekeeping += 1
                             continue
+                        if not record.DaysInWeek:
+                            row.append(float("NAN"))
+                            continue
                         if date.isoweekday() not in record.DaysInWeek:
                             row.append("")
                             continue
@@ -341,8 +344,7 @@ class TimesheetDetail(db.Model):
                     earlyMinutes = datetime.combine(date.today(
                     ), shiftAssignment.FinishTime) - datetime.combine(date.today(), self.CheckoutTime)
                     self.EarlyMinutes = earlyMinutes.total_seconds() / 60
-                return True
-            return False
+            return True
         except Exception as ex:
             app.logger.exception(
                 f"TimesheetDetail.IncludeAssignment failed. Exception[{ex}]")
