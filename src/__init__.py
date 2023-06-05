@@ -66,14 +66,15 @@ def create_app(config_class=Config):
     @app.after_request
     def after_request(response):
         try:
-            exp_timestamp = get_jwt()["exp"]
-            now = datetime.now()
-            target_timestamp = datetime.timestamp(now + timedelta(minutes=10))
-            app.logger.info(f"Check if refresh token {now}")
-            if target_timestamp > exp_timestamp:
-                access_token = create_access_token(identity=get_jwt_identity(), additional_claims=get_jwt())
-                set_access_cookies(response, access_token)
-                app.logger.info(f"Refresh token successfully {now}")
+            # exp_timestamp = get_jwt()["exp"]
+            # now = datetime.now()
+            # target_timestamp = datetime.timestamp(now + timedelta(minutes=10))
+            # app.logger.info(f"Check if refresh token {now}")
+            # if target_timestamp > exp_timestamp:
+            #     access_token = create_access_token(identity=get_jwt_identity(), additional_claims=get_jwt())
+            #     set_access_cookies(response, access_token)
+            #     app.logger.info(f"Refresh token successfully {now}")
+            pass
         except (RuntimeError, KeyError):
             # Case where there is not a valid JWT. Just return the original response
             pass

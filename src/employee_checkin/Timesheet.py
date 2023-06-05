@@ -275,7 +275,6 @@ class Timesheet(db.Model):
                     "valign": "vcenter",
                     "font_name": "Tahoma",
                     "font_size": "16",
-
             })
             # Write the column headers with the defined format.
             for col_num, value in enumerate(df.columns.values):

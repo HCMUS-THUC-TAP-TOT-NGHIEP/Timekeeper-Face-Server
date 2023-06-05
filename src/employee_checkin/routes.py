@@ -31,11 +31,10 @@ from src.shift.model import (DayInWeekEnum, ShiftAssignment,
 from src.shift.ShiftModel import (ShiftDetailModel, ShiftDetailSchema,
                                   ShiftModel, vShiftDetail, vShiftDetailSchema)
 from src.utils.helpers import DeleteFile
+from dateutil.parser import parse
 EmployeeCheckinRoute = Blueprint("/checkin", __name__)
 
 # POST "api/checkin"
-
-
 @EmployeeCheckinRoute.route("/", methods=["POST"])
 @jwt_required()
 def createCheckinRecord():
@@ -527,8 +526,8 @@ def getTimesheetDetails():
     finally:
         app.logger.info(f"getTimesheetDetails kết thúc")
 
-# POST api/checkin/timesheet/detail/report/export
-@EmployeeCheckinRoute.route("/timesheet/detail/export", methods=["POST"])
+# POST api/checkin/timesheet/detail/report
+@EmployeeCheckinRoute.route("/timesheet/detail/report", methods=["POST"])
 @admin_required()
 def exportTimesheetDetailReport():
     try:
@@ -547,9 +546,6 @@ def exportTimesheetDetailReport():
             raise ProjectException(f"Không tìm thấy bảng phân ca mã {TimesheetId}.")
         data = exist.QueryDetails()
         detailList = TimesheetDetailSchema(many=True).dump(data)
-
-
-
         app.logger.info(f"exportTimesheetDetailReport thành công")
         return {
             "Status": 1,
@@ -581,8 +577,8 @@ def exportTimesheetDetailReport():
     finally:
         app.logger.info(f"exportTimesheetDetailReport kết thúc")
 
-
-@EmployeeCheckinRoute.route("/timesheet/report/export", methods=["POST"])
+# POST api/checkin/timesheet/report
+@EmployeeCheckinRoute.route("/timesheet/report", methods=["POST"])
 @admin_required()
 def exportTimesheetReport():
     path=""
@@ -625,6 +621,55 @@ def exportTimesheetReport():
         }, 200
     finally:
         app.logger.info(f"getTimesheetDetails kết thúc")
-        #t = threading.Thread(target=DeleteFile, args=(path, datetime.now() + timedelta(seconds=3)))
-        #t.start()
+        t = threading.Thread(target=DeleteFile, args=(path, datetime.now() + timedelta(seconds=3)))
+        t.start()
 
+# POST "api/checkin/report"
+@EmployeeCheckinRoute.route("/report", methods=["POST"])
+@admin_required()
+def ExportCheckinReport():
+    path=""
+    try:
+        app.logger.info(f"ExportCheckinReport bắt đầu")
+        claims = get_jwt()
+        id = claims["id"]
+        jRequestData = request.get_json()
+        DateFrom = jRequestData["DateFrom"] if "DateFrom" in jRequestData else None
+        DateTo = jRequestData["DateTo"] if "DateTo" in jRequestData else None
+        Keyword = jRequestData["Keyword"] if "Keyword" in jRequestData else None
+
+
+        #region validate
+        if not DateFrom:
+            raise ProjectException("Yêu cầu không hợp lệ, do chưa cung cấp ngày bắt đầu.")
+        if not DateTo:
+            raise ProjectException("Yêu cầu không hợp lệ, do chưa cung cấp ngày kết thúc.")
+
+        #endregion
+        
+        path = AttendanceStatisticV2.ExportReport(DateFrom=parse(DateFrom).date(), DateTo=parse(DateTo).date(), Keyword=Keyword)       
+        response = send_file(path, as_attachment=True)
+        app.logger.info(f"ExportCheckinReport thành công")
+        return response
+    except ProjectException as pEx:
+        db.session.rollback()
+        app.logger.exception(
+            f"ExportCheckinReport thất bại. Có exception[{str(pEx)}]")
+        return {
+            "Status": 0,
+            "Description": f"{str(pEx)}",
+            "ResponseData": None,
+        }, 200
+    except Exception as ex:
+        db.session.rollback()
+        app.logger.exception(
+            f"ExportCheckinReport thất bại. Có exception[{str(ex)}]")
+        return {
+            "Status": 0,
+            "Description": f"Xảy ra lỗi ở máy chủ.",
+            "ResponseData": None,
+        }, 200
+    finally:
+        app.logger.info(f"ExportCheckinReport kết thúc")
+        t = threading.Thread(target=DeleteFile, args=(path, datetime.now() + timedelta(seconds=3)))
+        t.start()
