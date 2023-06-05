@@ -9,7 +9,7 @@ from pandas import ExcelWriter, DataFrame
 import os
 import shutil
 from src.extension import ProjectException
-from src.utils.helpers import daterange, DeleteFile
+from src.utils.helpers import daterange, DeleteFile, GetDayOfWeek
 from threading import Thread
 import threading
 from openpyxl.styles import NamedStyle, Font
@@ -150,7 +150,7 @@ class AttendanceStatisticV2(db.Model):
                     for date in daterange(DateFrom, DateTo):
                         rec = [stt]
                         rec.extend(prefixData)
-                        rec.extend([date.strftime("%d/%m/%Y"), date.strftime('%A')])
+                        rec.extend([date.strftime("%d/%m/%Y"), GetDayOfWeek(date)])
                         checkinList = db.session.execute(db.select(AttendanceStatisticV2).where(and_(
                             AttendanceStatisticV2.Id == employee.Id, AttendanceStatisticV2.Date == date))).scalars().all()
                         if not checkinList or len(checkinList) == 0:
