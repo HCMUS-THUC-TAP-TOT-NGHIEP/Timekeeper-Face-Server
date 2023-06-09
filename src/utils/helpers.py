@@ -13,20 +13,21 @@ def subtractTime(start_time, end_time) -> float: # số phút
 def GetDayOfWeek(date: datetime.date) -> str:
     try:
         number = date.isoweekday()
-        if date == 1:
+        if number == 1:
             return 'Thứ hai'
-        if date == 2:
+        if number == 2:
             return 'Thứ ba'
-        if date == 3:
+        if number == 3:
             return 'Thứ tư'
-        if date == 4:
+        if number == 4:
             return 'Thứ năm'
-        if date == 5:
+        if number == 5:
             return 'Thứ sáu'
-        if date == 6:
+        if number == 6:
             return 'Thứ bảy'
-        if date == 7:
-            return 'Thứ hai'
+        if number == 7:
+            return "Chủ nhật"
+        return ""
     except Exception as ex:
         raise Exception(f"GetDayOfWeek({str(date)}) có exception.")
 

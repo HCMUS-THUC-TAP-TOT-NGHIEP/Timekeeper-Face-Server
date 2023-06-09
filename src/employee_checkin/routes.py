@@ -46,7 +46,6 @@ def createCheckinRecord():
     except Exception as ex:
         pass
 
-
 # GET "api/checkin/list"
 @EmployeeCheckinRoute.route("/list", methods=["POST"])
 @jwt_required()
@@ -309,6 +308,44 @@ def getTimeSheetList():
     finally:
         app.logger.info(f"getTimeSheetList kết thúc")
 
+# POST api/checkin/timesheet/detail
+@EmployeeCheckinRoute.route("/timesheet/detail", methods=["PUT"])
+@admin_required()
+def modifyTimesheetDetail():
+    try: 
+        jsonRequestData = request.get_json()
+        if "Id" not in jsonRequestData:
+            raise ProjectException("Yêu cầu không hợp lệ, do không có Id")
+        id = jsonRequestData["Id"]
+        exist = TimesheetDetail.query.filter_by(Id=id).first()
+        if not exist:
+            raise ProjectException(f"Không tồn tại thời gian biểu có mã {Id}")
+        exist.updateOne(jsonRequestData)
+        return {
+            "Status": 1,
+            "Description": None,
+            "ResponseData": TimesheetDetailSchema().dump(exist),
+        }, 200
+    except ProjectException as pEx:
+        app.logger.exception(
+            f"getTimeSheetList thất bại. Có exception[{str(pEx)}]")
+        return {
+            "Status": 0,
+            "Description": f"{str(pEx)}",
+            "ResponseData": None,
+        }, 200
+    except Exception as ex:
+        app.logger.exception(
+            f"getTimeSheetList thất bại. Có exception[{str(ex)}]")
+        return {
+            "Status": 0,
+            "Description": f"Xảy ra lỗi ở máy chủ.",
+            "ResponseData": None,
+        }, 200
+    finally:
+        app.logger.info(f"getTimeSheetList kết thúc")
+
+
 # POST api/checkin/timesheet
 @EmployeeCheckinRoute.route("/timesheet", methods=["POST"])
 @admin_required()
@@ -386,7 +423,7 @@ def createTimeSheet():
 @admin_required()
 def DeleteTimesheet():
     try:
-        app.logger.info(f"DeleteTimesheet bắt đầu")
+        app.logger.info("DeleteTimesheet bắt đầu")
         jsonRequestData = request.get_json()
         if "Id" not in jsonRequestData:
             raise ProjectException("Yêu cầu không hợp lệ, do chưa cung cấp mã báo cáo.")
@@ -397,16 +434,16 @@ def DeleteTimesheet():
             "Status": 0,
             "Description": None,
             "ResponseData": {
-                Id: TimesheetId
+                "Id": TimesheetId
             },
         }, 200
 
-    except ProjectException as pEx:
+    except ProjectException as project_exception:
         app.logger.exception(
-            f"DeleteTimesheet thất bại. Có exception[{str(pEx)}]")
+            f"DeleteTimesheet thất bại. Có exception[{str(project_exception)}]")
         return {
             "Status": 0,
-            "Description": f"{str(pEx)}",
+            "Description": f"{str(project_exception)}",
             "ResponseData": None,
         }, 200
     except Exception as ex:
@@ -493,7 +530,7 @@ def getTimesheetDetails():
         data = exist.QueryDetails()
         detailList = TimesheetDetailSchema(many=True).dump(data)
         # detailList = []
-        
+        responseData = []
 
         app.logger.info(f"getTimesheetDetails thành công")
         return {

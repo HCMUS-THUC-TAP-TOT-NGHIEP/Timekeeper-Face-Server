@@ -1,8 +1,10 @@
 from src.db import db
 from src import marshmallow
-from sqlalchemy import Column, Integer, String, SmallInteger, DateTime, Boolean
+from marshmallow import Schema, fields
+from sqlalchemy import Column, Integer, String, SmallInteger, DateTime, Boolean, and_, select
 from datetime import datetime
-
+from flask import current_app as app
+from src.department.model import DepartmentModel
 # MODELS
 
 
@@ -27,7 +29,38 @@ class EmployeeModel(db.Model):
     ModifiedAt = Column(DateTime())
 
     def FullName(self):
-        return " ".join(self.LastName, self.FirstName)
+        return " ".join([self.LastName, self.FirstName])
+
+    @staticmethod
+    def GetEmployeeListByDepartment(department: list[int] | int) -> list:
+        try:
+            app.logger.info(
+                "EmployeeModel.GetEmployeeListByDepartment() bắt đầu")
+            if isinstance(department, int) or isinstance(department, str):
+                department_list = [department]
+            else:
+                department_list = department
+
+            result = list()
+            if None in department_list:
+                data = db.session.execute(select(EmployeeModel).where(
+                    EmployeeModel.DepartmentId == None)).scalars().all()
+                if data:
+                    result.extend(data)
+            department_list.remove(None)
+            if department_list and isinstance(department_list[0], int):
+                data = db.session.execute(select(EmployeeModel).where(
+                    EmployeeModel.DepartmentId.in_(department_list))).scalars().all()
+                if data:
+                    result.extend(data)
+            return result
+        except Exception as ex:
+            app.logger.error(
+                f"EmployeeModel.GetEmployeeListByDepartment() có exception[{str(ex)}]")
+            raise ex
+        finally:
+            app.logger.info(
+                "EmployeeModel.GetEmployeeListByDepartment() kết thúc")
 
 
 class vEmployeeModel(db.Model):
@@ -55,7 +88,7 @@ class vEmployeeModel(db.Model):
         return " ".join([self.LastName, self.FirstName])
 
 
-class EmployeeSchema(marshmallow.Schema):
+class EmployeeSchema(Schema):
     class Meta:
         fields = (
             "Id",
