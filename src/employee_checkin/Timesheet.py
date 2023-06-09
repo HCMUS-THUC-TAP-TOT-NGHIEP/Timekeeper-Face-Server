@@ -187,7 +187,9 @@ class Timesheet(db.Model):
             writer = ExcelWriter(path, engine="openpyxl",
                                  mode="a", if_sheet_exists="overlay")
             worksheet = writer.sheets["Main"]
-            worksheet["A3"] = f"Từ ngày {self.DateFrom} đến ngày {self.DateTo}"
+            date_from = self.DateFrom.__format__("%d/%m/%Y")
+            date_to = self.DateTo.__format__("%d/%m/%Y")
+            worksheet["A3"] = f"Từ ngày {date_from} đến ngày {date_to}"
 
             # region write các date header
         
