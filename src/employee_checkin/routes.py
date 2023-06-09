@@ -740,8 +740,7 @@ def UpdateBulkTimesheetDetailByImport():
         id = claims["id"]
         fileRequest = request.files["ImportData"]
         timesheetId = request.form.get("TimesheetId")
-        # ["TimesheetId"]
-
+        
         # region validate
 
         if not fileRequest:
