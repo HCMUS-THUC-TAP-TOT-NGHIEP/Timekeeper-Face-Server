@@ -16,6 +16,7 @@ from src.face_api.model import RecognitionData, RecognitionDataSchema
 import threading
 from keras_facenet import FaceNet
 from sklearn.preprocessing import LabelEncoder
+import threading
 
 from src.face_api.train_facenet import train_facenet
 from src.face_api.face_recog import get_ID
@@ -68,8 +69,9 @@ def register():
         
 
         # quá trình trích xuất khuôn mặt và train ảnh
-        train_facenet(embedder, encoder, Config.LOCAL_STORAGE, Config.PATH_ENCODE, Config.PATH_MODEL)        
-        
+        # train_facenet(embedder, encoder, Config.LOCAL_STORAGE, Config.PATH_ENCODE, Config.PATH_MODEL)        
+        t = threading.Thread(target=train_facenet, args=(embedder, encoder, Config.LOCAL_STORAGE,Config.PATH_ENCODE, Config.PATH_MODEL ))
+        t.start()
 
         return {
             "Status": 1,
