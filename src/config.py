@@ -33,10 +33,11 @@ class Config:
         "APP_LOG_NAME") else "log.log"
 
     LOCAL_STORAGE = "./public/datasets"
-    HAARCASCADEPATH = "./public/static/haarcascade_frontalface_default.xml"
-    PATH_MODEL_TRAIN = "./public/static/Trainner.yml"
-    PATH_MODEL_FACENET = "./public/static/facenet_keras_weights.h5"
-    PATH_ENCODE = "./public/static/encodings.pkl"
+    # HAARCASCADEPATH = "./public/static/haarcascade_frontalface_default.xml"
+    # PATH_MODEL_TRAIN = "./public/static/Trainner.yml"
+    # PATH_MODEL_FACENET = "./public/static/facenet_keras_weights.h5"
+    PATH_ENCODE = "./public/static/faces_embeddings.npz"
+    PATH_MODEL = "./public/static/svm_model.pkl"
 
     EXCELTEMPLATEPATH = '../public/templates/Excel'
 
