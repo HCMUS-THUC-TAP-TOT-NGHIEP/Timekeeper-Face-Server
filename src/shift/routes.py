@@ -75,7 +75,7 @@ def GetShiftList():
         app.logger.exception(f"GetShiftList thất bại. {ex}")
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ.",
+            "Description": f"Xảy ra lỗi ở máy chủ.",
             "ResponseData": None,
         }, 200
 
@@ -208,7 +208,7 @@ def createNewShift():
         app.logger.exception(f"createNewShift thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ.",
+            "Description": f"Xảy ra lỗi ở máy chủ.",
             "ResponseData": None,
         }, 200
     finally:
@@ -257,7 +257,7 @@ def deleteShift():
         app.logger.exception(f"deleteShift thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ.",
+            "Description": f"Xảy ra lỗi ở máy chủ.",
             "ResponseData": None,
         }, 200
 
@@ -360,7 +360,7 @@ def updateShift():
         app.logger.exception(f"UpdateShift thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ.",
+            "Description": f"Xảy ra lỗi ở máy chủ.",
             "ResponseData": None,
         }, 200
     finally:
@@ -405,7 +405,7 @@ def GetShiftDetail():
         app.logger.exception(f"GetShiftDetail thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ.",
+            "Description": f"Xảy ra lỗi ở máy chủ.",
             "ResponseData": None,
         }, 200
     finally:
@@ -438,7 +438,7 @@ def AssignShift():
         startDate = jsonRequestData["StartDate"] if "StartDate" in jsonRequestData else None
         endDate = jsonRequestData["EndDate"] if "EndDate" in jsonRequestData else None
         daysInWeek = jsonRequestData["DaysInWeek"] if "DaysInWeek" in jsonRequestData else None
-        assignmentType = jsonRequestData["AssignmentType"] if "AssignmentType" in jsonRequestData else None
+        targetType = jsonRequestData["TargetType"] if "TargetType" in jsonRequestData else None
 
         # endregion
         # region validate
@@ -458,15 +458,15 @@ def AssignShift():
             raise ProjectException(f"Không tìm thấy ngày kết thúc trong truy vấn.")
         if not daysInWeek or not len(daysInWeek):
             raise ProjectException(f"Không tìm thấy ngày trong tuần được áp dụng bảng phân ca trong truy vấn.")
-        if not assignmentType:
+        if not targetType:
             raise ProjectException(f"Không tìm thấy kiểu phân ca cho bảng phân ca trong truy vấn.")
 
         targetArray = list()
-        if assignmentType == TargetType.Employee.value:
+        if targetType == TargetType.Employee.value:
             if not len(employeeList):
                 raise ProjectException(f"Không tìm thấy các nhân viên được áp dụng bảng phân ca trong truy vấn.")
             targetArray = employeeList
-        elif assignmentType == TargetType.Department.value:
+        elif targetType == TargetType.Department.value:
             if not len(departmentList):
                 raise ProjectException(f"Không tìm thấy các  phòng ban được áp dụng bảng phân ca trong truy vấn.")
             targetArray = departmentList
@@ -485,7 +485,7 @@ def AssignShift():
 
         newShiftAssignment = ShiftAssignment()
         newShiftAssignment.Description = description
-        newShiftAssignment.TargetType = assignmentType
+        newShiftAssignment.TargetType = targetType
         newShiftAssignment.ShiftId = shiftId
         newShiftAssignment.DaysInWeek = daysInWeek
         newShiftAssignment.ShiftDetailId = shiftDetail.Id
@@ -669,7 +669,7 @@ def getShiftAssignmentList():
         )
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ. Không thể truy cập được thông tin phân ca",
+            "Description": f"Xảy ra lỗi ở máy chủ. Không thể truy cập được thông tin phân ca",
             "ResponseData": None,
         }, 200
     finally:
@@ -725,7 +725,7 @@ def getShiftAssignmentDetail():
         app.logger.exception(f"UpdateShift thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ. Không thể truy cập được thông tin phân ca",
+            "Description": f"Xảy ra lỗi ở máy chủ. Không thể truy cập được thông tin phân ca",
             "ResponseData": None,
         }, 200
     finally:
@@ -764,7 +764,7 @@ def GetAssignmentType():
         app.logger.exception(f"GetAssignmentTypes thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ. Không thể truy cập được thông tin kiểu phân ca.",
+            "Description": f"Xảy ra lỗi ở máy chủ. Không thể truy cập được thông tin kiểu phân ca.",
             "ResponseData": None,
         }, 200
 
@@ -884,7 +884,7 @@ def UpdateAssignment():
         app.logger.exception(f"UpdateAssignment thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ.",
+            "Description": f"Xảy ra lỗi ở máy chủ.",
             "ResponseData": None,
         }, 200
     finally:

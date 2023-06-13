@@ -13,6 +13,7 @@ from src.employee.model import EmployeeModel, employeeInfoListSchema
 from src.extension import object_as_dict
 from src.jwt import get_jwt_identity, jwt_required
 from src.middlewares.token_required import admin_required
+from src.extension import ProjectException
 
 Department = Blueprint("department", __name__)
 
@@ -61,7 +62,7 @@ def GetDepartmentList():
             f"GetDepartmentList thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ.",
+            "Description": f"Xảy ra lỗi ở máy chủ.",
             "ResponseData": None,
         }, 200
 
@@ -148,22 +149,23 @@ def UpdateDepartment():
         # endregion
 
         DepartmentId = jsonRequestData["Id"]
-        department = db.session.execute(
-            db.select(DepartmentModel).filter_by(Id=DepartmentId)
-        ).scalar_one_or_none()
+        name = jsonRequestData["Name"] if "Name" in jsonRequestData else None
+        managerId = jsonRequestData["ManagerId"] if "ManagerId" in jsonRequestData else None
+        status = jsonRequestData["Status"] if "Status" in jsonRequestData else None
+        department = DepartmentModel.query.filter_by(Id=DepartmentId).first()
         if not department:
-            raise Exception(f"Can not find employee id[{DepartmentId}]")
-        hasSomeChanges = False
-        for key in jsonRequestData:
-            if getattr(department, key) != jsonRequestData[key]:
-                hasSomeChanges = True
-                setattr(department, key, jsonRequestData[key])
-        if not hasSomeChanges:
-            return {
-                "Status": 1,
-                "Description": f"Không có sự thay đổi nào trong dữ liệu của Phòng ban {DepartmentId}",
-                "ResponseData": None,
-            }
+            raise ProjectException(f"Can not find employee id[{DepartmentId}]")
+        
+        if name and name != department.Name:
+            department.Name = name
+        if managerId and managerId != department.ManagerId:
+            employee = EmployeeModel.query.filter_by(EmployeeModel.Id==managerId).first()
+            if employee:
+                employee.DepartmentId = DepartmentId
+                department.ManagerId = managerId                
+        if isinstance(status,int) and status != department.Status:
+            department.Status = status
+        
         department.ModifiedAt = datetime.now()
         department.ModifiedBy = user.Id
         db.session.commit()
