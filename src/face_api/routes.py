@@ -14,14 +14,17 @@ from src.employee_checkin.EmployeeCheckin import EmployeeCheckin, employeeChecki
 from sqlalchemy import func, select
 from src.face_api.model import RecognitionData, RecognitionDataSchema
 import threading
+from keras_facenet import FaceNet
+from sklearn.preprocessing import LabelEncoder
 
-from src.face_api.train_v2 import train_facenet
-from src.face_api.architecture import *
-from src.face_api.detect import recog
+from src.face_api.train_facenet import train_facenet
+from src.face_api.face_recog import get_ID
 
 FaceApi = Blueprint("face", __name__)
 
-face_encoder = InceptionResNetV2()
+embedder = FaceNet()
+encoder = LabelEncoder()
+
 # Luôn luôn viết try ... except...
 # Ghi log:
 #  - Thông tin (thành công, thực hiện task gì đó): app.logger.info(str)
@@ -55,20 +58,18 @@ def register():
             raise ProjectException(f"không tồn tại nhân viên [{EmployeeId}]")
 
         name = f"{employee.FirstName}_{employee.LastName}"
-        # region Lưu local mảng ảnh đã nhận
+        # Lưu local mảng ảnh đã nhận
 
         flag = save_images(PictureList, EmployeeId, name)
         if not flag:
             raise Exception("Không lưu được ảnh")
         app.logger.info("save_images successfully. Lưu ảnh thành công")
 
-        #endregion
+        
 
-        # region quá trình trích xuất khuôn mặt và train ảnh
-        # processed_faces(RAW_PATH)
-        # train_model_face(RAW_PATH)
-        train_facenet(Config.LOCAL_STORAGE, face_encoder)
-        #endregion
+        # quá trình trích xuất khuôn mặt và train ảnh
+        train_facenet(embedder, encoder, Config.LOCAL_STORAGE, Config.PATH_ENCODE, Config.PATH_MODEL)        
+        
 
         return {
             "Status": 1,
@@ -122,9 +123,9 @@ def recognition():
 
         RecognitionMethod = 1
         img = base64ToOpenCV(Picture)
-        Id = recog(img, face_encoder)
+        Id = get_ID(embedder, encoder, Config.PATH_ENCODE, Config.PATH_MODEL, img)
 
-        if Id == None:
+        if Id == -1:
             raise ProjectException(
                 "Khuôn mặt hiện tại chưa đăng ký hoặc nhận diện sai."
             )
