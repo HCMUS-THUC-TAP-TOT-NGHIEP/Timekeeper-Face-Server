@@ -1,3 +1,6 @@
+import pandas
+from werkzeug.utils import secure_filename
+import os
 from threading import Thread
 import threading
 from datetime import date, datetime, timedelta
@@ -31,11 +34,23 @@ from src.shift.model import (DayInWeekEnum, ShiftAssignment,
 from src.shift.ShiftModel import (ShiftDetailModel, ShiftDetailSchema,
                                   ShiftModel, vShiftDetail, vShiftDetailSchema)
 from src.utils.helpers import DeleteFile
+from dateutil.parser import parse
 EmployeeCheckinRoute = Blueprint("/checkin", __name__)
 
+ALLOWED_EXTENSIONS = {'xlsx', 'xls', 'csv'}
+
+def CheckIfFileAllowed(filename):
+    if ('.' not in filename):
+        return False
+    extension = GetFileExtensionFromFileNam(filename)
+    if extension not in ALLOWED_EXTENSIONS:
+        return False
+    return True
+
+def GetFileExtensionFromFileNam(filename):
+    return filename.rsplit('.', 1)[1].lower() if '.' in filename else None
+
 # POST "api/checkin"
-
-
 @EmployeeCheckinRoute.route("/", methods=["POST"])
 @jwt_required()
 def createCheckinRecord():
@@ -46,7 +61,6 @@ def createCheckinRecord():
         pass
     except Exception as ex:
         pass
-
 
 # GET "api/checkin/list"
 @EmployeeCheckinRoute.route("/list", methods=["POST"])
@@ -235,12 +249,14 @@ def GetTemplate():
         id = claims['id']
         params = request.args
         FileName = params['FileName']
-        excelTemplatePath = Config.EXCELTEMPLATEPATH
-        if FileName == "TimekeeperDataTemplate":
-            return send_from_directory(excelTemplatePath, "TimekeeperDataTemplate.xlsx", as_attachment=True)
-        else:
-            raise ProjectException("Không tìm thấy tệp tin mẫu.")
+        if not FileName:
+            raise ProjectException("Yêu cầu không hợp lệ.")
 
+        templatePath = os.path.join(
+            os.pardir, app.static_url_path, "templates", "Excel", f'{FileName}.xlsx')
+        if not os.path.exists(templatePath):
+            raise ProjectException("Không tìm thấy tệp tin mẫu.")
+        return send_file(templatePath, as_attachment=True)
     except ProjectException as ex:
         db.session.rollback()
         app.logger.info(
@@ -309,6 +325,44 @@ def getTimeSheetList():
         }, 200
     finally:
         app.logger.info(f"getTimeSheetList kết thúc")
+
+# POST api/checkin/timesheet/detail
+@EmployeeCheckinRoute.route("/timesheet/detail", methods=["PUT"])
+@admin_required()
+def modifyTimesheetDetail():
+    try: 
+        jsonRequestData = request.get_json()
+        if "Id" not in jsonRequestData:
+            raise ProjectException("Yêu cầu không hợp lệ, do không có Id")
+        id = jsonRequestData["Id"]
+        exist = TimesheetDetail.query.filter_by(Id=id).first()
+        if not exist:
+            raise ProjectException(f"Không tồn tại thời gian biểu có mã {Id}")
+        exist.updateOne(jsonRequestData)
+        return {
+            "Status": 1,
+            "Description": None,
+            "ResponseData": TimesheetDetailSchema().dump(exist),
+        }, 200
+    except ProjectException as pEx:
+        app.logger.exception(
+            f"getTimeSheetList thất bại. Có exception[{str(pEx)}]")
+        return {
+            "Status": 0,
+            "Description": f"{str(pEx)}",
+            "ResponseData": None,
+        }, 200
+    except Exception as ex:
+        app.logger.exception(
+            f"getTimeSheetList thất bại. Có exception[{str(ex)}]")
+        return {
+            "Status": 0,
+            "Description": f"Xảy ra lỗi ở máy chủ.",
+            "ResponseData": None,
+        }, 200
+    finally:
+        app.logger.info(f"getTimeSheetList kết thúc")
+
 
 # POST api/checkin/timesheet
 @EmployeeCheckinRoute.route("/timesheet", methods=["POST"])
@@ -387,7 +441,7 @@ def createTimeSheet():
 @admin_required()
 def DeleteTimesheet():
     try:
-        app.logger.info(f"DeleteTimesheet bắt đầu")
+        app.logger.info("DeleteTimesheet bắt đầu")
         jsonRequestData = request.get_json()
         if "Id" not in jsonRequestData:
             raise ProjectException("Yêu cầu không hợp lệ, do chưa cung cấp mã báo cáo.")
@@ -398,16 +452,16 @@ def DeleteTimesheet():
             "Status": 0,
             "Description": None,
             "ResponseData": {
-                Id: TimesheetId
+                "Id": TimesheetId
             },
         }, 200
 
-    except ProjectException as pEx:
+    except ProjectException as project_exception:
         app.logger.exception(
-            f"DeleteTimesheet thất bại. Có exception[{str(pEx)}]")
+            f"DeleteTimesheet thất bại. Có exception[{str(project_exception)}]")
         return {
             "Status": 0,
-            "Description": f"{str(pEx)}",
+            "Description": f"{str(project_exception)}",
             "ResponseData": None,
         }, 200
     except Exception as ex:
@@ -443,7 +497,6 @@ def UpdateTimesheet():
         exist.InsertTimesheetDetail()
         db.session.commit()
         app.logger.info(f"UpdateTimesheet thành công. ")
-
         return {
             "Status": 1,
             "Description": f"Cập nhật bảng phân ca {exist.Name} thành công",
@@ -495,7 +548,7 @@ def getTimesheetDetails():
         data = exist.QueryDetails()
         detailList = TimesheetDetailSchema(many=True).dump(data)
         # detailList = []
-        
+        responseData = []
 
         app.logger.info(f"getTimesheetDetails thành công")
         return {
@@ -528,8 +581,8 @@ def getTimesheetDetails():
     finally:
         app.logger.info(f"getTimesheetDetails kết thúc")
 
-# POST api/checkin/timesheet/detail/report/export
-@EmployeeCheckinRoute.route("/timesheet/detail/export", methods=["POST"])
+# POST api/checkin/timesheet/detail/report
+@EmployeeCheckinRoute.route("/timesheet/detail/report", methods=["POST"])
 @admin_required()
 def exportTimesheetDetailReport():
     try:
@@ -548,9 +601,6 @@ def exportTimesheetDetailReport():
             raise ProjectException(f"Không tìm thấy bảng phân ca mã {TimesheetId}.")
         data = exist.QueryDetails()
         detailList = TimesheetDetailSchema(many=True).dump(data)
-
-
-
         app.logger.info(f"exportTimesheetDetailReport thành công")
         return {
             "Status": 1,
@@ -582,8 +632,8 @@ def exportTimesheetDetailReport():
     finally:
         app.logger.info(f"exportTimesheetDetailReport kết thúc")
 
-
-@EmployeeCheckinRoute.route("/timesheet/report/export", methods=["POST"])
+# POST api/checkin/timesheet/report
+@EmployeeCheckinRoute.route("/timesheet/report", methods=["POST"])
 @admin_required()
 def exportTimesheetReport():
     path=""
@@ -626,6 +676,182 @@ def exportTimesheetReport():
         }, 200
     finally:
         app.logger.info(f"getTimesheetDetails kết thúc")
-        #t = threading.Thread(target=DeleteFile, args=(path, datetime.now() + timedelta(seconds=3)))
-        #t.start()
+        t = threading.Thread(target=DeleteFile, args=(path, datetime.now() + timedelta(seconds=3)))
+        t.start()
 
+# POST "api/checkin/report"
+@EmployeeCheckinRoute.route("/report", methods=["POST"])
+@admin_required()
+def ExportCheckinReport():
+    path=""
+    try:
+        app.logger.info(f"ExportCheckinReport bắt đầu")
+        claims = get_jwt()
+        id = claims["id"]
+        jRequestData = request.get_json()
+        DateFrom = jRequestData["DateFrom"] if "DateFrom" in jRequestData else None
+        DateTo = jRequestData["DateTo"] if "DateTo" in jRequestData else None
+        Keyword = jRequestData["Keyword"] if "Keyword" in jRequestData else None
+
+
+        #region validate
+        if not DateFrom:
+            raise ProjectException("Yêu cầu không hợp lệ, do chưa cung cấp ngày bắt đầu.")
+        if not DateTo:
+            raise ProjectException("Yêu cầu không hợp lệ, do chưa cung cấp ngày kết thúc.")
+
+        #endregion
+        
+        path = AttendanceStatisticV2.ExportReport(DateFrom=parse(DateFrom).date(), DateTo=parse(DateTo).date(), Keyword=Keyword)       
+        response = send_file(path, as_attachment=True)
+        app.logger.info(f"ExportCheckinReport thành công")
+        return response
+    except ProjectException as pEx:
+        db.session.rollback()
+        app.logger.exception(
+            f"ExportCheckinReport thất bại. Có exception[{str(pEx)}]")
+        return {
+            "Status": 0,
+            "Description": f"{str(pEx)}",
+            "ResponseData": None,
+        }, 200
+    except Exception as ex:
+        db.session.rollback()
+        app.logger.exception(
+            f"ExportCheckinReport thất bại. Có exception[{str(ex)}]")
+        return {
+            "Status": 0,
+            "Description": f"Xảy ra lỗi ở máy chủ.",
+            "ResponseData": None,
+        }, 200
+    finally:
+        app.logger.info(f"ExportCheckinReport kết thúc")
+        t = threading.Thread(target=DeleteFile, args=(path, datetime.now() + timedelta(seconds=3)))
+        t.start()
+
+
+# POST "api/checkin/timesheet/import"
+@EmployeeCheckinRoute.route("timesheet/import", methods=["POST"])
+@admin_required()
+def UpdateBulkTimesheetDetailByImport():
+    try:
+        app.logger.info(f"UpdateBulkTimesheetDetailByImport bắt đầu")
+        claims = get_jwt()
+        id = claims["id"]
+        fileRequest = request.files["ImportData"]
+        timesheetId = request.form.get("TimesheetId")
+        
+        # region validate
+
+        if not fileRequest:
+            raise ProjectException("Không tìm thấy tệp tin")
+        if not timesheetId:
+            raise ProjectException("Yêu cầu không hợp lệ do không cung cấp mã timesheet")
+        exist = Timesheet().query.filter_by(Id=timesheetId).first()
+        if not exist:
+            raise ProjectException(f"Yêu cầu không hợp lệ do không tìm thấy timesheet có mã {timesheetId}")
+        if not CheckIfFileAllowed(fileRequest.filename):
+            raise ProjectException(
+                f"Tập tin {fileRequest.filename} có định dạng không phù hợp (cần phải là {string.join(ALLOWED_EXTENSIONS)}) ")
+
+        # endregion
+
+        filename = secure_filename(fileRequest.filename)
+        fileExtension = GetFileExtensionFromFileNam(filename)
+        if fileExtension in ['xlsx', 'xls']:
+            excel_data = pandas.read_excel(
+                fileRequest, sheet_name="Data", header=3)
+            if (excel_data.empty):
+                raise ProjectException("Tệp tin không có dữ liệu.")
+            rowCount = len(excel_data.index)
+            colCount = len(excel_data.columns)
+            for i in range(rowCount):
+                employeeCode = int(excel_data.iat[i, 0])
+                date = excel_data.iat[i, 3]
+                shiftId = int(excel_data.iat[i, 4])
+                checkinTime = excel_data.iat[i, 5]
+                checkoutTime = excel_data.iat[i, 6]
+                workingHour = float(excel_data.iat[i, 7])
+
+                if not employeeCode:
+                    raise ProjectException(
+                        f"Ô A{i + 1} bị trống, chưa có mã nhân viên.")
+
+                employee = EmployeeModel.query.filter_by(Id=employeeCode).first()
+                if not employee:
+                    raise ProjectException(f"Không tìm thấy nhân viên có mã {employeeCode}")
+                if not date:
+                    raise ProjectException(
+                        f"Ô D{i + 1} bị trống, chưa có ngày.")
+                try:
+                    date = datetime.strptime(date, "%d/%m/%Y")
+                except:
+                    raise ProjectException(f"Ô D{i + 1} không đúng địng dạng DD/MM/YYYY")
+                if not shiftId:
+                    raise ProjectException(
+                        f"Ô E{i + 1} bị trống, chưa mã ca.")
+                if not ShiftModel.query.filter_by(Id=shiftId).first():
+                    raise ProjectException(
+                        f"Ca làm việc {shiftId} không tồn tại.")
+                if not checkinTime:
+                    raise ProjectException(
+                        f"Ô F{i + 1} bị trống, chưa có ngày.")
+                if not checkoutTime:
+                    raise ProjectException(
+                        f"Ô G{i + 3 + 1} bị trống, chưa có ngày.")
+                if not workingHour:
+                    raise ProjectException(
+                        f"Ô H{i + 3 + 1} bị trống, chưa có sô giờ.")
+
+
+                detail = db.session.execute(db.select(TimesheetDetail).where(
+                    and_(TimesheetDetail.TimesheetId==timesheetId, TimesheetDetail.EmployeeId==employeeCode
+                        , TimesheetDetail.Date == date, TimesheetDetail.ShiftId == shiftId
+                        )
+                )).scalars().first()
+                if not detail:
+                    shift = ShiftDetailModel.query.filter_by(ShiftId=shiftId).first()
+                    detail = db.session.execute(db.select(TimesheetDetail).where(
+                        and_(TimesheetDetail.TimesheetId==timesheetId, TimesheetDetail.EmployeeId==employeeCode
+                            , TimesheetDetail.Date == date, TimesheetDetail.ShiftId == None
+                            )
+                        )).scalars().first()
+                    if not detail: continue
+                    detail.ShiftId = shiftId
+                    detail.StartTime = shift.StartTime
+                    detail.FinishTime = shift.FinishTime
+                    detail.BreakAt = shift.BreakAt
+                    detail.BreakEnd = shift.BreakEnd
+                
+                detail.CheckinTime = checkinTime
+                detail.CheckoutTime = checkoutTime              
+                detail.WorkingHour = workingHour      
+
+        elif fileExtension == 'csv':
+            csv_data = pandas.read_csv(fileRequest, header=0)
+            raise ProjectException(f"Không hỗ trợ file có phần mở rộng .{fileExtension}")
+        db.session.commit()
+        app.logger.info(f"UpdateBulkTimesheetDetailByImport thành công")
+        return {
+            "Status": 1,
+            "Description": None,
+            "ResponseData": None,
+        }, 200
+    except ProjectException as pEx:
+        app.logger.exception(
+            f"UpdateBulkTimesheetDetailByImport thất bại. Có exception[{str(pEx)}]")
+        return {
+            "Status": 0,
+            "Description": f"{str(pEx)}",
+            "ResponseData": None,
+        }, 200
+    except Exception as ex:
+        app.logger.exception(
+            f"UpdateBulkTimesheetDetailByImport thất bại. Có exception[{str(ex)}]")
+        return {
+            "Status": 0,
+            "Description": f"Xảy ra lỗi ở máy chủ.",
+            "ResponseData": None,
+        }, 200
+    finally:
+        app.logger.info(f"UpdateBulkTimesheetDetailByImport kết thúc")
