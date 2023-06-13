@@ -40,8 +40,9 @@ class Config:
 
     # region GG Drive Api
     CREDENTIALS_PATH = os.getenv("CREDENTIALS_PATH") if os.getenv(
-        "CREDENTIALS_PATH") else "./public/gg_drive/credentials.json"
+        "CREDENTIALS_PATH") else "../public/gg_drive/credentials.json"
     TOKEN_PATH = os.getenv("TOKEN_PATH") if os.getenv(
-        "TOKEN_PATH") else "./public/gg_drive/token.json"
+        "TOKEN_PATH") else "../public/gg_drive/token.json"
 
+    DRIVE_FOLDER_ID = '1fusOVodaDiSZ0UtwXn_v251gG8oMwCln'
     # endregion

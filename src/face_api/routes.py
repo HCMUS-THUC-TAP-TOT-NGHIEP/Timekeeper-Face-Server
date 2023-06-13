@@ -12,7 +12,8 @@ from src.face_api.actions import *
 from src.employee.model import EmployeeModel, employeeInfoSchema
 from src.employee_checkin.EmployeeCheckin import EmployeeCheckin, employeeCheckinSchema, employeeCheckinListSchema
 from sqlalchemy import func, select
-
+from src.face_api.model import RecognitionData, RecognitionDataSchema
+import threading
 FaceApi = Blueprint("face", __name__)
 
 # Luôn luôn viết try ... except...
@@ -109,7 +110,7 @@ def recognition():
             raise ProjectException("Yêu cầu không hợp lệ do không cung cấp hình ảnh.")        
         if not AttendanceTime :
             raise ProjectException("Yêu cầu không hợp lệ do thời gian nhận diện không có hoặc không hợp lệ.")
-        
+        AttendanceTime = datetime.strptime(AttendanceTime, '%Y-%m-%dT%H:%M:%S.%fZ')
         #endregion
 
         RecognitionMethod = 1
@@ -124,35 +125,18 @@ def recognition():
         employee = EmployeeModel.query.filter(EmployeeModel.Id == Id).first()
         if not employee:
             raise ValueError(f"Không tìm thấy nhân viên mã {Id}")
+
+
         name = f"{employee.LastName} {employee.FirstName}"
-        # latestCheckin = EmployeeCheckin.query.filter_by(and_(
-        #     func.extract('epoch',
-        #         Time,
-        #         AttendanceTime
-        #     ) > 5
-        # )).first()
-        # if not latestCheckin:
-        employeeCheckin = EmployeeCheckin()
-        employeeCheckin.Method = RecognitionMethod
-        employeeCheckin.MethodText = "Khuôn mặt"
-        employeeCheckin.EmployeeId = employee.Id
-        employeeCheckin.Time = AttendanceTime
-        employeeCheckin.EvidenceId = None
-        employeeCheckin.LogType = 0
-        employeeCheckin.CreatedAt = datetime.now()
-        employeeCheckin.CreatedBy = 0
-        employeeCheckin.ModifiedAt = datetime.now()
-        employeeCheckin.ModifiedBy = 0
-        db.session.add(employeeCheckin)
 
-        app.logger.info("EmployeeID:" + str(Id))
-
+        t = threading.Thread(target=EmployeeCheckin.insert_one, args=(app._get_current_object(), Id, RecognitionMethod, "Khuôn mặt", AttendanceTime,  Picture.split(",")[1] , ) )
+        t.start()
+                
         list_img = os.listdir(os.path.join(Config.LOCAL_STORAGE, str(Id)))
         img_path = os.path.join(Config.LOCAL_STORAGE, str(Id), list_img[0])
 
         img = cv2.imread(img_path)
         str_img = openCVToBase64(img)
-        db.session.commit()
         app.logger.info(f"Recognition thành công nhân viên Id[{Id}]")
         return {
             "Status": 1,
@@ -164,6 +148,7 @@ def recognition():
             },
         }
     except ProjectException as pEx:
+        db.session.rollback()
         app.logger.error(f"Nhận diện khuôn mặt thất bại. Có exception[{str(pEx)}]")
         return {
             "Status": 0,
@@ -171,6 +156,7 @@ def recognition():
             "ResponseData": None,
         }, 200
     except Exception as ex:
+        db.session.rollback()
         app.logger.error(f"Nhận diện khuôn mặt thất bại. Có exception[{ex}]")
         return {
             "Status": 0,
