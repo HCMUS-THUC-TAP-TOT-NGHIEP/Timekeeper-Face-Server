@@ -25,6 +25,7 @@ numpy
 mtcnn
 scikit-learn
 scipy
+keras_facenet
 
 #google drive api
 google-api-python-client
