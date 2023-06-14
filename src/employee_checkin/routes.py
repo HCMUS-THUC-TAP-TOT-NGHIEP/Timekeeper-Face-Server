@@ -51,16 +51,62 @@ def GetFileExtensionFromFileNam(filename):
     return filename.rsplit('.', 1)[1].lower() if '.' in filename else None
 
 # POST "api/checkin"
-@EmployeeCheckinRoute.route("/", methods=["POST"])
-@jwt_required()
+@EmployeeCheckinRoute.route("/new", methods=["POST"])
 def createCheckinRecord():
     try:
+        app.logger.info(f"createCheckinRecord bắt đầu")
+        jsonRequest = request.form
+        Image = jsonRequest["Image"] if "Image" in jsonRequest else ""  #base64 encoded
+        Method = int(jsonRequest["Method"]) if "Method" in jsonRequest else None
+        EmployeeId = int(jsonRequest["EmployeeId"]) if "EmployeeId" in jsonRequest else None
+        AttendanceTime = jsonRequest["AttendanceTime"] if "AttendanceTime" in jsonRequest else None
 
-        pass
+        #region validation
+
+        if not Image:
+            raise ProjectException("Không ghi nhận chấm công do thiếu hình ảnh.")
+        if not Method:
+            raise ProjectException("Không ghi nhận chấm công do thiếu thông tin hình thức chấm công.")
+        if not EmployeeId:
+            raise ProjectException("Không ghi nhận chấm công do thiếu thông tin nhân viên.")
+        exist = EmployeeModel.query.filter_by(Id=EmployeeId).first()
+        if not exist:
+            raise ProjectException(f"Không tìm thấy nhân viên có mã {EmployeeId}.")
+        if not AttendanceTime:
+            raise ProjectException(f"Chưa cung cấp thông tin giờ.")
+        AttendanceTime = datetime.fromisoformat(AttendanceTime)
+
+        #endregion
+
+        EmployeeCheckin.insert_one(app=app._get_current_object(),employee_id=EmployeeId, method=Method, method_text="", time=AttendanceTime, image_data=Image.split(",")[-1])
+        db.session.commit()
+        app.logger.info(f"createCheckinRecord thành công.")
+        return {
+            "Status": 1,
+            "Description": None,
+            "ResponseData": None,
+        }, 200
+
     except ProjectException as pEx:
-        pass
+        db.session.rollback()
+        app.logger.exception(
+            f"createCheckinRecord thất bại. Có exception[{str(pEx)}]")
+        return {
+            "Status": 0,
+            "Description": f"{str(pEx)}",
+            "ResponseData": None,
+        }, 200
     except Exception as ex:
-        pass
+        db.session.rollback()
+        app.logger.exception(
+            f"createCheckinRecord thất bại. Có exception[{str(ex)}]")
+        return {
+            "Status": 0,
+            "Description": f"Xảy ra lỗi ở máy chủ.",
+            "ResponseData": None,
+        }, 200
+    finally:
+        app.logger.info(f"createCheckinRecord kết thúc")
 
 # GET "api/checkin/list"
 @EmployeeCheckinRoute.route("/list", methods=["POST"])

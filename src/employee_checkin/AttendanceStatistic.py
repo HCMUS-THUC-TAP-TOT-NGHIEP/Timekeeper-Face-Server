@@ -75,7 +75,7 @@ class AttendanceStatistic(db.Model):
 class AttendanceStatisticSchema(marshmallow.Schema):
     class Meta:
         fields = ("Id", "EmployeeName", "FirstCheckin", "LastCheckin", "Time",
-                  "Date", "DepartmentId", "DepartmentName", "Position", "Method", "MethodText")
+                  "Date", "DepartmentId", "DepartmentName", "Position", "Method", "MethodText", "AccessUrl", "DownloadUrl")
 
 
 class AttendanceStatisticV2(db.Model):
@@ -90,6 +90,8 @@ class AttendanceStatisticV2(db.Model):
     MethodText = Column(String())
     Time = Column(DateTime(), primary_key='True')
     Date = Column(Date())
+    AccessUrl = Column(String())
+    DownloadUrl = Column(String())
 
     @staticmethod
     def QueryMany(DateFrom, DateTo, Keyword=None, Page=None, PageSize=None):

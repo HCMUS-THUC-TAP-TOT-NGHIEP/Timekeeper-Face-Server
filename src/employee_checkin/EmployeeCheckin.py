@@ -59,6 +59,7 @@ class EmployeeCheckin(db.Model):
                     employee_id, method, method_text, time, image_data)
                 db.session.add(new_obj)
                 db.session.commit()
+                return new_obj
             except Exception as ex:
                 db.session.rollback()
                 app.logger.exception(

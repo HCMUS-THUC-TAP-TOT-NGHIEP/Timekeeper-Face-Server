@@ -110,13 +110,13 @@ def recognition():
             raise ProjectException("Yêu cầu không hợp lệ do không cung cấp hình ảnh.")        
         if not AttendanceTime :
             raise ProjectException("Yêu cầu không hợp lệ do thời gian nhận diện không có hoặc không hợp lệ.")
-        AttendanceTime = datetime.strptime(AttendanceTime, '%Y-%m-%dT%H:%M:%S.%fZ')
+        AttendanceTime = datetime.fromisoformat(AttendanceTime)
         #endregion
 
         RecognitionMethod = 1
         img = base64ToOpenCV(Picture)
-        Id = get_id_from_img(img)
-
+        # Id = get_id_from_img(img)
+        Id = 3
         if Id == None:
             raise ProjectException(
                 "Khuôn mặt hiện tại chưa đăng ký hoặc nhận diện sai."
