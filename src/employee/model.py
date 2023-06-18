@@ -44,13 +44,13 @@ class EmployeeModel(db.Model):
             result = list()
             if None in department_list:
                 data = db.session.execute(select(EmployeeModel).where(
-                    EmployeeModel.DepartmentId == None)).scalars().all()
+                    EmployeeModel.DepartmentId == None).order_by(EmployeeModel.Id)).scalars().all()
                 if data:
                     result.extend(data)
             department_list.remove(None)
             if department_list and isinstance(department_list[0], int):
                 data = db.session.execute(select(EmployeeModel).where(
-                    EmployeeModel.DepartmentId.in_(department_list))).scalars().all()
+                    EmployeeModel.DepartmentId.in_(department_list)).order_by(EmployeeModel.Id)).scalars().all()
                 if data:
                     result.extend(data)
             return result
@@ -117,7 +117,7 @@ class EmployeeSchema(marshmallow.SQLAlchemyAutoSchema):
                 department = DepartmentModel.query.filter_by(
                     Id=object.DepartmentId).first()
                 if department:
-                    return department.name
+                    return department.Name
                 return ""
             except Exception as ex:
                 # print(ex)

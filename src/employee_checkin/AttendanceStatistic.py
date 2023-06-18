@@ -132,8 +132,8 @@ class AttendanceStatisticV2(db.Model):
         try:
             app.logger.info(f"AttendanceStatisticV2.ExportReport() start.")
             templatePath = os.path.join(
-                os.pardir, app.static_url_path, "templates", "Excel", f'CheckinData.xlsx')
-            path = os.path.join(os.pardir, app.static_url_path, "export",
+                os.pardir, app.static_folder, "templates", "Excel", f'CheckinData.xlsx')
+            path = os.path.join(os.pardir, app.static_folder, "export",
                                 f'Dữ liệu chấm công_{datetime.now().strftime("%Y%m%d%H%M%S")}.xlsx')
             shutil.copyfile(templatePath, path)
             writer = ExcelWriter(path, engine="openpyxl",
@@ -152,10 +152,10 @@ class AttendanceStatisticV2(db.Model):
                 prefixData = [employee.Id, " ".join(
                     [employee.LastName, employee.FirstName])]
                 if employee.DepartmentId != department:
-                    tmp = list(
+                    temp = list(
                         filter(lambda x: x.Id == employee.DepartmentId, departmentList))
-                    if tmp and len(temp) > 0:
-                        prefixData.append(tmp[0].Name)
+                    if temp and len(temp) > 0:
+                        prefixData.append(temp[0].Name)
                     else:
                         prefixData.append(None)
                 for date in daterange(DateFrom, DateTo):

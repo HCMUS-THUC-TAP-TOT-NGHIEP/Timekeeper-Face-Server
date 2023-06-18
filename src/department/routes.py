@@ -158,12 +158,11 @@ def UpdateDepartment():
 
         if name and name != department.Name:
             department.Name = name
+        employee = EmployeeModel.query.filter_by(Id=managerId).first()
+        if employee:
+            employee.DepartmentId = DepartmentId
         if managerId and managerId != department.ManagerId:
-            employee = EmployeeModel.query.filter_by(
-                EmployeeModel.Id == managerId).first()
-            if employee:
-                employee.DepartmentId = DepartmentId
-                department.ManagerId = managerId
+            department.ManagerId = managerId
         if isinstance(status, int) and status != department.Status:
             department.Status = status
 
