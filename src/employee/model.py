@@ -88,23 +88,24 @@ class vEmployeeModel(db.Model):
         return " ".join([self.LastName, self.FirstName])
 
 
-class EmployeeSchema(Schema):
-    class Meta:
-        fields = (
-            "Id",
-            "FirstName",
-            "LastName",
-            "DateOfBirth",
-            "Gender",
-            "Address",
-            "JoinDate",
-            "LeaveDate",
-            "DepartmentId",
-            "Position",
-            "Email",
-            "MobilePhone",
-            "DepartmentName"
-        )
+class EmployeeSchema(marshmallow.SQLAlchemyAutoSchema):
+    Id = fields.Integer()
+    FirstName = fields.String()
+    LastName = fields.String()
+    DateOfBirth = fields.Date()
+    Gender = fields.Boolean()
+    Address = fields.String()
+    JoinDate = fields.Date()
+    LeaveDate = fields.Date()
+    DepartmentId = fields.Integer()
+    Position = fields.String()
+    Email = fields.String()
+    MobilePhone = fields.String()
+    DepartmentName = fields.String()
+    FullName = fields.Method("get_full_name")
+
+    def get_full_name(self, object):
+        return " ".join([object.LastName, object.FirstName])
 
 
 employeeInfoSchema = EmployeeSchema()

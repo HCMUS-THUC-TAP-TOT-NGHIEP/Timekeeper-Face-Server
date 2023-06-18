@@ -3,7 +3,7 @@ from src import marshmallow
 from sqlalchemy import Column, Integer, String, DateTime, Time, ARRAY, Boolean, Numeric, Date, delete
 from enum import Enum
 from flask import current_app as app
-from src.extension import ProjectException
+from src.utils.extension import ProjectException
 from datetime import datetime
 
 
@@ -23,19 +23,20 @@ class ShiftModel(db.Model):
         super().__init__()
 
     @staticmethod
-    def DeleteBulkByIds(IdList: list=[], userId: int=None) -> None:
+    def DeleteBulkByIds(IdList: list = [], userId: int = None) -> None:
         try:
             if len(IdList) > 0:
-                query = delete(ShiftDetailModel).where(ShiftDetailModel.ShiftId.in_(IdList))
+                query = delete(ShiftDetailModel).where(
+                    ShiftDetailModel.ShiftId.in_(IdList))
                 db.session.execute(query)
                 query = delete(ShiftModel).where(ShiftModel.Id.in_(IdList))
                 db.session.execute(query)
                 db.session.commit()
-                app.logger.info(f"ShiftModel.DeleteBulkByIds đã xóa các {';'.join(map(str, IdList))}")
+                app.logger.info(
+                    f"ShiftModel.DeleteBulkByIds đã xóa các {';'.join(map(str, IdList))}")
         except Exception as ex:
             db.session.rollback()
             raise Exception(f"ShiftModel.DeleteBulkByIds exception. {ex}")
-
 
 
 class ShiftSchema(marshmallow.Schema):

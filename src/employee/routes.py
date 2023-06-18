@@ -14,7 +14,7 @@ from src.db import db
 from src.department.model import DepartmentModel
 from src.employee.model import (EmployeeModel, employeeInfoListSchema, vEmployeeModel,
                                 employeeInfoSchema)
-from src.extension import ProjectException
+from src.utils.extension import ProjectException
 from src.jwt import get_jwt_identity, jwt_required, get_jwt
 from src.middlewares.token_required import admin_required
 import numpy as np

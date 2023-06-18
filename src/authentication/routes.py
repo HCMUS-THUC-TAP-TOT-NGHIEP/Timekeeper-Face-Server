@@ -6,8 +6,8 @@ from flask import current_app as app
 from flask import render_template, request
 from src.authentication.model import UserModel, UserSchema
 from src.db import db
-from src.email import send_email
-from src.extension import ProjectException
+from src.utils.email import send_email
+from src.utils.extension import ProjectException
 from src.jwt import (
     TokenBlockList,
     create_access_token,

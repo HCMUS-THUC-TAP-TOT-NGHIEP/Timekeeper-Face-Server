@@ -7,6 +7,7 @@ from flask import current_app as app
 from src.employee.model import EmployeeModel, EmployeeSchema
 from src.department.model import DepartmentModel, DepartmentSchema
 from src.shift.ShiftModel import ShiftModel
+from src.utils.extension import ProjectException
 
 # MODELS
 
@@ -35,13 +36,16 @@ class ShiftAssignment(db.Model):
             departmentList = []
             total = 0
             if (self.TargetType == TargetType.Employee.value):
-                query = db.select(EmployeeModel.Id, EmployeeModel.FirstName, EmployeeModel.LastName, EmployeeModel.Position, vShiftAssignmentDetail.DepartmentName).where(and_(
-                    vShiftAssignmentDetail.Id == self.Id, EmployeeModel.Id == vShiftAssignmentDetail.EmployeeId))
+                # query = db.select(EmployeeModel.Id, EmployeeModel.FirstName, EmployeeModel.LastName, EmployeeModel.Position).where(and_(
+                #     ShiftAssignmentDetail.ShiftAssignmentId == self.Id, EmployeeModel.Id == ShiftAssignmentDetail.Target))
+                query = db.select(EmployeeModel.Id, EmployeeModel.FirstName, EmployeeModel.LastName, EmployeeModel.Position).where(and_(
+                    ShiftAssignmentEmployee.ShiftAssignmentId == self.Id, EmployeeModel.Id == ShiftAssignmentEmployee.EmployeeId))
                 employeeList = EmployeeSchema(many=True).dump(
                     db.session.execute(query).all())
             elif (self.TargetType == TargetType.Department.value):
                 query = db.select(DepartmentModel).where(and_(
-                    vShiftAssignmentDetail.Id == self.Id, DepartmentModel.Id == vShiftAssignmentDetail.DepartmentId))
+                    # ShiftAssignmentDetail.ShiftAssignmentId == self.Id, DepartmentModel.Id == ShiftAssignmentDepartment.Target))
+                    ShiftAssignmentDepartment.ShiftAssignmentId == self.Id, DepartmentModel.Id == ShiftAssignmentDepartment.DepartmentId))
                 departmentList = DepartmentSchema(many=True).dump(
                     db.session.execute(query).scalars().all())
 
@@ -96,37 +100,65 @@ class ShiftAssignment(db.Model):
             raise Exception(
                 f"ShiftAssignment.QueryMany thất bại. Có exception[{str(ex)}]")
 
-    def InsertManyTargets(self, IdList: list, userId: int) -> bool:
+    def InsertManyTargets(self, IdList: list, userId: int, target_type: int = None) -> bool:
         try:
-            if len(IdList):
-                insertArray = []
-                for id in IdList:
-                    insertArray.append({
-                        "Target": id,
-                        "ShiftAssignmentId": self.Id,
-                        "CreatedBy": userId,
-                        "ModifiedBy": userId,
-                    })
+            assignment_type = self.TargetType
+            if assignment_type == TargetType.Department.value:
+                insertArr = list(map(lambda x: {
+                    "DepartmentId": x,
+                    "ShiftAssignmentId": self.Id,
+                    "CreatedBy": userId,
+                    "ModifiedBy": userId,
+                }, IdList))
                 result = db.session.execute(
-                    insert(ShiftAssignmentDetail), insertArray)
-                print(result)
-            return True
+                    insert(ShiftAssignmentDepartment), insertArr)
+
+            elif assignment_type == TargetType.Employee.value:
+                insertArr = list(map(lambda x: {
+                    "EmployeeId": x,
+                    "ShiftAssignmentId": self.Id,
+                    "CreatedBy": userId,
+                    "ModifiedBy": userId,
+                }, IdList))
+                result = db.session.execute(
+                    insert(ShiftAssignmentEmployee), insertArr)
+          # if len(IdList):
+            #     insertArray = []
+            #     for id in IdList:
+            #         insertArray.append({
+            #             "Target": id,
+            #             "ShiftAssignmentId": self.Id,
+            #             "CreatedBy": userId,
+            #             "ModifiedBy": userId,
+            #         })
+            #     result = db.session.execute(
+            #         insert(ShiftAssignmentDetail), insertArray)
+            #     print(result)
+            db.session.commit()
         except Exception as ex:
             db.session.rollback()
             app.logger.exception(
-                f"ShiftAssignment.RemoveBulkByIds thất bại. Có exception[{str(ex)}]"
+                f"ShiftAssignment.InsertManyTargets thất bại. Có exception[{str(ex)}]"
             )
             raise Exception(
-                f"ShiftAssignment.RemoveBulkByIds thất bại. Có exception[{str(ex)}]")
+                f"ShiftAssignment.InsertManyTargets thất bại. Có exception[{str(ex)}]")
 
-    def RemoveBulkByTargets(self, TargetList: []) -> bool:
+    def RemoveBulkByTargets(self, TargetList: [], target_type: int = None) -> bool:
         try:
+            assignment_type = self.TargetType if target_type is None else target_type
             if len(TargetList):
-                query = delete(ShiftAssignmentDetail).where(and_(ShiftAssignmentDetail.ShiftAssignmentId == self.Id,
-                                                                ShiftAssignmentDetail.Target.in_(TargetList))
-                                                            )
-                result = db.session.execute(query)
-                print(result)
+                # query = delete(ShiftAssignmentDetail).where(and_(ShiftAssignmentDetail.ShiftAssignmentId == self.Id,
+                #                                              ShiftAssignmentDetail.Target.in_(TargetList))
+                #                                         )
+                if assignment_type == TargetType.Department.value:
+                    query = delete(ShiftAssignmentDepartment).where(and_(
+                        ShiftAssignmentDepartment.ShiftAssignmentId == self.Id, ShiftAssignmentDepartment.DepartmentId.in_(TargetList)))
+                elif assignment_type == TargetType.Employee.value:
+                    query = delete(ShiftAssignmentEmployee).where(and_(
+                        ShiftAssignmentEmployee.ShiftAssignmentId == self.Id, ShiftAssignmentEmployee.EmployeeId.in_(TargetList)))
+                if query:
+                    db.session.execute(query)
+                    db.session.commit()
             return True
         except Exception as ex:
             db.session.rollback()
@@ -160,8 +192,8 @@ class ShiftAssignmentDetail(db.Model):
     __tablename__ = "ShiftAssignmentDetail"
 
     Id = Column(Integer(), primary_key=True)
-    ShiftAssignmentId = Column(Integer(), nullable=False)
-    Target = Column(Integer(), nullable=False)
+    ShiftAssignmentId = Column(Integer(), nullable=False,  primary_key=True)
+    Target = Column(Integer(), nullable=False,  primary_key=True)
     Status = Column(String(), default='1')
     CreatedBy = Column(Integer())
     CreatedAt = Column(DateTime(timezone=None), default=datetime.now())
@@ -251,6 +283,72 @@ class vShiftAssignmentDetail(db.Model):
     WorkingDay = Column(Numeric(precision=10, scale=2))
 
 
+class ShiftAssignmentEmployee(db.Model):
+    __tablename__ = "ShiftAssignment_Employee"
+    ShiftAssignmentId = Column(Integer(), primary_key=True)
+    EmployeeId = Column(Integer(), primary_key=True)
+    Status = Column(Integer(), default=1)
+    CreatedAt = Column(DateTime(), default=datetime.now())
+    CreatedBy = Column(Integer(), default=0)
+    ModifiedAt = Column(DateTime(), default=datetime.now())
+    ModifiedBy = Column(Integer(), default=0)
+
+    def __init__(self):
+        super().__init__()
+
+    def __init__(self, shift_assignment_id: int, employee_id: int):
+        try:
+            if not ShiftAssignment.query.filter_by(Id=shift_assignment_id):
+                raise ProjectException(
+                    f"Không tìm thấy bảng phân ca {shift_assignment_id}")
+            if not EmployeeModel.query.filter_by(Id=employee_id):
+                raise ProjectException(
+                    f"Không tìm thấy nhân viên {employee_id}")
+            self.ShiftAssignmentId = shift_assignment_id
+            self.EmployeeId = employee_id
+        except ProjectException as pEx:
+            app.logger.exception(
+                f"ShiftAssignmentEmployee.__init__() Exception {pEx}")
+            raise pEx
+        except Exception as ex:
+            app.logger.exception(
+                f"ShiftAssignmentEmployee.__init__() Exception {ex}")
+            raise ex
+
+
+class ShiftAssignmentDepartment(db.Model):
+    __tablename__ = "ShiftAssignment_Department"
+    ShiftAssignmentId = Column(Integer(), primary_key=True)
+    DepartmentId = Column(Integer(), primary_key=True)
+    Status = Column(Integer(), default=1)
+    CreatedAt = Column(DateTime(), default=datetime.now())
+    CreatedBy = Column(Integer(), default=0)
+    ModifiedAt = Column(DateTime(), default=datetime.now())
+    ModifiedBy = Column(Integer(), default=0)
+
+    def __init__(self):
+        super().__init__()
+
+    def __init__(self, shift_assignment_id: int, department_id: int):
+        try:
+            if not ShiftAssignment.query.filter_by(Id=shift_assignment_id):
+                raise ProjectException(
+                    f"Không tìm thấy bảng phân ca {shift_assignment_id}")
+            if not DepartmentModel.query.filter_by(Id=department_id):
+                raise ProjectException(
+                    f"Không tìm thấy phòng ban/ bộ phận {department_id}")
+            self.ShiftAssignmentId = shift_assignment_id
+            self.DepartmentId = department_id
+        except ProjectException as pEx:
+            app.logger.exception(
+                f"ShiftAssignmentDepartment.__init__() Exception {pEx}")
+            raise pEx
+        except Exception as ex:
+            app.logger.exception(
+                f"ShiftAssignmentDepartment.__init__() Exception {ex}")
+            raise ex
+
+
 class ShiftAssignmentDetailSchema(marshmallow.Schema):
     class Meta:
         fields = (
@@ -258,12 +356,12 @@ class ShiftAssignmentDetailSchema(marshmallow.Schema):
             "ShiftAssignmentId",
             "ShiftId",
             "ShiftDetailId"
-            "EmployeeName",
-            "StartDate",
-            "EndDate",
             "DepartmentName",
             "DepartmentId",
             "EmployeeId",
+            "EmployeeName",
+            "StartDate",
+            "EndDate",
             "TargetType",
             "DaysInWeek",
             "Description",

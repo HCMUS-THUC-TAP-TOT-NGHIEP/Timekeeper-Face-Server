@@ -7,7 +7,7 @@ from flask import request
 from src.db import db
 from src.jwt import get_jwt_identity, jwt_required
 from src.middlewares.token_required import admin_required
-from src.extension import ProjectException
+from src.utils.extension import ProjectException
 from src.face_api.actions import *
 from src.employee.model import EmployeeModel, employeeInfoSchema
 from src.employee_checkin.EmployeeCheckin import EmployeeCheckin, employeeCheckinSchema, employeeCheckinListSchema
@@ -115,8 +115,8 @@ def recognition():
 
         RecognitionMethod = 1
         img = base64ToOpenCV(Picture)
-        # Id = get_id_from_img(img)
-        Id = 3
+        Id = get_id_from_img(img)
+        # Id = 3
         if Id == None:
             raise ProjectException(
                 "Khuôn mặt hiện tại chưa đăng ký hoặc nhận diện sai."

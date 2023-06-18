@@ -5,7 +5,7 @@ from src.middlewares.token_required import admin_required
 from sqlalchemy import select, or_, and_
 from src.authentication.model import UserModel
 from src.employee.model import EmployeeModel
-from src.extension import ProjectException, object_as_dict
+from src.utils.extension import ProjectException, object_as_dict
 
 # from src import bcrypt
 from datetime import datetime

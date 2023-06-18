@@ -463,15 +463,15 @@ def AssignShift():
         if not targetType:
             raise ProjectException(f"Không tìm thấy kiểu phân ca cho bảng phân ca trong truy vấn.")
 
-        targetArray = list()
         if targetType == TargetType.Employee.value:
             if not len(employeeList):
                 raise ProjectException(f"Không tìm thấy các nhân viên được áp dụng bảng phân ca trong truy vấn.")
-            targetArray = employeeList
         elif targetType == TargetType.Department.value:
             if not len(departmentList):
                 raise ProjectException(f"Không tìm thấy các  phòng ban được áp dụng bảng phân ca trong truy vấn.")
-            targetArray = departmentList
+        else:
+            raise ProjectException(f"Không hỗ trợ phân ca kiểu {targetType}")
+
         # endregion
 
 
@@ -504,29 +504,60 @@ def AssignShift():
 
         # region Thêm chi tiết phân ca mới
 
-        values = []
-        for target in targetArray:
-            values.append(
-                {
-                    "ShiftAssignmentId": newShiftAssignment.Id,
-                    "Target": target,
-                    "CreatedAt": datetime.now(),
-                    "ModifiedAt": datetime.now(),
-                    "CreatedBy": id,
-                    "ModifiedBy": id,
-                }
-            )
+
+        if targetType == TargetType.Employee.value:
+            values = list()
+            for employeeId in employeeList:
+                values.append(     
+                    {
+                        "ShiftAssignmentId": newShiftAssignment.Id,
+                        "EmployeeId": employeeId,
+                        "CreatedAt": datetime.now(),
+                        "ModifiedAt": datetime.now(),
+                        "CreatedBy": id,
+                        "ModifiedBy": id,
+                    }
+                )
+            db.session.execute(insert(ShiftAssignmentEmployee), values)
+        elif targetType == TargetType.Department.value:
+            values = list()
+            for departmentId in departmentList:
+                    values.append(     
+                    {
+                        "ShiftAssignmentId": newShiftAssignment.Id,
+                        "DepartmentId": departmentId,
+                        "CreatedAt": datetime.now(),
+                        "ModifiedAt": datetime.now(),
+                        "CreatedBy": id,
+                        "ModifiedBy": id,
+                    }
+                )
+                # values.append(ShiftAssignmentDepartment (shift_assignment_id=newShiftAssignment.Id, department_id=department_id))
+            db.session.execute(insert(ShiftAssignmentDepartment), values)
+
+        # values = []
+        # for target in targetArray:
+        #     values.append(
+        #         {
+        #             "ShiftAssignmentId": newShiftAssignment.Id,
+        #             "Target": target,
+        #             "CreatedAt": datetime.now(),
+        #             "ModifiedAt": datetime.now(),
+        #             "CreatedBy": id,
+        #             "ModifiedBy": id,
+        #         }
+        #     )
         
 
-        if len(values) == 0:
-            db.session.rollback()
-            app.logger.info("AssignShift thành công")
-            return {
-                "Status": 0,
-                "Description": f"Không thể tạo phân ca do chưa có đối tượng được phân ca.",
-                "ResponseData": None,
-            }, 200
-        db.session.execute(insert(ShiftAssignmentDetail), values)
+        # if len(values) == 0:
+        #     db.session.rollback()
+        #     app.logger.info("AssignShift thành công")
+        #     return {
+        #         "Status": 0,
+        #         "Description": f"Không thể tạo phân ca do chưa có đối tượng được phân ca.",
+        #         "ResponseData": None,
+        #     }, 200
+        # db.session.execute(insert(ShiftAssignmentDetail), values)
 
         # endregion
 
@@ -630,17 +661,18 @@ def getShiftAssignmentList():
             temp["EmployeeList"] = []
             temp["DepartmentList"] = []
             if assignment["TargetType"] == TargetType.Employee.value:
-                EmployeeList = db.session.execute(
-                    db.select(vShiftAssignmentDetail.EmployeeName)
-                    .where(and_(vShiftAssignmentDetail.Id == assignment["Id"], vShiftAssignmentDetail.TargetType ==  TargetType.Employee.value))
-                ).scalars().all()
-                temp["EmployeeList"] = EmployeeList
+                    # query = db.select(vShiftAssignmentDetail.EmployeeName) \
+                    #         .where(and_(vShiftAssignmentDetail.Id == assignment["Id"], vShiftAssignmentDetail.TargetType ==  TargetType.Employee.value))
+                query = db.select(EmployeeModel).join(ShiftAssignmentEmployee, ShiftAssignmentEmployee.EmployeeId == EmployeeModel.Id).where(and_(ShiftAssignmentEmployee.ShiftAssignmentId == assignment["Id"]))
+                EmployeeList = db.session.execute(query).scalars().all()
+                temp["EmployeeList"] = EmployeeSchema(many=True).dump(EmployeeList)
             elif assignment["TargetType"] == TargetType.Department.value:
-                DepartmentList = db.session.execute(
-                    db.select(vShiftAssignmentDetail.DepartmentName)
-                    .where(and_(vShiftAssignmentDetail.Id == assignment["Id"], vShiftAssignmentDetail.TargetType == TargetType.Department.value))
-                ).scalars().all()
-                temp["DepartmentList"] = DepartmentList
+                    # query = db.select(vShiftAssignmentDetail.DepartmentName)\
+                    # .where(and_(vShiftAssignmentDetail.Id == assignment["Id"], vShiftAssignmentDetail.TargetType == TargetType.Department.value))
+                query = db.select(DepartmentModel).join(ShiftAssignmentDepartment, ShiftAssignmentDepartment.DepartmentId == DepartmentModel.Id).where(and_(ShiftAssignmentDepartment.ShiftAssignmentId == assignment["Id"]))
+                DepartmentList = db.session.execute(query).scalars().all()
+
+                temp["DepartmentList"] = DepartmentSchema(many=True).dump(DepartmentList)
             else: pass
             data.append(temp)
 
@@ -820,14 +852,16 @@ def UpdateAssignment():
         if not shiftAssignment:
             raise ProjectException("Không tìm thấy bảng phân ca.")
             
-        detailTargetList = db.session.execute(
-            select(ShiftAssignmentDetail.Target).where(
-                and_(
-                    ShiftAssignmentDetail.ShiftAssignmentId == assignmentId,
-                    ShiftAssignmentDetail.Status == "1",
-                )
-            )
-        ).scalars().all()
+        # detailTargetList = db.session.execute(
+        #     select(ShiftAssignmentDetail.Target).where(
+        #         and_(
+        #             ShiftAssignmentDetail.ShiftAssignmentId == assignmentId,
+        #             ShiftAssignmentDetail.Status == "1",
+        #         )
+        #     )
+        # ).scalars().all()
+
+        detailTargetList = shiftAssignment.QueryDetails()
 
         if description and description != shiftAssignment.Description:
             shiftAssignment.Description = description
@@ -846,24 +880,33 @@ def UpdateAssignment():
 
         insertIdArray = []
         removeArray = []
-        if assignmentType and assignmentType != shiftAssignment.TargetType:
-            shiftAssignment.TargetType = assignmentType
-            removeArray.extend(detailTargetList)
-            insertIdArray.extend(EmployeeList if assignmentType == 1 else DepartmentList if assignmentType == 2 else [])
-        else:
-            if assignmentType == TargetType.Employee.value:
-                removeArray = list(filter(lambda x: x not in EmployeeList , detailTargetList ))
-                insertIdArray = list(filter(lambda x: x not in detailTargetList, EmployeeList))
-                
-            elif assignmentType == TargetType.Department.value:
-                removeArray = list(filter(lambda x: x not in DepartmentList, detailTargetList))
-                insertIdArray = list(filter(lambda x: x not in detailTargetList, DepartmentList))     
 
-        if len(removeArray):
-            # ShiftAssignmentDetail.DisableBulk(removeArray)
-            shiftAssignment.RemoveBulkByTargets(removeArray)
-        if len(insertIdArray):
-            shiftAssignment.InsertManyTargets(IdList=insertIdArray, userId=id)
+        if assignmentType == shiftAssignment.TargetType:
+            if assignmentType == TargetType.Employee.value:
+                removeArray = list(filter(lambda x: x not in EmployeeList , detailTargetList["EmployeeList"] ))
+                insertIdArray = list(filter(lambda x: x not in detailTargetList, EmployeeList))
+            elif assignmentType == TargetType.Department.value:
+                removeArray = list(filter(lambda x: x not in DepartmentList, detailTargetList["DepartmentList"]))
+                insertIdArray = list(filter(lambda x: x not in detailTargetList, DepartmentList))     
+            if len(removeArray):
+                # ShiftAssignmentDetail.DisableBulk(removeArray)
+                shiftAssignment.RemoveBulkByTargets(removeArray)
+            if len(insertIdArray):
+                shiftAssignment.InsertManyTargets(IdList=insertIdArray, userId=id)
+
+        else:
+            if assignmentType == TargetType.Department.value:
+                insertIdArray.extend(DepartmentList)
+            if assignmentType == TargetType.Employee.value:
+                insertIdArray.extend(EmployeeList)
+            # insertIdArray.extend(EmployeeList if assignmentType == 1 else EmployeeList if assignmentType == 2 else [])
+
+            if len(removeArray):
+                # ShiftAssignmentDetail.DisableBulk(removeArray)
+                shiftAssignment.RemoveBulkByTargets(TargetList=removeArray)
+            shiftAssignment.TargetType = assignmentType
+            if len(insertIdArray):
+                shiftAssignment.InsertManyTargets(IdList=insertIdArray, userId=id)
 
 
         # if assignmentType and assignmentType != shiftAssignment.TargetType:

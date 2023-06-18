@@ -25,7 +25,7 @@ from src.employee_checkin.Timesheet import (Timesheet, TimesheetDetail,
                                             timesheetDetailSchema,
                                             timesheetListSchema,
                                             timesheetSchema)
-from src.extension import ProjectException
+from src.utils.extension import ProjectException
 from src.jwt import get_jwt, get_jwt_identity, jwt_required
 from src.middlewares.token_required import admin_required
 from src.shift.model import (DayInWeekEnum, ShiftAssignment,
@@ -299,7 +299,7 @@ def GetTemplate():
             raise ProjectException("Yêu cầu không hợp lệ.")
 
         templatePath = os.path.join(
-            os.pardir, app.static_url_path, "templates", "Excel", f'{FileName}.xlsx')
+            os.pardir, app.static_folder, "templates", "Excel", f'{FileName}.xlsx')
         if not os.path.exists(templatePath):
             raise ProjectException("Không tìm thấy tệp tin mẫu.")
         return send_file(templatePath, as_attachment=True)
@@ -495,7 +495,7 @@ def DeleteTimesheet():
         Timesheet.DeleteById(id=TimesheetId)
         app.logger.info(f"DeleteTimesheet Id[{TimesheetId}] thành công.")
         return {
-            "Status": 0,
+            "Status": 1,
             "Description": None,
             "ResponseData": {
                 "Id": TimesheetId
@@ -722,8 +722,8 @@ def exportTimesheetReport():
         }, 200
     finally:
         app.logger.info(f"getTimesheetDetails kết thúc")
-        t = threading.Thread(target=DeleteFile, args=(path, datetime.now() + timedelta(seconds=3)))
-        t.start()
+        # t = threading.Thread(target=DeleteFile, args=(path, datetime.now() + timedelta(seconds=3)))
+        # t.start()
 
 # POST "api/checkin/report"
 @EmployeeCheckinRoute.route("/report", methods=["POST"])

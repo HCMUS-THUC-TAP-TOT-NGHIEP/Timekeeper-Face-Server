@@ -10,10 +10,10 @@ from src.authentication.model import UserModel
 from src.db import db
 from src.department.model import DepartmentModel, departmentListSchema, departmentSchema, vDepartment
 from src.employee.model import EmployeeModel, employeeInfoListSchema
-from src.extension import object_as_dict
+from src.utils.extension import object_as_dict
 from src.jwt import get_jwt_identity, jwt_required
 from src.middlewares.token_required import admin_required
-from src.extension import ProjectException
+from src.utils.extension import ProjectException
 
 Department = Blueprint("department", __name__)
 
@@ -155,17 +155,18 @@ def UpdateDepartment():
         department = DepartmentModel.query.filter_by(Id=DepartmentId).first()
         if not department:
             raise ProjectException(f"Can not find employee id[{DepartmentId}]")
-        
+
         if name and name != department.Name:
             department.Name = name
         if managerId and managerId != department.ManagerId:
-            employee = EmployeeModel.query.filter_by(EmployeeModel.Id==managerId).first()
+            employee = EmployeeModel.query.filter_by(
+                EmployeeModel.Id == managerId).first()
             if employee:
                 employee.DepartmentId = DepartmentId
-                department.ManagerId = managerId                
-        if isinstance(status,int) and status != department.Status:
+                department.ManagerId = managerId
+        if isinstance(status, int) and status != department.Status:
             department.Status = status
-        
+
         department.ModifiedAt = datetime.now()
         department.ModifiedBy = user.Id
         db.session.commit()

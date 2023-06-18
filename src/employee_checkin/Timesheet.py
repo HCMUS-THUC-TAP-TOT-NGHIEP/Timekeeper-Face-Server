@@ -10,7 +10,7 @@ from src.db import db
 from src.employee.model import EmployeeModel, vEmployeeModel
 from src.department.model import DepartmentModel
 from src.employee_checkin.AttendanceStatistic import AttendanceStatisticV2
-from src.extension import ProjectException
+from src.utils.extension import ProjectException
 from src.shift.model import ShiftModel, vShiftAssignmentDetail
 import io
 import os
@@ -21,11 +21,12 @@ from werkzeug.utils import secure_filename
 from xlsxwriter import Workbook
 
 import shutil
-from src.extension import ProjectException
+from src.utils.extension import ProjectException
 from src.utils.helpers import daterange, DeleteFile, GetDayOfWeek
 from threading import Thread
 import threading
 from openpyxl.styles import NamedStyle, Font, PatternFill, Color, Alignment, Border, Side, Color
+
 
 class Timesheet(db.Model):
     __tablename__ = "Timesheet"
@@ -180,8 +181,8 @@ class Timesheet(db.Model):
         try:
             app.logger.info(f"Timesheet.CreateTimesheetReport() start.")
             templatePath = os.path.join(
-                os.pardir, app.static_url_path, "templates", "Excel", f'SummaryReport.xlsx')
-            path = os.path.join(os.pardir, app.static_url_path, "export",
+                os.pardir, app.static_folder, "templates", "Excel", f'SummaryReport.xlsx')
+            path = os.path.join(os.pardir, app.static_folder, "export",
                                 f'Bảng chấm công tổng hợp_{datetime.now().strftime("%Y%m%d%H%M%S")}.xlsx')
             shutil.copyfile(templatePath, path)
             writer = ExcelWriter(path, engine="openpyxl",
@@ -192,19 +193,19 @@ class Timesheet(db.Model):
             worksheet["A3"] = f"Từ ngày {date_from} đến ngày {date_to}"
 
             # region write các date header
-        
-            daysColumns = [[date.day.__str__() for date in daterange(self.DateFrom, self.DateTo)], [GetDayOfWeek(date) for date in daterange(self.DateFrom, self.DateTo)] ]
+
+            daysColumns = [[date.day.__str__() for date in daterange(self.DateFrom, self.DateTo)], [
+                GetDayOfWeek(date) for date in daterange(self.DateFrom, self.DateTo)]]
             df = DataFrame(data=daysColumns)
-            df.to_excel(writer, sheet_name="Main", header=False, startcol=14, startrow=4, index=False)
+            df.to_excel(writer, sheet_name="Main", header=False,
+                        startcol=14, startrow=4, index=False)
             colStyle = NamedStyle(name="colStyle")
             colStyle.fill = PatternFill("solid", fgColor=Color(index=44))
             colStyle.font = Font(name='Tahoma', size=8, bold=True)
-            colStyle.border = Border(top=Side(border_style="thin", color="000000")
-                                    , right=Side(border_style="thin", color="000000")
-                                    , bottom=Side(border_style="thin", color="000000")
-                                    , left=Side(border_style="thin", color="000000")
-                            )
-            colStyle.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True, shrink_to_fit=True)
+            colStyle.border = Border(top=Side(border_style="thin", color="000000"), right=Side(border_style="thin", color="000000"), bottom=Side(border_style="thin", color="000000"), left=Side(border_style="thin", color="000000")
+                                     )
+            colStyle.alignment = Alignment(
+                horizontal="center", vertical="center", wrap_text=True, shrink_to_fit=True)
             for cells in worksheet.iter_rows(min_row=5, max_row=6, min_col=15):
                 for cell in cells:
                     cell.style = colStyle
@@ -218,20 +219,24 @@ class Timesheet(db.Model):
             data = []
             query = db.select(vEmployeeModel)
             if self.DepartmentList:
-                query = query.where(vEmployeeModel.DepartmentId.in_(self.DepartmentList))
+                query = query.where(
+                    vEmployeeModel.DepartmentId.in_(self.DepartmentList))
             #     departmentList = DepartmentList
             # if departmentList:
-            query = query.order_by(vEmployeeModel.DepartmentId, vEmployeeModel.Id)
+            query = query.order_by(
+                vEmployeeModel.DepartmentId, vEmployeeModel.Id)
             employeeList = db.session.execute(query).scalars().all()
             if employeeList:
                 for employee in employeeList:
-                    row = [stt, employee.Id, employee.FullName(), employee.DepartmentName, employee.Position, employee.JoinDate.strftime("%d/%m/%Y"), 0, 0, 0, 0, 0]
+                    row = [stt, employee.Id, employee.FullName(), employee.DepartmentName,
+                           employee.Position, employee.JoinDate.strftime("%d/%m/%Y"), 0, 0, 0, 0, 0]
                     total_minute = 0
                     count_late_early = 0
                     count_no_timekeeping = 0
                     details = []
                     for date in daterange(self.DateFrom, self.DateTo):
-                        record = db.session.execute(db.select(vTimesheetDetail).where(and_(vTimesheetDetail.TimesheetId == self.Id, vTimesheetDetail.EmployeeId == employee.Id, vTimesheetDetail.Date == date))).scalars().first()
+                        record = db.session.execute(db.select(vTimesheetDetail).where(and_(
+                            vTimesheetDetail.TimesheetId == self.Id, vTimesheetDetail.EmployeeId == employee.Id, vTimesheetDetail.Date == date))).scalars().first()
                         detailString = None
                         if not record:
                             continue
@@ -240,36 +245,38 @@ class Timesheet(db.Model):
                             if not detail["CheckinTime"] and not detail["CheckoutTime"]:
                                 count_no_timekeeping += 1
                             if detail["LateMinutes"] > 0:
-                                count_late_early +=1
+                                count_late_early += 1
                                 total_minute += round(detail["LateMinutes"], 2)
                             if detail["EarlyMinutes"] > 0:
-                                count_late_early +=1
-                                total_minute += round(detail["EarlyMinutes"], 2)
+                                count_late_early += 1
+                                total_minute += round(
+                                    detail["EarlyMinutes"], 2)
                             shiftName = detail["ShiftName"] if detail["ShiftName"] else ""
-                            totalHour = round(detail["TotalHour"], 2).__str__() + " h" if detail["TotalHour"] else ""
+                            totalHour = round(detail["TotalHour"], 2).__str__(
+                            ) + " h" if detail["TotalHour"] else ""
                             detailString = "\n".join([shiftName, totalHour])
                         details.append(detailString)
                     row.append(count_late_early)
-                    row.append(total_minute) 
+                    row.append(total_minute)
                     row.append(count_no_timekeeping)
                     row.extend(details)
                     data.append(row)
-                    stt+=1
+                    stt += 1
             dataStyle = NamedStyle(name="dataStyle")
             dataStyle.font = Font(name='Tahoma', size=8)
-            dataStyle.border = Border(top=Side(border_style="thin", color="000000")
-                                    , right=Side(border_style="thin", color="000000")
-                                    , bottom=Side(border_style="thin", color="000000")
-                                    , left=Side(border_style="thin", color="000000")
-                            )
-            dataStyle.alignment = Alignment(vertical="center", wrap_text=True, shrink_to_fit=True)
+            dataStyle.border = Border(top=Side(border_style="thin", color="000000"), right=Side(border_style="thin", color="000000"), bottom=Side(border_style="thin", color="000000"), left=Side(border_style="thin", color="000000")
+                                      )
+            dataStyle.alignment = Alignment(
+                vertical="center", wrap_text=True, shrink_to_fit=True)
             df = DataFrame(data=data)
-            df.to_excel(writer,  sheet_name="Main", startcol=start_col, startrow=start_row, float_format="%.2f", index=False, header=False, na_rep="")
+            df.to_excel(writer,  sheet_name="Main", startcol=start_col, startrow=start_row,
+                        float_format="%.2f", index=False, header=False, na_rep="")
             for cells in worksheet.iter_rows(min_row=7, min_col=0):
                 for cell in cells:
                     cell.style = dataStyle
 
-            #endregion
+            # endregion
+
             return path
         except ProjectException as pEx:
             app.logger.exception(
@@ -315,17 +322,23 @@ class TimesheetDetail(db.Model):
         try:
             app.logger.exception(f"TimesheetDetail.IncludeAssignment start. ")
             query = db.select(vShiftAssignmentDetail).where(and_(vShiftAssignmentDetail.EmployeeId == self.EmployeeId,
-                                                                 between(self.Date, vShiftAssignmentDetail.StartDate, vShiftAssignmentDetail.EndDate)
+                                                                 between(
+                                                                     self.Date, vShiftAssignmentDetail.StartDate, vShiftAssignmentDetail.EndDate)
                                                                  ))
-            shiftAssignment = db.session.execute(query).scalars().first()
-            if shiftAssignment:
-                if self.Date.isoweekday() not in shiftAssignment.DaysInWeek: return
-                self.ShiftAssignmentId = shiftAssignment.Id
-                self.ShiftId = shiftAssignment.ShiftId
-                self.BreakAt = shiftAssignment.BreakAt
-                self.BreakEnd = shiftAssignment.BreakEnd
-                self.StartTime = shiftAssignment.StartTime
-                self.FinishTime = shiftAssignment.FinishTime
+
+            shiftAssignments = db.session.execute(query).scalars().all()
+
+            for shiftAssignment in shiftAssignments:
+                if shiftAssignment:
+                    if self.Date.isoweekday() not in shiftAssignment.DaysInWeek:
+                        continue
+                    self.ShiftAssignmentId = shiftAssignment.Id
+                    self.ShiftId = shiftAssignment.ShiftId
+                    self.BreakAt = shiftAssignment.BreakAt
+                    self.BreakEnd = shiftAssignment.BreakEnd
+                    self.StartTime = shiftAssignment.StartTime
+                    self.FinishTime = shiftAssignment.FinishTime
+                    break
                 # if self.CheckinTime:
                 #     hourDiff = self.CheckinTime.hour - shiftAssignment.StartTime.hour
                 #     minDiff = self.CheckinTime.minute - shiftAssignment.StartTime.minute
@@ -344,9 +357,10 @@ class TimesheetDetail(db.Model):
         finally:
             app.logger.exception(f"TimesheetDetail.IncludeAssignment finish. ")
 
-    def updateOne(self, data: dict=None):
-        try: 
-            if data is None: return
+    def updateOne(self, data: dict = None):
+        try:
+            if data is None:
+                return
             if "CheckinTime" in data and data["CheckinTime"] != self.CheckinTime:
                 self.CheckinTime = data["CheckinTime"]
             if "CheckoutTime" in data and data["CheckoutTime"] != self.CheckoutTime:
@@ -361,6 +375,7 @@ class TimesheetDetail(db.Model):
                 f"TimesheetDetail.IncludeAssignment failed. Exception[{ex}]")
         finally:
             app.logger.exception(f"TimesheetDetail.IncludeAssignment finish. ")
+
 
 class vTimesheetDetail(db.Model):
     __tablename__ = "vTimesheetDetail"
@@ -412,7 +427,7 @@ class TimesheetDetailSchema(marshmallow.SQLAlchemyAutoSchema):
     EarlyMinutes = fields.Method("get_early_minutes")
     Status = fields.Method("get_status")
     TotalHour = fields.Method("get_total_hour")
-    
+
     def get_status(self, obj):
         try:
             if obj.CheckinTime < obj.StartTime:
@@ -421,8 +436,8 @@ class TimesheetDetailSchema(marshmallow.SQLAlchemyAutoSchema):
                 return "Vào trễ"
         except:
             return None
-        
-    def get_late_minutes(self, obj) ->  int:
+
+    def get_late_minutes(self, obj) -> int:
         try:
             if obj.StartTime and obj.CheckinTime:
                 result = subtractTime(obj.StartTime, obj.CheckinTime)
@@ -441,7 +456,7 @@ class TimesheetDetailSchema(marshmallow.SQLAlchemyAutoSchema):
                 return 0
         except:
             return None
-    
+
     def get_total_hour(self, obj) -> float:
         try:
             if not obj.BreakEnd or not obj.BreakAt:
@@ -452,10 +467,12 @@ class TimesheetDetailSchema(marshmallow.SQLAlchemyAutoSchema):
             elif obj.CheckoutTime < obj.BreakEnd and obj.CheckinTime > obj.BreakAt:
                 delta = subtractTime(obj.BreakEnd, obj.CheckoutTime)
             else:
-                delta = subtractTime(obj.CheckinTime, obj.CheckoutTime) - subtractTime(obj.BreakAt, obj.BreakEnd)
+                delta = subtractTime(
+                    obj.CheckinTime, obj.CheckoutTime) - subtractTime(obj.BreakAt, obj.BreakEnd)
             return delta / 60
         except:
             return None
+
 
 timesheetSchema = TimesheetSchema()
 timesheetListSchema = TimesheetSchema(many=True)

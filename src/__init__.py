@@ -4,7 +4,7 @@ from src.config import Config
 from flask_migrate import Migrate
 from src.db import db
 from src.jwt import jwt, get_jwt
-from src.email import mail
+from src.utils.email import mail
 from flask_cors import CORS
 from threading import Thread
 from flask_marshmallow import Marshmallow
