@@ -101,11 +101,27 @@ class EmployeeSchema(marshmallow.SQLAlchemyAutoSchema):
     Position = fields.String()
     Email = fields.String()
     MobilePhone = fields.String()
-    DepartmentName = fields.String()
+    # DepartmentName = fields.String()
+    DepartmentName = fields.Method("get_department_name")
     FullName = fields.Method("get_full_name")
 
     def get_full_name(self, object):
         return " ".join([object.LastName, object.FirstName])
+
+    def get_department_name(self, object):
+        try:
+            if object.DepartmentName:
+                return object.DepartmentName
+        except:
+            try:
+                department = DepartmentModel.query.filter_by(
+                    Id=object.DepartmentId).first()
+                if department:
+                    return department.name
+                return ""
+            except Exception as ex:
+                # print(ex)
+                return ""
 
 
 employeeInfoSchema = EmployeeSchema()
