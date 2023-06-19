@@ -10,8 +10,6 @@ flask-cors
 flask-marshmallow
 flask-json
 gunicorn
-opencv-contrib-python
-opencv-python
 Pillow
 marshmallow
 marshmallow-sqlalchemy
@@ -20,9 +18,10 @@ xlwt
 xlsxwriter
 openpyxl
 xlrd
+
+opencv-python
 Tensorflow
 numpy
-mtcnn
 scikit-learn
 scipy
 keras_facenet
@@ -31,9 +30,3 @@ keras_facenet
 google-api-python-client
 google-auth-httplib2
 google-auth-oauthlib
-numpy
-Click
-cmake
-boost
-dlib
-face-recognition
