@@ -31,9 +31,4 @@ keras_facenet
 google-api-python-client
 google-auth-httplib2
 google-auth-oauthlib
-numpy
-Click
-cmake
-boost
-dlib
-face-recognition
+
