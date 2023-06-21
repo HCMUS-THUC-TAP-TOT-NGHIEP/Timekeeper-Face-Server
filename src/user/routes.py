@@ -5,7 +5,7 @@ from src.middlewares.token_required import admin_required
 from sqlalchemy import select, or_, and_
 from src.authentication.model import UserModel
 from src.employee.model import EmployeeModel
-from src.extension import ProjectException, object_as_dict
+from src.utils.extension import ProjectException, object_as_dict
 
 # from src import bcrypt
 from datetime import datetime
@@ -192,7 +192,7 @@ def AddNewUser():
         app.logger.exception(ex)
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ. \nKhông thể thêm user mới.",
+            "Description": f"Xảy ra lỗi ở máy chủ. \nKhông thể thêm user mới.",
             "ResponseData": None,
         }
 
@@ -244,7 +244,7 @@ def DeleteUser():
         app.logger.exception(ex)
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ. \nKhông thể xóa người dùng.",
+            "Description": f"Xảy ra lỗi ở máy chủ. \nKhông thể xóa người dùng.",
             "ResponseData": None,
         }
 
@@ -344,6 +344,6 @@ def UpdateUser():
         app.logger.exception(ex)
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ. \nKhông thể thay đổi thông tin người dùng.",
+            "Description": f"Xảy ra lỗi ở máy chủ. \nKhông thể thay đổi thông tin người dùng.",
             "ResponseData": None,
         }

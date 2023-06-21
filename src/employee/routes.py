@@ -12,9 +12,9 @@ from werkzeug.utils import secure_filename
 from src.authentication.model import UserModel
 from src.db import db
 from src.department.model import DepartmentModel
-from src.employee.model import (EmployeeModel, employeeInfoListSchema,
+from src.employee.model import (EmployeeModel, employeeInfoListSchema, vEmployeeModel,
                                 employeeInfoSchema)
-from src.extension import ProjectException
+from src.utils.extension import ProjectException
 from src.jwt import get_jwt_identity, jwt_required, get_jwt
 from src.middlewares.token_required import admin_required
 import numpy as np
@@ -24,8 +24,6 @@ Employee = Blueprint("employee", __name__)
 ALLOWED_EXTENSIONS = {'xlsx', 'xls', 'csv'}
 
 # GET api/employee
-
-
 @Employee.route("/", methods=["GET"])
 @jwt_required()
 def GetEmployeeInfo():
@@ -35,9 +33,7 @@ def GetEmployeeInfo():
         username = identity["username"]
 
         employeeId = request.args.get("Id")
-        employee = db.session.execute(
-            db.select(EmployeeModel).filter_by(Id=employeeId)
-        ).scalar_one()
+        employee = vEmployeeModel.query.filter_by(Id=employeeId).first()
 
         if not employee:
             raise Exception(f"Employee {employeeId} not found.")
@@ -60,7 +56,6 @@ def GetEmployeeInfo():
             "ResponseData": None,
 
         }, 200
-
 
 # POST api/employee/create
 @Employee.route("/create", methods=["POST"])
@@ -113,10 +108,6 @@ def CreateEmployee():
 
             raise Exception("Invalid MobilePhone. MobilePhone is not found.")
 
-        if "DepartmentId" not in jsonRequestData:
-
-            raise Exception("Invalid DepartmentId. DepartmentId is not found.")
-
         firstName = jsonRequestData["FirstName"]
 
         lastName = jsonRequestData["LastName"]
@@ -135,7 +126,7 @@ def CreateEmployee():
 
         MobilePhone = jsonRequestData["MobilePhone"]
 
-        DepartmentId = jsonRequestData["DepartmentId"]
+        DepartmentId = jsonRequestData["DepartmentId"] if "DepartmentId" in jsonRequestData else None
 
         if not isinstance(firstName, str) or not firstName or not firstName.strip():
 
@@ -229,7 +220,6 @@ def CreateEmployee():
 
         }, 200
 
-
 # PUT api/employee/update
 @Employee.route("/update", methods=["PUT"])
 @jwt_required()
@@ -296,8 +286,6 @@ def UpdateEmployeeInfo():
         }, 200
 
 # DELETE api/employee/
-
-
 @Employee.route("/", methods=["DELETE"])
 @jwt_required()
 def DeleteEmployee():
@@ -344,102 +332,52 @@ def DeleteEmployee():
             "ResponseData": None,
         }, 200
 
-
 # GET api/employee/many
-
-@Employee.route("/many", methods=["GET"])
+@Employee.route("/many", methods=["GET", "POST"])
 @admin_required()
 def GetManyEmployee():
-
     try:
-
-        identity = get_jwt_identity()
-
-        email = identity["email"]
-
-        username = identity["username"]
-
         args = request.args.to_dict()
-
-        # region validate
-
-        user = db.session.execute(
-
-            db.select(UserModel).filter_by(EmailAddress=email)
-
-        ).scalar_one_or_none()
-
-        if not user:
-
-            raise Exception(f"No account found for email address[{email}]")
-
-        # endregion
-
         perPage = int(args["PerPage"]) if "PerPage" in args else 10
-
         page = int(args["Page"]) if "Page" in args else 1
-
-        pageObject = db.paginate(
-
-            db.select(EmployeeModel)
-
-            .order_by(EmployeeModel.Id, EmployeeModel.JoinDate),
-
-            per_page=perPage,
-
-            page=page
-        )
-
-        data = pageObject.items
-        employees = [employeeInfoSchema.dump(d) for d in data]
-
-        for employee in employees:
-
-            employee["DepartmentName"] = ""
-
-            department = DepartmentModel.query.filter_by(
-                Id=employee["DepartmentId"]).first()
-
-            if (department):
-
-                employee["DepartmentName"] = department.Name
-                continue
-
-        return {
-
-            "Status": 1,
-
-            "Description": None,
-
-            "ResponseData": {
-
-                "EmployeeList": employees,
-
-                "Total": pageObject.total
-
-            },
-
-        }, 200
-
+        if request.method == "GET":
+            result = db.paginate(
+                db.select(vEmployeeModel)
+                .order_by(vEmployeeModel.Id),
+                per_page=perPage,
+                page=page
+            )
+            employees = employeeInfoListSchema.dump(result.items)
+            return {
+                "Status": 1,
+                "Description": None,
+                "ResponseData": {
+                    "EmployeeList": employees,
+                    "Total": result.total
+                },
+            }, 200
+        if request.method == "POST":
+            jsonRequestData = request.get_json()
+            department = jsonRequestData["Department"] if "Department" in jsonRequestData else None
+            result = EmployeeModel.GetEmployeeListByDepartment(department)
+            return {
+                "Status": 1,
+                "Description": None,
+                "ResponseData": {
+                    "EmployeeList": employeeInfoListSchema.dump(result),
+                    "Total": len(result)
+                },
+            }, 200
     except Exception as ex:
-
         app.logger.info(
-
             f"GetManyEMployee thất bại. Có exception[{str(ex)}]")
-
         return {
-
             "Status": 0,
-
             "Description": f"Truy vấn danh sách nhân viên không thành công.",
-
             "ResponseData": None,
-
         }, 200
-
 
 # POST api/employee/import
-
 @Employee.route("/import", methods=["POST"])
 @admin_required()
 def importData():
@@ -535,18 +473,15 @@ def importData():
             f"Importing EmployeeModel thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ.",
+            "Description": f"Xảy ra lỗi ở máy chủ.",
             "ResponseData": None,
         }, 200
     finally:
         app.logger.info("Importing EmployeeModel kết thúc")
 
-
 excelTemplatePath = path.join("..", "public", "templates", "Excel")
 
 # GET api/employee/import/templates
-
-
 @Employee.route("import/templates", methods=["GET", "POST"])
 @admin_required()
 def GetTemplate():
@@ -555,12 +490,6 @@ def GetTemplate():
         claims = get_jwt()
         id = claims['id']
         return send_from_directory(excelTemplatePath, "Employee.xlsx", as_attachment=True)
-        return {
-            "Status": 1,
-            "Description": None,
-            "ResponseData": None,
-        }, 200
-
     except ProjectException as ex:
         db.session.rollback()
         app.logger.info(
@@ -576,12 +505,11 @@ def GetTemplate():
             f"GetTemplate EmployeeModel thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ.",
+            "Description": f"Xảy ra lỗi ở máy chủ.",
             "ResponseData": None,
         }, 200
     finally:
         app.logger.info("GetTemplate EmployeeModel kết thúc")
-
 
 def CheckIfFileAllowed(filename):
     if ('.' not in filename):
@@ -591,6 +519,37 @@ def CheckIfFileAllowed(filename):
         return False
     return True
 
-
 def GetFileExtensionFromFileNam(filename):
     return filename.rsplit('.', 1)[1].lower() if '.' in filename else None
+
+@Employee.route("/search", methods=["POST"])
+# @admin_required()
+def SearchEmployees():
+    try:
+        app.logger.info(f"SearchEmployees bắt đầu")
+        jsonRequestData = request.get_json()
+        department = jsonRequestData["Department"] if "Department" in jsonRequestData else None
+        result = EmployeeModel.GetEmployeeListByDepartment(department)
+        return {
+            "Status": 1,
+            "Description": f"",
+            "ResponseData": employeeInfoListSchema.dump(result),
+        }, 200
+    except ProjectException as ex:
+        app.logger.error(
+            f"SearchEmployees thất bại. Có exception[{str(ex)}]")
+        return {
+            "Status": 0,
+            "Description": f"{ex}",
+            "ResponseData": None,
+        }, 200
+    except Exception as ex:
+        app.logger.error(
+            f"SearchEmployees thất bại. Có exception[{str(ex)}]")
+        return {
+            "Status": 0,
+            "Description": f"Xảy ra lỗi ở máy chủ.",
+            "ResponseData": None,
+        }, 200
+    finally:
+        app.logger.info("SearchEmployees kết thúc")

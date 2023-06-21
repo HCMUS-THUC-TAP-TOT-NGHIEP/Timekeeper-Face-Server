@@ -5,6 +5,7 @@ load_dotenv()
 
 
 class Config:
+    FLASK_APP = "app.py"
     FLASK_DEBUG = bool(os.environ.get("DEBUG"))
     SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URI")
     MAIL_SERVER = os.getenv("MAIL_SERVER")
@@ -31,9 +32,7 @@ class Config:
     APP_LOG_NAME = os.getenv("APP_LOG_NAME") if os.getenv(
         "APP_LOG_NAME") else "log.log"
 
-    RAW_PATH = "./public/datasets/raw"
-    LOCAL_STORAGE = "./public/datasets/raw"
-    TRAIN_PATH = "./public/datasets/processed"
+    LOCAL_STORAGE = "./public/datasets"
     HAARCASCADEPATH = "./public/static/haarcascade_frontalface_default.xml"
     PATH_MODEL_TRAIN = "./public/static/Trainner.yml"
 
@@ -41,8 +40,9 @@ class Config:
 
     # region GG Drive Api
     CREDENTIALS_PATH = os.getenv("CREDENTIALS_PATH") if os.getenv(
-        "CREDENTIALS_PATH") else "./public/gg_drive/credentials.json"
+        "CREDENTIALS_PATH") else "../public/gg_drive/credentials.json"
     TOKEN_PATH = os.getenv("TOKEN_PATH") if os.getenv(
-        "TOKEN_PATH") else "./public/gg_drive/token.json"
+        "TOKEN_PATH") else "../public/gg_drive/token.json"
 
+    DRIVE_FOLDER_ID = '1fusOVodaDiSZ0UtwXn_v251gG8oMwCln'
     # endregion

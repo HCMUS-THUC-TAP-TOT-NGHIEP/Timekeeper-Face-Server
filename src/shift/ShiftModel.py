@@ -1,9 +1,9 @@
 from src.db import db
 from src import marshmallow
-from sqlalchemy import Column, Integer, String, DateTime, Time, ARRAY, Boolean, Numeric, Date
+from sqlalchemy import Column, Integer, String, DateTime, Time, ARRAY, Boolean, Numeric, Date, delete
 from enum import Enum
 from flask import current_app as app
-from src.extension import ProjectException
+from src.utils.extension import ProjectException
 from datetime import datetime
 
 
@@ -21,6 +21,22 @@ class ShiftModel(db.Model):
 
     def __init__(self) -> None:
         super().__init__()
+
+    @staticmethod
+    def DeleteBulkByIds(IdList: list = [], userId: int = None) -> None:
+        try:
+            if len(IdList) > 0:
+                query = delete(ShiftDetailModel).where(
+                    ShiftDetailModel.ShiftId.in_(IdList))
+                db.session.execute(query)
+                query = delete(ShiftModel).where(ShiftModel.Id.in_(IdList))
+                db.session.execute(query)
+                db.session.commit()
+                app.logger.info(
+                    f"ShiftModel.DeleteBulkByIds đã xóa các {';'.join(map(str, IdList))}")
+        except Exception as ex:
+            db.session.rollback()
+            raise Exception(f"ShiftModel.DeleteBulkByIds exception. {ex}")
 
 
 class ShiftSchema(marshmallow.Schema):
@@ -58,8 +74,8 @@ class ShiftDetailModel(db.Model):
     CheckinRequired = Column(Boolean(), default=True)
     CheckoutRequired = Column(Boolean(), default=True)
     HasBreak = Column(Boolean(), default=False)
-    WorkingHour = Column(Numeric(precision=5, scale=2))
-    WorkingDay = Column(Numeric(precision=5, scale=2))
+    WorkingHour = Column(Numeric(precision=10, scale=2))
+    WorkingDay = Column(Numeric(precision=10, scale=2))
     Status = Column(Integer(), default=1)
     CreatedBy = Column(Integer())
     CreatedAt = Column(DateTime(timezone=None), default=datetime.now())
@@ -111,25 +127,25 @@ class vShiftDetail(db.Model):
     BreakAt = Column(Time(timezone=False))
     BreakEnd = Column(Time(timezone=False))
     HasBreak = Column(Boolean())
-    WorkingDay = Column((Numeric(precision=5, scale=2)))
-    WorkingHour = Column((Numeric(precision=5, scale=2)))
+    WorkingDay = Column((Numeric(precision=10, scale=2)))
+    WorkingHour = Column((Numeric(precision=10, scale=2)))
     DetailStatus = Column(Integer())
     CheckinRequired = Column(Boolean())
     CheckoutRequired = Column(Boolean())
 
     @staticmethod
-    def QueryMany(Page=None, PageSize=None, Condition=None):
+    def QueryMany(Page=None, PageSize=None, Condition=None) -> dict:
         try:
             app.logger.info(f"vShiftDetail.QueryMany bắt đầu")
             if PageSize and Page and PageSize > 0 and Page > 0:
-                data = db.paginate(db.select(vShiftDetail),
+                data = db.paginate(db.select(vShiftDetail).order_by(vShiftDetail.Id),
                                    page=Page, per_page=PageSize)
                 return {
                     "items": data.items,
                     "total": data.total
                 }
             else:
-                data = vShiftDetail.query.all()
+                data = vShiftDetail.query.order_by(vShiftDetail.Id).all()
                 return {
                     "items": data,
                     "total": len(data)
