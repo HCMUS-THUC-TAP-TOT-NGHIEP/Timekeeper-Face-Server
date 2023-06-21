@@ -6,8 +6,8 @@ from flask import current_app as app
 from flask import render_template, request
 from src.authentication.model import UserModel, UserSchema
 from src.db import db
-from src.email import send_email
-from src.extension import ProjectException
+from src.utils.email import send_email
+from src.utils.extension import ProjectException
 from src.jwt import (
     TokenBlockList,
     create_access_token,
@@ -116,7 +116,7 @@ def register():
         app.logger.exception(f"register thất bại. Có exception[{ex}]")
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ. Đăng ký tài khoản không thành công",
+            "Description": f"Xảy ra lỗi ở máy chủ. Đăng ký tài khoản không thành công",
             "ResponseData": None,
         }, 200
     finally:
@@ -212,7 +212,7 @@ def login():
         app.logger.error(f"login thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ. Đăng nhập tài khoản không thành công",
+            "Description": f"Xảy ra lỗi ở máy chủ. Đăng nhập tài khoản không thành công",
             "ResponseData": None,
         }, 200
     finally:
@@ -260,8 +260,6 @@ def request_reset_password():
             sender="admin",
             text_body="",
         )
-        print("clientUrl", clientUrl)
-        print("reset_link", reset_link)
         return {
             "Status": 1,
             "Description": None,
@@ -278,7 +276,7 @@ def request_reset_password():
         app.logger.exception(ex)
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ. \nKhông thể thay đổi mật khẩu",
+            "Description": f"Xảy ra lỗi ở máy chủ. \nKhông thể thay đổi mật khẩu",
             "ResponseData": None,
         }, 200
     finally:
@@ -417,7 +415,7 @@ def changePassword():
         app.logger.error(f"changePassword thất bại. Có exception[{ex}]")
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở máy chủ. Đổi mật khẩu tài khoản không thành công",
+            "Description": f"Xảy ra lỗi ở máy chủ. Đổi mật khẩu tài khoản không thành công",
             "ResponseData": None,
         }, 200
     finally:
