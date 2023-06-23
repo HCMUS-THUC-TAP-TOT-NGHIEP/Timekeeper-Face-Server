@@ -830,7 +830,7 @@ def UpdateBulkTimesheetDetailByImport():
                     raise ProjectException(
                         f"Ô D{i + 1} bị trống, chưa có ngày.")
                 try:
-                    date = datetime.strptime(date, "%d/%m/%Y")
+                    date = date.date()
                 except:
                     raise ProjectException(f"Ô D{i + 1} không đúng địng dạng DD/MM/YYYY")
                 if not shiftId:

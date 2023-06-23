@@ -637,7 +637,7 @@ def getShiftAssignmentList():
                 temp["EmployeeList"] = EmployeeList
             elif assignment["TargetType"] == TargetType.Department.value:
                 DepartmentList = db.session.execute(
-                    db.select(vShiftAssignmentDetail.DepartmentName)
+                    db.select(func.distinct(vShiftAssignmentDetail.DepartmentName))
                     .where(and_(vShiftAssignmentDetail.Id == assignment["Id"], vShiftAssignmentDetail.TargetType == TargetType.Department.value))
                 ).scalars().all()
                 temp["DepartmentList"] = DepartmentList
