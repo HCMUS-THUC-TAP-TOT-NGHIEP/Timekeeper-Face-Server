@@ -10,7 +10,7 @@ import uuid
 import os
 import pickle
 import face_recognition
-
+from flask import current_app as app
 
 class RecognitionData(db.Model):
     __tablename__ = "RecognitionData"
@@ -128,7 +128,7 @@ def save_images(images, id, name):
 # train ảnh khuôn mặt
 def train_model_face(path_train):
     try:
-        
+        app.logger.info(f"train_model_face start {path_train}")
         for Id in os.listdir(path_train):
             Id_path = os.path.join(path_train, Id)
             
@@ -152,10 +152,14 @@ def train_model_face(path_train):
                 # Save the face encodings and names to a file
         with open("encodings.pickle", "wb") as f:
             pickle.dump({"encodings": known_encodings, "names": known_names}, f)
+        app.logger.info("train_model_face OK")
         return known_encodings, known_names
 
     except Exception as ex:
+        app.logger.exception(f"train_model_face failed, exception[{ex}]")
         raise Exception(f"train_model failed. [exception{ex}]")
+    finally:
+        app.logger.info(f"train_model_face finish {path_train}")
 
 
 # nhận dạng khuôn mặt từ 1 ảnh

@@ -120,7 +120,7 @@ def recognition():
             raise ProjectException("Yêu cầu không hợp lệ do không cung cấp hình ảnh.")        
         if not AttendanceTime :
             raise ProjectException("Yêu cầu không hợp lệ do thời gian nhận diện không có hoặc không hợp lệ.")
-        AttendanceTime = datetime.fromisoformat(AttendanceTime)
+        # AttendanceTime = datetime.fromisoformat(AttendanceTime)
         #endregion
 
         RecognitionMethod = 1
