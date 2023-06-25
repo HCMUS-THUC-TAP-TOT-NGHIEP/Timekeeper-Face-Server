@@ -44,7 +44,7 @@ class RecognitionData(db.Model):
         service = DriveService()
         try:
             self.EmployeeId = employee_id
-            folder_name = time.__format__("%Y%m%d")
+            folder_name = datetime.fromisoformat(time).__format__("%Y%m%d")
             folders = service.search_folder(
                 query=f"(mimeType = '{MimeType.google_folder}') and (name = '{folder_name}') and ('{Config.DRIVE_FOLDER_ID}' in parents)")
             if folders is None or not folders:

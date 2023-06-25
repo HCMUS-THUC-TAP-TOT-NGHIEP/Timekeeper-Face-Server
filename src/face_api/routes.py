@@ -1,4 +1,5 @@
 from datetime import datetime
+from dateutil import tz
 
 from flask import Blueprint
 from flask import current_app as app
@@ -109,13 +110,12 @@ def recognition():
             jsonRequestData["Picture"] if "Picture" in jsonRequestData else None
         )
         AttendanceTime = (
-            jsonRequestData["AttendanceTime"] if "AttendanceTime" in jsonRequestData else datetime.now()
+            datetime.fromisoformat(jsonRequestData["AttendanceTime"]).astimezone(tz.tzlocal()).isoformat() if "AttendanceTime" in jsonRequestData else datetime.now()
         )
 
         #endregion
         
         #region validation
-
         if not Picture or len(Picture) == 0:
             raise ProjectException("Yêu cầu không hợp lệ do không cung cấp hình ảnh.")        
         if not AttendanceTime :
@@ -128,14 +128,23 @@ def recognition():
         Id = get_ID(embedder, encoder, Config.PATH_ENCODE, Config.PATH_MODEL, img)
 
         if Id == -1:
-            raise ProjectException(
-                "Khuôn mặt hiện tại chưa đăng ký hoặc nhận diện sai."
-            )
+            app.logger.error(f"recognition unknown")
+            return {
+                "Status": 2,
+                "Description": f"Không xác định. Vui lòng đăng ký khuôn mặt.",
+                "ResponseData": None,
+            }, 200
+
         
         employee = EmployeeModel.query.filter(EmployeeModel.Id == Id).first()
         if not employee:
-            raise ValueError(f"Không tìm thấy nhân viên mã {Id}")
-
+            # raise ValueError(f"Không tìm thấy nhân viên mã {Id}")
+            app.logger.error(f"recognition exception. Không tìm thấy nhân viên mã {Id}")
+            return {
+                "Status": 2,
+                "Description": f"Không xác định được nhân viên. Vui lòng kiểm tra log.",
+                "ResponseData": None,
+            }, 200
 
         name = f"{employee.LastName} {employee.FirstName}"
 
@@ -164,7 +173,7 @@ def recognition():
         app.logger.error(f"Nhận diện khuôn mặt thất bại. Có exception[{str(pEx)}]")
         return {
             "Status": 0,
-            "Description": f"Nhận diện không thành công. {pEx}",
+            "Description": f"{pEx}",
             "ResponseData": None,
         }, 200
     except Exception as ex:
