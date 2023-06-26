@@ -36,16 +36,16 @@ class ShiftAssignment(db.Model):
             departmentList = []
             total = 0
             if (self.TargetType == TargetType.Employee.value):
-                # query = db.select(EmployeeModel.Id, EmployeeModel.FirstName, EmployeeModel.LastName, EmployeeModel.Position).where(and_(
-                #     ShiftAssignmentDetail.ShiftAssignmentId == self.Id, EmployeeModel.Id == ShiftAssignmentDetail.Target))
                 query = db.select(EmployeeModel.Id, EmployeeModel.FirstName, EmployeeModel.LastName, EmployeeModel.Position).where(and_(
-                    ShiftAssignmentEmployee.ShiftAssignmentId == self.Id, EmployeeModel.Id == ShiftAssignmentEmployee.EmployeeId))
+                    ShiftAssignmentDetail.ShiftAssignmentId == self.Id, EmployeeModel.Id == ShiftAssignmentDetail.Target))
+                # query = db.select(EmployeeModel.Id, EmployeeModel.FirstName, EmployeeModel.LastName, EmployeeModel.Position).where(and_(
+                #     ShiftAssignmentEmployee.ShiftAssignmentId == self.Id, EmployeeModel.Id == ShiftAssignmentEmployee.EmployeeId))
                 employeeList = EmployeeSchema(many=True).dump(
                     db.session.execute(query).all())
             elif (self.TargetType == TargetType.Department.value):
                 query = db.select(DepartmentModel).where(and_(
-                    # ShiftAssignmentDetail.ShiftAssignmentId == self.Id, DepartmentModel.Id == ShiftAssignmentDepartment.Target))
-                    ShiftAssignmentDepartment.ShiftAssignmentId == self.Id, DepartmentModel.Id == ShiftAssignmentDepartment.DepartmentId))
+                    ShiftAssignmentDetail.ShiftAssignmentId == self.Id, DepartmentModel.Id == ShiftAssignmentDetail.Target))
+                # ShiftAssignmentDepartment.ShiftAssignmentId == self.Id, DepartmentModel.Id == ShiftAssignmentDepartment.DepartmentId))
                 departmentList = DepartmentSchema(many=True).dump(
                     db.session.execute(query).scalars().all())
 
@@ -102,39 +102,39 @@ class ShiftAssignment(db.Model):
 
     def InsertManyTargets(self, IdList: list, userId: int, target_type: int = None) -> bool:
         try:
-            assignment_type = self.TargetType
-            if assignment_type == TargetType.Department.value:
-                insertArr = list(map(lambda x: {
-                    "DepartmentId": x,
-                    "ShiftAssignmentId": self.Id,
-                    "CreatedBy": userId,
-                    "ModifiedBy": userId,
-                }, IdList))
-                result = db.session.execute(
-                    insert(ShiftAssignmentDepartment), insertArr)
-
-            elif assignment_type == TargetType.Employee.value:
-                insertArr = list(map(lambda x: {
-                    "EmployeeId": x,
-                    "ShiftAssignmentId": self.Id,
-                    "CreatedBy": userId,
-                    "ModifiedBy": userId,
-                }, IdList))
-                result = db.session.execute(
-                    insert(ShiftAssignmentEmployee), insertArr)
-          # if len(IdList):
-            #     insertArray = []
-            #     for id in IdList:
-            #         insertArray.append({
-            #             "Target": id,
+            #     assignment_type = self.TargetType
+            #     if assignment_type == TargetType.Department.value:
+            #         insertArr = list(map(lambda x: {
+            #             "DepartmentId": x,
             #             "ShiftAssignmentId": self.Id,
             #             "CreatedBy": userId,
             #             "ModifiedBy": userId,
-            #         })
-            #     result = db.session.execute(
-            #         insert(ShiftAssignmentDetail), insertArray)
-            #     print(result)
-            db.session.commit()
+            #         }, IdList))
+            #         result = db.session.execute(
+            #             insert(ShiftAssignmentDepartment), insertArr)
+
+            #     elif assignment_type == TargetType.Employee.value:
+            #         insertArr = list(map(lambda x: {
+            #             "EmployeeId": x,
+            #             "ShiftAssignmentId": self.Id,
+            #             "CreatedBy": userId,
+            #             "ModifiedBy": userId,
+            #         }, IdList))
+            #         result = db.session.execute(
+            #             insert(ShiftAssignmentEmployee), insertArr)
+            if len(IdList):
+                insertArray = []
+                for id in IdList:
+                    insertArray.append({
+                        "Target": id,
+                        "ShiftAssignmentId": self.Id,
+                        "CreatedBy": userId,
+                        "ModifiedBy": userId,
+                    })
+                result = db.session.execute(
+                    insert(ShiftAssignmentDetail), insertArray)
+                print(result)
+                db.session.commit()
         except Exception as ex:
             db.session.rollback()
             app.logger.exception(
@@ -147,18 +147,22 @@ class ShiftAssignment(db.Model):
         try:
             assignment_type = self.TargetType if target_type is None else target_type
             if len(TargetList):
-                # query = delete(ShiftAssignmentDetail).where(and_(ShiftAssignmentDetail.ShiftAssignmentId == self.Id,
-                #                                              ShiftAssignmentDetail.Target.in_(TargetList))
-                #                                         )
-                if assignment_type == TargetType.Department.value:
-                    query = delete(ShiftAssignmentDepartment).where(and_(
-                        ShiftAssignmentDepartment.ShiftAssignmentId == self.Id, ShiftAssignmentDepartment.DepartmentId.in_(TargetList)))
-                elif assignment_type == TargetType.Employee.value:
-                    query = delete(ShiftAssignmentEmployee).where(and_(
-                        ShiftAssignmentEmployee.ShiftAssignmentId == self.Id, ShiftAssignmentEmployee.EmployeeId.in_(TargetList)))
-                if query:
-                    db.session.execute(query)
-                    db.session.commit()
+                query = delete(ShiftAssignmentDetail).where(and_(ShiftAssignmentDetail.ShiftAssignmentId == self.Id,
+                                                                 ShiftAssignmentDetail.Target.in_(TargetList))
+                                                            )
+                db.session.execute(query)
+                db.session.commit()
+                # if assignment_type == TargetType.Department.value:
+                #     query = delete(ShiftAssignmentDepartment).where(and_(
+                #         ShiftAssignmentDepartment.ShiftAssignmentId == self.Id, ShiftAssignmentDepartment.DepartmentId.in_(TargetList)))
+                #     db.session.execute(query)
+                #     db.session.commit()
+                # elif assignment_type == TargetType.Employee.value:
+                #     query = delete(ShiftAssignmentEmployee).where(and_(
+                #         ShiftAssignmentEmployee.ShiftAssignmentId == self.Id, ShiftAssignmentEmployee.EmployeeId.in_(TargetList)))
+                #     db.session.execute(query)
+                #     db.session.commit()
+                # if query:
             return True
         except Exception as ex:
             db.session.rollback()
@@ -191,7 +195,7 @@ class ShiftAssignmentSchema(marshmallow.Schema):
 class ShiftAssignmentDetail(db.Model):
     __tablename__ = "ShiftAssignmentDetail"
 
-    Id = Column(Integer(), primary_key=True)
+    Id = Column(Integer(), autoincrement=True)
     ShiftAssignmentId = Column(Integer(), nullable=False,  primary_key=True)
     Target = Column(Integer(), nullable=False,  primary_key=True)
     Status = Column(String(), default='1')
@@ -201,7 +205,7 @@ class ShiftAssignmentDetail(db.Model):
     ModifiedAt = Column(DateTime(timezone=None), default=datetime.now())
 
     @staticmethod
-    def RemoveBulkByIds(IdList: []) -> bool:
+    def RemoveBulkByIds(IdList: []):
         try:
             if len(IdList):
                 query = delete(ShiftAssignmentDetail).where(

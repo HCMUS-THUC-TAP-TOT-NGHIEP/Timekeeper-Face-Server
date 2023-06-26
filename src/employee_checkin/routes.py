@@ -901,3 +901,29 @@ def UpdateBulkTimesheetDetailByImport():
         }, 200
     finally:
         app.logger.info(f"UpdateBulkTimesheetDetailByImport kết thúc")
+
+
+@EmployeeCheckinRoute.route("/", methods=["POST"])
+def CreateCheckinRecord():
+    try:
+        app.logger.info(f"CreateCheckinRecord bắt đầu.")
+        
+
+    except ProjectException as pEx:
+        app.logger.exception(
+            f"CreateCheckinRecord thất bại. Có exception[{str(pEx)}]")
+        return {
+            "Status": 0,
+            "Description": f"{str(pEx)}",
+            "ResponseData": None,
+        }, 200
+    except Exception as ex:
+        app.logger.exception(
+            f"CreateCheckinRecord thất bại. Có exception[{str(ex)}]")
+        return {
+            "Status": 0,
+            "Description": f"Xảy ra lỗi ở máy chủ.",
+            "ResponseData": None,
+        }, 200
+    finally:
+        app.logger.info(f"CreateCheckinRecord kết thúc")

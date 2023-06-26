@@ -30,6 +30,8 @@ from openpyxl.styles import NamedStyle, Font, PatternFill, Color, Alignment, Bor
 
 class Timesheet(db.Model):
     __tablename__ = "Timesheet"
+    __table_args__ = {'extend_existing': True}
+
     Id = Column(BigInteger(), primary_key=True)
     Name = Column(String(), nullable=False)
     DateFrom = Column(Date(), nullable=False)
@@ -299,6 +301,7 @@ class TimesheetSchema(marshmallow.Schema):
 
 class TimesheetDetail(db.Model):
     __tablename__ = "TimesheetDetail"
+    __table_args__ = {'extend_existing': True}
 
     Id = Column(BigInteger(), primary_key=True)
     TimesheetId = Column(BigInteger(), nullable=False)
@@ -379,6 +382,7 @@ class TimesheetDetail(db.Model):
 
 class vTimesheetDetail(db.Model):
     __tablename__ = "vTimesheetDetail"
+    __table_args__ = {'extend_existing': True}
 
     Id = Column(BigInteger(), primary_key=True)
     Date = Column(Date(), nullable=False)

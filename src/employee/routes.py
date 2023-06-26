@@ -251,20 +251,34 @@ def UpdateEmployeeInfo():
 
         if not employeeInfo:
             raise Exception(f"Can not find employee id[{EmployeeId}]")
-
-        hasSomeChanges = False
-        for key in jsonRequestData:
-            if getattr(employeeInfo, key) != jsonRequestData[key]:
-                hasSomeChanges = True
-                setattr(employeeInfo, key, jsonRequestData[key])
-
-        if not hasSomeChanges:
-            return {
-                "Status": 1,
-                "Description": f"Không có sự thay đổi nào trong dữ liệu của Nhân viên {employeeInfo.Id}",
-                "ResponseData": None,
-            }
-
+        if 'FirstName' in jsonRequestData:
+            employeeInfo.FirstName = jsonRequestData["FirstName"]
+        if 'LastName' in jsonRequestData:
+            employeeInfo.LastName = jsonRequestData["LastName"]
+        if 'Email' in jsonRequestData:
+            employeeInfo.Email = jsonRequestData["Email"]
+        if 'MobilePhone' in jsonRequestData:
+            employeeInfo.MobilePhone = jsonRequestData["MobilePhone"]
+        if 'DateOfBirth' in jsonRequestData:
+            employeeInfo.DateOfBirth = jsonRequestData["DateOfBirth"]
+        if 'Gender' in jsonRequestData:
+            employeeInfo.Gender = jsonRequestData["Gender"]
+        if 'JoinDate' in jsonRequestData:
+            employeeInfo.JoinDate = jsonRequestData["JoinDate"]
+        if 'LeaveDate' in jsonRequestData:
+            employeeInfo.LeaveDate = jsonRequestData["LeaveDate"]
+        if 'DepartmentId' in jsonRequestData:
+            if employeeInfo.DepartmentId is None:
+                employeeInfo.DepartmentId = int(jsonRequestData["DepartmentId"])
+            elif employeeInfo.DepartmentId != int(jsonRequestData["DepartmentId"]):
+                current_department = DepartmentModel.query.filer_by(Id=employeeInfo.DepartmentId).first()
+                new_department = DepartmentModel.query.filer_by(Id=int(jsonRequestData["DepartmentId"])).first()
+                if new_department:
+                    employeeInfo.DepartmentId = new_department.Id
+                if current_department and current_department.ManagerId == employeeInfo.Id:
+                    current_department.ManagerId = None
+        if 'Position' in jsonRequestData:
+            employeeInfo.Position = jsonRequestData['Position']
         employeeInfo.ModifiedAt = datetime.now()
         employeeInfo.ModifiedBy = user.Id
         db.session.commit()
@@ -359,14 +373,16 @@ def GetManyEmployee():
         if request.method == "POST":
             jsonRequestData = request.get_json()
             department = jsonRequestData["Department"] if "Department" in jsonRequestData else None
-            result = EmployeeModel.GetEmployeeListByDepartment(department)
+            searchString = args["SearchString"] if "SearchString" in args else None
+            result = EmployeeModel.GetEmployeeList(department=[department] if department else None, name=searchString)
             return {
                 "Status": 1,
                 "Description": None,
-                "ResponseData": {
-                    "EmployeeList": employeeInfoListSchema.dump(result),
-                    "Total": len(result)
-                },
+                "ResponseData": result,
+                # "ResponseData": {
+                #     "EmployeeList": employeeInfoListSchema.dump(result),
+                #     "Total": len(result)
+                # },
             }, 200
     except Exception as ex:
         app.logger.info(

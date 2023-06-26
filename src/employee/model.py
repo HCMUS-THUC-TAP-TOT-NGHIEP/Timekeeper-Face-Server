@@ -1,7 +1,7 @@
 from src.db import db
 from src import marshmallow
 from marshmallow import Schema, fields
-from sqlalchemy import Column, Integer, String, SmallInteger, DateTime, Boolean, and_, select
+from sqlalchemy import Column, Integer, String, SmallInteger, DateTime, Boolean, and_, func
 from datetime import datetime
 from flask import current_app as app
 from src.department.model import DepartmentModel
@@ -10,6 +10,7 @@ from src.department.model import DepartmentModel
 
 class EmployeeModel(db.Model):
     __tablename__ = "EmployeeInfo"
+    __table_args__ = {'extend_existing': True} 
 
     Id = Column(Integer(), primary_key=True)
     FirstName = Column(String(), nullable=False)
@@ -62,9 +63,49 @@ class EmployeeModel(db.Model):
             app.logger.info(
                 "EmployeeModel.GetEmployeeListByDepartment() kết thúc")
 
+    @staticmethod
+    def GetEmployeeList(department: list[int], name: str, page: int=0, perPage: int=0):
+        '''
+        Tìm kiếm nhân viên
+        Trả về danh sách nhân viên
+        Args:
+        department: phòng ban hoặc danh sách phòng ban
+        name: họ hoặc tên
+        page: trang
+        perPage: số nhân viên trên 1 trang
+        '''
+        try:
+            query = db.select(EmployeeModel)
+            if department:
+                query = query.where(EmployeeModel.DepartmentId.in_(department))
+            if name and name.strip():
+                query = query.where(func.concat(func.upper(EmployeeModel.LastName)," ", func.upper(EmployeeModel.FirstName)).like(f"%{name.upper()}%"))
+            query = query.order_by(EmployeeModel.DepartmentId, EmployeeModel.Id)
+            if page and perPage:
+                result = db.paginate(query, page=page, per_page=perPage)
+                return {
+                    "EmployeeList": employeeInfoListSchema.dump(result.items),
+                    "Total": result.total
+                }
+            else:
+                result = db.session.execute(query).scalars().all()
+                return {
+                    "EmployeeList": employeeInfoListSchema.dump(result),
+                    "Total": len(result)
+                }
+        except Exception as ex:
+            app.logger.error(
+                f"EmployeeModel.GetEmployeeList() có exception[{str(ex)}]")
+            raise ex
+        finally:
+            app.logger.info(
+                "EmployeeModel.GetEmployeeList() kết thúc")
+
+
 
 class vEmployeeModel(db.Model):
     __tablename__ = "vEmployeeDetail"
+    __table_args__ = {'extend_existing': True} 
 
     Id = Column(Integer(), primary_key=True)
     FirstName = Column(String(), nullable=False)
