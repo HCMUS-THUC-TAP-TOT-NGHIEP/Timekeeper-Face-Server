@@ -26,22 +26,24 @@ class UserModel(db.Model):
     @property
     def password(self):
         raise AttributeError("password is not a readable attribute")
+
     @password.setter
     def password(self, value):
         self.PasswordHash = generate_password_hash(value)
+
     def verify_password(self, password):
         return check_password_hash(self.PasswordHash, password)
 
     def __init__(self) -> None:
         super().__init__()
 
-
 # SCHEMA
 
 
 class UserSchema(marshmallow.Schema):
     class Meta:
-        fields = ("Id", "EmailAddress", "Username", "EmployeeId", "Status", "Role")
+        fields = ("Id", "EmailAddress", "Username",
+                  "EmployeeId", "Status", "Role")
 
 
 user_schema = UserSchema()
