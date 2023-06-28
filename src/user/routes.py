@@ -69,7 +69,6 @@ def get_authorization():
         role = RoleModel.query.filter_by(Id=current_user.Role).first()
         if not role:
             raise ProjectException(f"Phân quyền cho người dùng {username} đã bị thay đổi hoặc xóa bởi người khác.")
-
         response = {
                     "Status": 1,
                     "Description": None,
@@ -77,7 +76,6 @@ def get_authorization():
                         "Authorization": {}
                     }
         }
-
         if target == "User":
             if role.Id == 1:
                 response["ResponseData"]["Authorization"] = {
@@ -97,7 +95,6 @@ def get_authorization():
                         "delete": False,
                     }
                 }
-
         elif target == "Employee": 
             if role.Id == 1 or role.Id == 2:
                 response["ResponseData"]["Authorization"] = {
@@ -117,15 +114,85 @@ def get_authorization():
                         "delete": False,
                     }
                 }
-
-        elif target == "Department": pass
-        elif target == "Shift": pass
-        elif target == "ShiftAssignment": pass
-        elif target == "Timesheet": pass
+        elif target == "Department": 
+            if role.Id == 1 or role.Id == 2:
+                response["ResponseData"]["Authorization"] = {
+                    "Department": {
+                        "create": True,
+                        "read": True,
+                        "update": True,
+                        "delete": True,
+                    }
+                }
+            else:
+                response["ResponseData"]["Authorization"] = {
+                    "Department": {
+                        "create": False,
+                        "read": False,
+                        "update": False,
+                        "delete": False,
+                    }
+                }
+        elif target == "Shift": 
+            if role.Id == 1 or role.Id == 2:
+                response["ResponseData"]["Authorization"] = {
+                    "Shift": {
+                        "create": True,
+                        "read": True,
+                        "update": True,
+                        "delete": True,
+                    }
+                }
+            else:
+                response["ResponseData"]["Authorization"] = {
+                    "Shift": {
+                        "create": False,
+                        "read": False,
+                        "update": False,
+                        "delete": False,
+                    }
+                }
+        elif target == "ShiftAssignment": 
+            if role.Id == 1 or role.Id == 2:
+                response["ResponseData"]["Authorization"] = {
+                    "ShiftAssignment": {
+                        "create": True,
+                        "read": True,
+                        "update": True,
+                        "delete": True,
+                    }
+                }
+            else:
+                response["ResponseData"]["Authorization"] = {
+                    "ShiftAssignment": {
+                        "create": False,
+                        "read": False,
+                        "update": False,
+                        "delete": False,
+                    }
+                }
+        elif target == "Timesheet": 
+            if role.Id == 1 or role.Id == 2:
+                response["ResponseData"]["Authorization"] = {
+                    "Timesheet": {
+                        "create": True,
+                        "read": True,
+                        "update": True,
+                        "delete": True,
+                    }
+                }
+            else:
+                response["ResponseData"]["Authorization"] = {
+                    "Timesheet": {
+                        "create": False,
+                        "read": False,
+                        "update": False,
+                        "delete": False,
+                    }
+                }
         else: pass
 
         return response
-
     except ProjectException as pEx:
         app.logger.exception(f"check_authorization có lỗi. {pEx}")
         return {
