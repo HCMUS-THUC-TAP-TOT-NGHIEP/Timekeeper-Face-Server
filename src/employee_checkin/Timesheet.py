@@ -360,7 +360,7 @@ class TimesheetDetail(db.Model):
         finally:
             app.logger.exception(f"TimesheetDetail.IncludeAssignment finish. ")
 
-    def updateOne(self, data: dict = None):
+    def UpdateOne(self, data: dict = None):
         try:
             if data is None:
                 return
@@ -427,12 +427,12 @@ class TimesheetDetailSchema(marshmallow.SQLAlchemyAutoSchema):
     ShiftName = fields.String()
     WorkingHour = fields.Integer()
     WorkingDay = fields.Integer()
-    LateMinutes = fields.Method("get_late_minutes")
-    EarlyMinutes = fields.Method("get_early_minutes")
-    Status = fields.Method("get_status")
-    TotalHour = fields.Method("get_total_hour")
+    LateMinutes = fields.Method("GetLateMinutes")
+    EarlyMinutes = fields.Method("GetEarlyMinutes")
+    Status = fields.Method("GetStatus")
+    TotalHour = fields.Method("GetTotalHours")
 
-    def get_status(self, obj):
+    def GetStatus(self, obj):
         try:
             if obj.CheckinTime < obj.StartTime:
                 return "Vào sớm"
@@ -441,7 +441,7 @@ class TimesheetDetailSchema(marshmallow.SQLAlchemyAutoSchema):
         except:
             return None
 
-    def get_late_minutes(self, obj) -> int:
+    def GetLateMinutes(self, obj) -> int:
         try:
             if obj.StartTime and obj.CheckinTime:
                 result = subtractTime(obj.StartTime, obj.CheckinTime)
@@ -451,7 +451,7 @@ class TimesheetDetailSchema(marshmallow.SQLAlchemyAutoSchema):
         except:
             return None
 
-    def get_early_minutes(self, obj) -> int:
+    def GetEarlyMinutes(self, obj) -> int:
         try:
             if obj.FinishTime and obj.CheckoutTime:
                 result = subtractTime(obj.CheckoutTime, obj.FinishTime)
@@ -461,7 +461,7 @@ class TimesheetDetailSchema(marshmallow.SQLAlchemyAutoSchema):
         except:
             return None
 
-    def get_total_hour(self, obj) -> float:
+    def GetTotalHours(self, obj) -> float:
         try:
             if not obj.BreakEnd or not obj.BreakAt:
                 delta = subtractTime(obj.CheckinTime, obj.CheckoutTime)
