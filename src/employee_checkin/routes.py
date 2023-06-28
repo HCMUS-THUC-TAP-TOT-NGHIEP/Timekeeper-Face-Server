@@ -18,7 +18,7 @@ from src.employee.model import (EmployeeModel, employeeInfoListSchema,
 from src.employee_checkin.AttendanceStatistic import (
     AttendanceStatistic, AttendanceStatisticSchema, AttendanceStatisticV2)
 from src.employee_checkin.EmployeeCheckin import (EmployeeCheckin,
-                                                  employeeCheckinListSchema)
+                                                  employeeCheckinListSchema, CheckinMethodModel, CheckinMethodSchema)
 from src.employee_checkin.Timesheet import (Timesheet, TimesheetDetail,
                                             TimesheetDetailSchema,
                                             timesheetDetailListSchema,
@@ -108,6 +108,42 @@ def createCheckinRecord():
     finally:
         app.logger.info(f"createCheckinRecord kết thúc")
 
+# GET api/checkin/method
+@EmployeeCheckinRoute.route("/method", methods=["GET"])
+def GetAllCheckinMethods():
+    try: 
+        app.logger.info(f"GetAllCheckinMethods bắt đầu")
+        result = CheckinMethodModel.query.all()
+        app.logger.info(f"GetAllCheckinMethods thành công")
+        return {
+            "Status": 1,
+            "Description": f"",
+            "ResponseData": {
+                "CheckinMethodList": CheckinMethodSchema(many=True).dump(result),
+                "Total": len(result)
+            },
+        }, 200
+    except ProjectException as pEx:
+        db.session.rollback()
+        app.logger.exception(
+            f"GetAllCheckinMethods thất bại. Có exception[{str(pEx)}]")
+        return {
+            "Status": 0,
+            "Description": f"{str(pEx)}",
+            "ResponseData": None,
+        }, 200
+    except Exception as ex:
+        db.session.rollback()
+        app.logger.exception(
+            f"GetAllCheckinMethods thất bại. Có exception[{str(ex)}]")
+        return {
+            "Status": 0,
+            "Description": f"Xảy ra lỗi ở máy chủ.",
+            "ResponseData": None,
+        }, 200
+    finally:
+        app.logger.info(f"GetAllCheckinMethods kết thúc")
+
 # GET "api/checkin/list"
 @EmployeeCheckinRoute.route("/list", methods=["POST"])
 @jwt_required()
@@ -170,7 +206,7 @@ def getCheckinRecord():
     finally:
         app.logger.info(f"getCheckinRecord kết thúc")
 
-# GET "api/checkin/list"
+# GET "api/checkin/list/v2"
 @EmployeeCheckinRoute.route("/list/v2", methods=["POST"])
 @jwt_required()
 def getCheckinRecordV2():
@@ -185,12 +221,14 @@ def getCheckinRecordV2():
                     if "DateFrom" in jsonRequestData else None)
         DateTo = (jsonRequestData["DateTo"]
                   if "DateTo" in jsonRequestData else None)
+        MethodList = (jsonRequestData["MethodList"]
+                  if "MethodList" in jsonRequestData else [])
         Page = (jsonRequestData["Page"]
                   if "Page" in jsonRequestData else 1)
         PageSize = (jsonRequestData["PageSize"]
                   if "PageSize" in jsonRequestData else 50)
         result = AttendanceStatisticV2.QueryMany(
-            DateFrom=DateFrom, DateTo=DateTo, Keyword=Keyword, Page=Page, PageSize=PageSize)
+            DateFrom=DateFrom, DateTo=DateTo, Keyword=Keyword, Page=Page, PageSize=PageSize, MethodList=MethodList)
         count = result.total
         data = AttendanceStatisticSchema(many=True).dump(result.items)
         app.logger.info(f"getCheckinRecord v2 thành công")
