@@ -100,6 +100,12 @@ def AddNewDepartment():
         managerId = (
             jsonRequestData["ManagerId"] if "ManagerId" in jsonRequestData else None
         )
+
+        user = UserModel.query.filter_by(Id=managerId).first()
+        if not user:
+            raise ProjectException(
+                f"Không tìm thấy mã nhân viên {managerId} để làm quản lý.")
+
         newDepartment = DepartmentModel()
         newDepartment.Name = departmentName
         newDepartment.ManagerId = managerId
@@ -109,6 +115,9 @@ def AddNewDepartment():
         newDepartment.ModifiedBy = user.Id
         newDepartment.Status = "1"
         db.session.add(newDepartment)
+        db.session.flush()
+        db.session.refresh(newDepartment)
+        user.DepartmentId = newDepartment.Id
         db.session.commit()
         app.logger.info(f"AddNewDepartment thành công.")
         return {
@@ -162,7 +171,12 @@ def UpdateDepartment():
         if employee:
             employee.DepartmentId = DepartmentId
         if managerId and managerId != department.ManagerId:
+            user = UserModel.query.filter_by(Id=managerId).first()
+            if not user:
+                raise ProjectException(
+                    f"Không tìm thấy mã nhân viên {managerId} để làm quản lý.")
             department.ManagerId = managerId
+            user.DepartmentId = department.Id
         if isinstance(status, int) and status != department.Status:
             department.Status = status
 

@@ -1,7 +1,7 @@
 from src.db import db
 from src import marshmallow
 from marshmallow import Schema, fields
-from sqlalchemy import Column, Integer, String, SmallInteger, DateTime, Boolean, and_, func
+from sqlalchemy import Column, Integer, String, SmallInteger, DateTime, Boolean, and_, func, or_
 from datetime import datetime
 from flask import current_app as app
 from src.department.model import DepartmentModel
@@ -77,7 +77,11 @@ class EmployeeModel(db.Model):
         try:
             query = db.select(EmployeeModel)
             if department:
-                query = query.where(EmployeeModel.DepartmentId.in_(department))
+                if None in department:
+                # query = query.where(EmployeeModel.DepartmentId.in_(department))
+                    query = query.where(or_(EmployeeModel.DepartmentId.in_(department), EmployeeModel.DepartmentId == None))
+                else:
+                    query = query.where(EmployeeModel.DepartmentId.in_(department))
             if name and name.strip():
                 query = query.where(func.concat(func.upper(EmployeeModel.LastName)," ", func.upper(EmployeeModel.FirstName)).like(f"%{name.upper()}%"))
             query = query.order_by(EmployeeModel.DepartmentId, EmployeeModel.Id)
