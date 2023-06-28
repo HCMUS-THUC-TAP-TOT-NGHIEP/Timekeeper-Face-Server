@@ -33,7 +33,7 @@ from src.shift.model import (DayInWeekEnum, ShiftAssignment,
                              TargetType)
 from src.shift.ShiftModel import (ShiftDetailModel, ShiftDetailSchema,
                                   ShiftModel, vShiftDetail, vShiftDetailSchema)
-from src.utils.helpers import DeleteFile
+from src.utils.helpers import DeleteFile, daterange
 from dateutil.parser import parse
 EmployeeCheckinRoute = Blueprint("/checkin", __name__)
 
@@ -78,7 +78,7 @@ def createCheckinRecord():
 
         #endregion
 
-        EmployeeCheckin.insert_one(app=app._get_current_object(),employee_id=EmployeeId, method=Method, method_text="", time=AttendanceTime, image_data=Image.split(",")[-1])
+        EmployeeCheckin.InsertOne(app=app._get_current_object(),employee_id=EmployeeId, method=Method, method_text="", time=AttendanceTime, image_data=Image.split(",")[-1])
         db.session.commit()
         app.logger.info(f"createCheckinRecord thành công.")
         return {
@@ -422,7 +422,7 @@ def modifyTimesheetDetail():
         exist = TimesheetDetail.query.filter_by(Id=id).first()
         if not exist:
             raise ProjectException(f"Không tồn tại thời gian biểu có mã {Id}")
-        exist.updateOne(jsonRequestData)
+        exist.UpdateOne(jsonRequestData)
         return {
             "Status": 1,
             "Description": None,
@@ -940,12 +940,11 @@ def UpdateBulkTimesheetDetailByImport():
     finally:
         app.logger.info(f"UpdateBulkTimesheetDetailByImport kết thúc")
 
-
+# POST api/checkin
 @EmployeeCheckinRoute.route("/", methods=["POST"])
 def CreateCheckinRecord():
     try:
         app.logger.info(f"CreateCheckinRecord bắt đầu.")
-        
 
     except ProjectException as pEx:
         app.logger.exception(
@@ -965,3 +964,101 @@ def CreateCheckinRecord():
         }, 200
     finally:
         app.logger.info(f"CreateCheckinRecord kết thúc")
+
+# POST api/checkin/late-early/count
+@EmployeeCheckinRoute.route("/late-early/count", methods=["POST"])
+@admin_required()
+def CountLateEarly():
+    try:
+        app.logger.info(f"CountLateEarly bắt đầu.")
+        jsonRequestData = request.get_json()
+        DateFrom = datetime.fromisoformat(jsonRequestData["DateFrom"]) if "DateFrom" in jsonRequestData and jsonRequestData["DateFrom"] else None
+        if DateFrom is None:
+            raise Exception("Ngày không hợp lệ")
+        DateTo = datetime.fromisoformat(jsonRequestData["DateTo"]) if "DateTo" in jsonRequestData and jsonRequestData["DateTo"] else None
+        countList = []
+        dayList = []
+        if DateTo is None: 
+            result = EmployeeCheckin.CountLateEarly(DateFrom)
+            countList.append(result)
+            dayList.append(DateFrom.day)
+        else:
+            for date in daterange(DateFrom, DateTo):
+                result = EmployeeCheckin.CountLateEarly(date)
+                countList.append(result)
+                dayList.append(date.day)
+        return {
+            "Status": 1,
+            "Description": None,
+            "ResponseData": {
+                "CountList": countList,
+                "DateList": dayList,
+            },
+        }, 200
+    except ProjectException as pEx:
+        app.logger.exception(
+            f"CountLateEarly thất bại. Có exception[{str(pEx)}]")
+        return {
+            "Status": 0,
+            "Description": f"{str(pEx)}",
+            "ResponseData": None,
+        }, 200
+    except Exception as ex:
+        app.logger.exception(
+            f"CountLateEarly thất bại. Có exception[{str(ex)}]")
+        return {
+            "Status": 0,
+            "Description": f"Xảy ra lỗi ở máy chủ.",
+            "ResponseData": None,
+        }, 200
+    finally:
+        app.logger.info(f"CountLateEarly kết thúc")
+
+# POST api/checkin/off/count
+@EmployeeCheckinRoute.route("/off/count", methods=["POST"])
+@admin_required()
+def CountOff():
+    try:
+        app.logger.info(f"CountOff bắt đầu.")
+        jsonRequestData = request.get_json()
+        DateFrom = datetime.fromisoformat(jsonRequestData["DateFrom"]) if "DateFrom" in jsonRequestData and jsonRequestData["DateFrom"] else None
+        if DateFrom is None:
+            raise Exception("Ngày không hợp lệ")
+        DateTo = datetime.fromisoformat(jsonRequestData["DateTo"]) if "DateTo" in jsonRequestData and jsonRequestData["DateTo"] else None
+        countList = []
+        dayList = []
+        if DateTo is None: 
+            result = EmployeeCheckin.CountOff(DateFrom)
+            countList.append(result)
+            dayList.append(DateFrom.day)
+        else:
+            for date in daterange(DateFrom, DateTo):
+                result = EmployeeCheckin.CountOff(date)
+                countList.append(result)
+                dayList.append(date.day)
+        return {
+            "Status": 1,
+            "Description": None,
+            "ResponseData": {
+                "CountList": countList,
+                "DateList": dayList,
+            },
+        }, 200
+    except ProjectException as pEx:
+        app.logger.exception(
+            f"CountOff thất bại. Có exception[{str(pEx)}]")
+        return {
+            "Status": 0,
+            "Description": f"{str(pEx)}",
+            "ResponseData": None,
+        }, 200
+    except Exception as ex:
+        app.logger.exception(
+            f"CountOff thất bại. Có exception[{str(ex)}]")
+        return {
+            "Status": 0,
+            "Description": f"Xảy ra lỗi ở máy chủ.",
+            "ResponseData": None,
+        }, 200
+    finally:
+        app.logger.info(f"CountOff kết thúc")

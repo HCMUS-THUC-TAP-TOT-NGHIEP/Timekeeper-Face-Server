@@ -148,7 +148,7 @@ def recognition():
 
         name = f"{employee.LastName} {employee.FirstName}"
 
-        t = threading.Thread(target=EmployeeCheckin.insert_one, args=(app._get_current_object(), Id, RecognitionMethod, "Khuôn mặt", AttendanceTime,  Picture.split(",")[1] , ) )
+        t = threading.Thread(target=EmployeeCheckin.InsertOne, args=(app._get_current_object(), Id, RecognitionMethod, "Khuôn mặt", AttendanceTime,  Picture.split(",")[1] , ) )
         t.start()
                 
         app.logger.info("EmployeeID:" + str(Id))

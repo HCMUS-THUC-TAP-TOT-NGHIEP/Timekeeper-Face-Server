@@ -111,11 +111,6 @@ class AttendanceStatisticV2(db.Model):
             if MethodList and len(MethodList):
                 query = query.where(
                     AttendanceStatisticV2.Method.in_(MethodList))
-            # else:
-            #     query = query.where(and_(
-            #             AttendanceStatisticV2.Date.between(DateFrom, DateTo)
-            #         )).distinct()\
-            #         .order_by(AttendanceStatisticV2.Date, AttendanceStatisticV2.Id, AttendanceStatisticV2.Time)
 
             query = query.distinct().order_by(AttendanceStatisticV2.Date,
                                               AttendanceStatisticV2.Id, AttendanceStatisticV2.Time)
