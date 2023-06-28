@@ -59,7 +59,7 @@ def get_authorization():
         identity = get_jwt_identity()
         claim = get_jwt()
         user_id = claim["id"]
-        username = get_jwt_identity["username"]
+        username = identity["username"]
         args = request.args
         target = args["Target"] if "Target" in args else None
         permission = args["Permission"] if "Permission" in args else None
@@ -74,13 +74,13 @@ def get_authorization():
                     "Status": 1,
                     "Description": None,
                     "ResponseData": {
-                        "authorization": {}
+                        "Authorization": {}
                     }
         }
 
         if target == "User":
             if role.Id == 1:
-                response["ResponseData"]["authorization"] = {
+                response["ResponseData"]["Authorization"] = {
                     "User": {
                         "create": True,
                         "read": True,
@@ -89,10 +89,10 @@ def get_authorization():
                     }
                 }
             else:
-                response["ResponseData"]["authorization"] = {
+                response["ResponseData"]["Authorization"] = {
                     "User": {
                         "create": False,
-                        "read": False,
+                        "read": True,
                         "update": False,
                         "delete": False,
                     }
@@ -100,7 +100,7 @@ def get_authorization():
 
         elif target == "Employee": 
             if role.Id == 1 or role.Id == 2:
-                response["ResponseData"]["authorization"] = {
+                response["ResponseData"]["Authorization"] = {
                     "Employee": {
                         "create": True,
                         "read": True,
@@ -109,7 +109,7 @@ def get_authorization():
                     }
                 }
             else:
-                response["ResponseData"]["authorization"] = {
+                response["ResponseData"]["Authorization"] = {
                     "Employee": {
                         "create": False,
                         "read": False,
