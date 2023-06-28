@@ -35,6 +35,7 @@ from src.shift.ShiftModel import (ShiftDetailModel, ShiftDetailSchema,
                                   ShiftModel, vShiftDetail, vShiftDetailSchema)
 from src.utils.helpers import DeleteFile, daterange
 from dateutil.parser import parse
+
 EmployeeCheckinRoute = Blueprint("/checkin", __name__)
 
 ALLOWED_EXTENSIONS = {'xlsx', 'xls', 'csv'}

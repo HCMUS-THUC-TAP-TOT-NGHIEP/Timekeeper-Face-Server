@@ -272,7 +272,7 @@ def DeleteEmployee():
             "ResponseData": None,
         }, 200
 
-# GET api/employee/many
+# GET, POST api/employee/many
 @Employee.route("/many", methods=["GET", "POST"])
 @admin_required()
 def GetManyEmployee():
@@ -306,7 +306,7 @@ def GetManyEmployee():
         if request.method == "POST":
             jsonRequestData = request.get_json()
             department = jsonRequestData["Department"] if "Department" in jsonRequestData else None
-            result = EmployeeModel.GetEmployeeList(department=[department] if department else None, name=searchString)
+            result = EmployeeModel.GetEmployeeList(department=department if department else None, name=searchString)
             return {
                 "Status": 1,
                 "Description": None,
