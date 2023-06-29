@@ -3,7 +3,6 @@ from dotenv import load_dotenv
 from datetime import datetime, timedelta
 load_dotenv()
 
-
 isProduction = os.environ['MODE'] == 'production' if 'MODE' in os.environ else False
 
 
