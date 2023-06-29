@@ -45,15 +45,14 @@ class RecognitionData(db.Model):
         try:
             self.EmployeeId = employee_id
             folder_name = datetime.fromisoformat(time).__format__("%Y%m%d")
-            folders = service.search_folder(
+            folder = service.search_folder(
                 query=f"(mimeType = '{MimeType.google_folder}') and (name = '{folder_name}') and ('{Config.DRIVE_FOLDER_ID}' in parents)")
-            if folders is None or not folders:
+            if not folder:
                 folder = service.create_folder(
                     folder_name=folder_name, parent_folder_id=Config.DRIVE_FOLDER_ID)
                 if not folder:
                     return None
-            else:
-                folder = folders[0]
+
             file = service.upload_file(new_file_name=image_path,
                                        file_name=image_path, folder_id=folder["id"])
             if file is None:
