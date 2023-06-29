@@ -54,5 +54,6 @@ class Config:
     TOKEN_PATH = os.getenv("TOKEN_PATH") if os.getenv(
         "TOKEN_PATH") else "../public/gg_drive/token.json"
 
-    DRIVE_FOLDER_ID = '1fusOVodaDiSZ0UtwXn_v251gG8oMwCln'
+    DRIVE_FOLDER_ID = os.getenv("CHECKIN_LOG_IMAGES_FOLDER") if os.getenv(
+        "CHECKIN_LOG_IMAGES_FOLDER") else '1fusOVodaDiSZ0UtwXn_v251gG8oMwCln'
     # endregion
