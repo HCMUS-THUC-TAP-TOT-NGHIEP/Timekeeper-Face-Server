@@ -1,10 +1,14 @@
-from src.db import db
-from src import marshmallow
-from marshmallow import Schema, fields
-from sqlalchemy import Column, Integer, String, SmallInteger, DateTime, Boolean, and_, func, or_
 from datetime import datetime
+
 from flask import current_app as app
+from marshmallow import Schema, fields
+from sqlalchemy import (Boolean, Column, DateTime, Integer, SmallInteger,
+                        String, and_, func, or_)
+
+from src import marshmallow
+from src.db import db
 from src.department.model import DepartmentModel
+
 # MODELS
 
 
