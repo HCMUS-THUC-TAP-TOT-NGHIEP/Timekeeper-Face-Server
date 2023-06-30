@@ -1,6 +1,6 @@
 from src.db import db
 from src import marshmallow
-from sqlalchemy import Column, Integer, String, DateTime, Time, ARRAY, Boolean, Numeric, Date, delete
+from sqlalchemy import Column, Integer, String, DateTime, Time, ARRAY, Boolean, Numeric, Date, delete, or_, func
 from enum import Enum
 from flask import current_app as app
 from src.utils.extension import ProjectException
@@ -134,21 +134,26 @@ class vShiftDetail(db.Model):
     CheckoutRequired = Column(Boolean())
 
     @staticmethod
-    def QueryMany(Page=None, PageSize=None, Condition=None) -> dict:
+    def QueryMany(Page=None, PageSize=None, SearchString: str = "", Condition=None) -> dict:
         try:
             app.logger.info(f"vShiftDetail.QueryMany bắt đầu")
+            query = db.select(vShiftDetail)
+            if SearchString and SearchString.strip():
+                sqlString = "%" + SearchString.strip().upper() + "%"
+                query = query.where(or_(func.cast(vShiftDetail.Id, String).like(
+                    sqlString), func.upper(vShiftDetail.Description).like(sqlString)))
+            query = query.order_by(vShiftDetail.Id)
             if PageSize and Page and PageSize > 0 and Page > 0:
-                data = db.paginate(db.select(vShiftDetail).order_by(vShiftDetail.Id),
-                                   page=Page, per_page=PageSize)
+                result = db.paginate(query, page=Page, per_page=PageSize)
                 return {
-                    "items": data.items,
-                    "total": data.total
+                    "items": result.items,
+                    "total": result.total
                 }
             else:
-                data = vShiftDetail.query.order_by(vShiftDetail.Id).all()
+                result = db.session.execute(query).scalars().all()
                 return {
-                    "items": data,
-                    "total": len(data)
+                    "items": result,
+                    "total": len(result)
                 }
         except Exception as ex:
             app.logger.exception(f"vShiftDetail có exception: {ex}")
