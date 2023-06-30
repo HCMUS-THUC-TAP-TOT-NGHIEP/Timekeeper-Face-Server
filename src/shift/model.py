@@ -4,7 +4,7 @@ from enum import Enum
 from flask import current_app as app
 from marshmallow import fields
 from sqlalchemy import (ARRAY, Boolean, Column, Date, DateTime, Integer,
-                        Numeric, String, Time, and_, delete, func, insert, or_)
+                        Numeric, String, Time, and_, delete, func, insert, or_, distinct)
 
 from src import marshmallow
 from src.db import db
@@ -217,7 +217,7 @@ class ShiftAssignmentSchema(marshmallow.Schema):
             if obj.TargetType != TargetType.Department.value:
                 return []
             departmentList = db.session.execute(
-                db.select(vShiftAssignmentDetail.DepartmentName)
+                db.select(distinct(vShiftAssignmentDetail.DepartmentName))
                 .where(and_(vShiftAssignmentDetail.Id == obj.Id, vShiftAssignmentDetail.TargetType == TargetType.Department.value)).limit(5)
             ).scalars().all()
             return departmentList
