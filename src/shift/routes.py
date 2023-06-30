@@ -185,7 +185,7 @@ def createNewShift():
         return {
             "Status": 1,
             "Description": None,
-            "ResponseData": {"Id": newShift.Id},
+            "ResponseData": shiftSchema.dump(newShift),
         }, 200
     except ProjectException as ex:
         db.session.rollback()
