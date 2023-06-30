@@ -67,7 +67,7 @@ def GetShiftList():
         app.logger.exception(f"GetShiftList thất bại. {ex}")
         return {
             "Status": 0,
-            "Description": f"Xảy ra lỗi ở máy chủ.",
+            "Description": f"Xảy ra lỗi ở máy chủ. Hãy kiểm tra log.",
             "ResponseData": None,
         }, 200
 
@@ -89,7 +89,7 @@ def GetShiftTypeList():
         app.logger.error(f"GetShiftTypeList thất bại. {ex}")
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở server.",
+            "Description": f"Xảy ra lỗi ở máy chủ. Hãy kiểm tra log.",
             "ResponseData": None,
         }, 400
     finally:
@@ -200,7 +200,7 @@ def createNewShift():
         app.logger.exception(f"createNewShift thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Xảy ra lỗi ở máy chủ.",
+            "Description": f"Xảy ra lỗi ở máy chủ. Hãy kiểm tra log.",
             "ResponseData": None,
         }, 200
     finally:
@@ -249,7 +249,7 @@ def deleteShift():
         app.logger.exception(f"deleteShift thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Xảy ra lỗi ở máy chủ.",
+            "Description": f"Xảy ra lỗi ở máy chủ. Hãy kiểm tra log.",
             "ResponseData": None,
         }, 200
 
@@ -352,7 +352,7 @@ def updateShift():
         app.logger.exception(f"UpdateShift thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Xảy ra lỗi ở máy chủ.",
+            "Description": f"Xảy ra lỗi ở máy chủ. Hãy kiểm tra log.",
             "ResponseData": None,
         }, 200
     finally:
@@ -397,7 +397,7 @@ def GetShiftDetail():
         app.logger.exception(f"GetShiftDetail thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Xảy ra lỗi ở máy chủ.",
+            "Description": f"Xảy ra lỗi ở máy chủ. Hãy kiểm tra log.",
             "ResponseData": None,
         }, 200
     finally:
@@ -538,7 +538,7 @@ def AssignShift():
         app.logger.exception(f"AssignShift thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Xảy ra lỗi ở máy chủ. Không thể phân ca làm việc.",
+            "Description": f"Xảy ra lỗi ở máy chủ. Hãy kiểm tra log.",
             "ResponseData": None,
         }, 200
     finally:
@@ -607,41 +607,20 @@ def getShiftAssignmentList():
             page = int(args["Page"])
         if "PageSize" in args:
             pageSize = int(args["PageSize"])
+        searchString = args["SearchString"] if "SearchString" in args else ""
 
         #endregion
 
-        data = []
-        result = ShiftAssignment.QueryMany(Page=page, PerPage=pageSize)
-        shiftAssignmentList = result["Items"]
+        result = ShiftAssignment.QueryMany(Page=page, PerPage=pageSize, SearchString=searchString)
+        shiftAssignmentList = ShiftAssignmentSchema(many=True).dump(result["Items"])
         total = result["Total"]
-
-        for assignment in shiftAssignmentList:
-            temp = ShiftAssignmentSchema().dump(assignment)
-            temp["EmployeeList"] = []
-            temp["DepartmentList"] = []
-            if assignment["TargetType"] == TargetType.Employee.value:
-                EmployeeList = db.session.execute(
-                    db.select(vShiftAssignmentDetail.EmployeeName)
-                    .where(and_(vShiftAssignmentDetail.Id == assignment["Id"], vShiftAssignmentDetail.TargetType ==  TargetType.Employee.value))
-                ).scalars().all()
-                temp["EmployeeList"] = EmployeeList
-            elif assignment["TargetType"] == TargetType.Department.value:
-                DepartmentList = db.session.execute(
-                    db.select(vShiftAssignmentDetail.DepartmentName)
-                    .where(and_(vShiftAssignmentDetail.Id == assignment["Id"], vShiftAssignmentDetail.TargetType == TargetType.Department.value))
-                ).scalars().all()
-                temp["DepartmentList"] = DepartmentList
-            else: pass
-            data.append(temp)
-
-
-        app.logger.exception(f"getShiftAssignmentList thành công.")
+        app.logger.info(f"getShiftAssignmentList thành công.")
         return {
             "Status": 1,
             "Description": None,
             "ResponseData": {
-                "ShiftAssignmentList": data,
-                "Total": total
+                "ShiftAssignmentList": shiftAssignmentList,
+                "Total": result["Total"]
             }
         }, 200
     except ProjectException as pEx:
@@ -659,7 +638,7 @@ def getShiftAssignmentList():
         )
         return {
             "Status": 0,
-            "Description": f"Xảy ra lỗi ở máy chủ. Không thể truy cập được thông tin phân ca",
+            "Description": f"Xảy ra lỗi ở máy chủ. Hãy kiểm tra log.",
             "ResponseData": None,
         }, 200
     finally:
@@ -715,7 +694,7 @@ def getShiftAssignmentDetail():
         app.logger.exception(f"UpdateShift thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Xảy ra lỗi ở máy chủ. Không thể truy cập được thông tin phân ca",
+            "Description": f"Xảy ra lỗi ở máy chủ. Hãy kiểm tra log.",
             "ResponseData": None,
         }, 200
     finally:
@@ -754,7 +733,7 @@ def GetAssignmentType():
         app.logger.exception(f"GetAssignmentTypes thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Xảy ra lỗi ở máy chủ. Không thể truy cập được thông tin kiểu phân ca.",
+            "Description": f"Xảy ra lỗi ở máy chủ. Hãy kiểm tra log.",
             "ResponseData": None,
         }, 200
 
@@ -895,7 +874,7 @@ def UpdateAssignment():
         app.logger.exception(f"UpdateAssignment thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Xảy ra lỗi ở máy chủ.",
+            "Description": f"Xảy ra lỗi ở máy chủ. Hãy kiểm tra log.",
             "ResponseData": None,
         }, 200
     finally:
@@ -940,7 +919,7 @@ def DeleteShiftAssignment():
         app.logger.exception(f"DeleteShiftAssignment thất bại. Có exception[{str(ex)}]")
         return {
             "Status": 0,
-            "Description": f"Xảy ra lỗi ở máy chủ.",
+            "Description": f"Xảy ra lỗi ở máy chủ. Hãy kiểm tra log.",
             "ResponseData": None,
         }, 200
     finally:
