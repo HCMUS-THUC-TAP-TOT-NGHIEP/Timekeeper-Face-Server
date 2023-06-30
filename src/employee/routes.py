@@ -164,9 +164,9 @@ def UpdateEmployeeInfo():
             db.select(UserModel).filter_by(EmailAddress=email)
         ).scalar_one_or_none()
         if not user:
-            raise Exception(f"No account found for email address[{email}]")
+            raise ProjectException(f"No account found for email address[{email}]")
         if ("Id" not in jsonRequestData) or (not jsonRequestData["Id"]):
-            raise Exception("Employee Id is empty or invalid.")
+            raise ProjectException("Employee Id is empty or invalid.")
 
         # endregion
 
@@ -197,8 +197,8 @@ def UpdateEmployeeInfo():
             if employeeInfo.DepartmentId is None:
                 employeeInfo.DepartmentId = int(jsonRequestData["DepartmentId"])
             elif employeeInfo.DepartmentId != int(jsonRequestData["DepartmentId"]):
-                current_department = DepartmentModel.query.filer_by(Id=employeeInfo.DepartmentId).first()
-                new_department = DepartmentModel.query.filer_by(Id=int(jsonRequestData["DepartmentId"])).first()
+                current_department = DepartmentModel.query.filter_by(Id=employeeInfo.DepartmentId).first()
+                new_department = DepartmentModel.query.filter_by(Id=int(jsonRequestData["DepartmentId"])).first()
                 if new_department:
                     employeeInfo.DepartmentId = new_department.Id
                 if current_department and current_department.ManagerId == employeeInfo.Id:
@@ -213,6 +213,14 @@ def UpdateEmployeeInfo():
             "Description": None,
             "ResponseData": None,
         }, 200
+    except ProjectException as ex:
+        app.logger.error(
+            f"SearchEmployees thất bại. Có exception[{str(ex)}]")
+        return {
+            "Status": 0,
+            "Description": f"{ex}",
+            "ResponseData": None,
+        }, 200
 
     except Exception as ex:
         db.session.rollback()
@@ -221,7 +229,7 @@ def UpdateEmployeeInfo():
         )
         return {
             "Status": 0,
-            "Description": f"Chỉnh sửa thông tin nhân viên không thành công.",
+            "Description": f"Xảy ra lỗi ở máy chủ",
             "ResponseData": None,
         }, 200
 
@@ -286,6 +294,7 @@ def GetManyEmployee():
             sqlStr = "%" + searchString.upper() + "%"
             query = query.where(or_(func.cast(vEmployeeModel.Id, String).like(sqlStr),
                                     func.concat(func.upper(vEmployeeModel.LastName)," ", func.upper(vEmployeeModel.FirstName)).like(sqlStr)))
+        query = query.order_by(vEmployeeModel.Id)
         if request.method == "GET":
             result = db.paginate(
                 query,
@@ -312,6 +321,14 @@ def GetManyEmployee():
                 "Description": None,
                 "ResponseData": result,
             }, 200
+    except ProjectException as ex:
+        app.logger.error(
+            f"SearchEmployees thất bại. Có exception[{str(ex)}]")
+        return {
+            "Status": 0,
+            "Description": f"{ex}",
+            "ResponseData": None,
+        }, 200
     except Exception as ex:
         app.logger.info(
             f"GetManyEmployee thất bại. Có exception[{str(ex)}]")

@@ -1,23 +1,19 @@
 import re
 from datetime import datetime
 from urllib.parse import urljoin
+
 from flask import Blueprint
 from flask import current_app as app
 from flask import render_template, request
+from sqlalchemy import and_, or_
+
 from src.authentication.model import UserModel, UserSchema
+from src.config import Config
 from src.db import db
+from src.jwt import (TokenBlockList, create_access_token, create_refresh_token,
+                     get_jwt, get_jwt_identity, jwt_required)
 from src.utils.email import send_email
 from src.utils.extension import ProjectException
-from src.jwt import (
-    TokenBlockList,
-    create_access_token,
-    get_jwt,
-    get_jwt_identity,
-    jwt_required,
-    create_refresh_token
-)
-from sqlalchemy import or_, and_
-from src.config import Config
 
 Authentication = Blueprint("auth", __name__)
 
@@ -54,7 +50,6 @@ def register():
 
         users = UserModel.query.all()
         if len(users) == 0:
-            # hashedPassword = bcrypt.generate_password_hash(password).decode("utf-8")
             new_user = UserModel()
             new_user.EmailAddress = email
             new_user.Username = username
@@ -76,8 +71,7 @@ def register():
                 raise Exception("Role is not valid")
             role = int(jsonRequestData["role"])
             adminId = int(jsonRequestData["adminId"])
-            # hashedPassword = bcrypt.generate_password_hash(password).decode("utf-8")
-            # new_user = UserModel(email, hashedPassword, "", 1, status=1, role=role)
+
             new_user = UserModel()
             new_user.Username = username
             new_user.EmailAddress = email
@@ -197,7 +191,10 @@ def login():
                 "access_token": access_token,
                 "access_expires": datetime.now().__add__(Config.JWT_ACCESS_TOKEN_EXPIRES),
                 "refresh_token": refresh_token,
-                "refresh_expires": datetime.now().__add__(Config.JWT_REFRESH_TOKEN_EXPIRES)
+                "refresh_expires": datetime.now().__add__(Config.JWT_REFRESH_TOKEN_EXPIRES),
+                "user": {
+                    "username": exist.Username
+                }
             },
         }, 200
             
