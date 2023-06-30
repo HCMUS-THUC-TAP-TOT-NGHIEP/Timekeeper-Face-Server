@@ -12,32 +12,21 @@ from src.db import db
 from src.department.model import DepartmentModel, DepartmentSchema
 from src.designation.model import Designation
 from src.employee.model import EmployeeModel, EmployeeSchema
-from src.utils.extension import ProjectException, object_as_dict
 from src.jwt import get_jwt, get_jwt_identity, jwt_required
 from src.middlewares.token_required import admin_required
-from src.shift.model import (
-    ShiftAssignment,
-    ShiftAssignmentDetail,
-    ShiftAssignmentSchema,
-    ShiftAssignmentType,
-    Status,
-    TargetType,
-    ShiftAssignmentDetailSchema,
-    vShiftAssignmentDetail,
-    ShiftAssignmentEmployee,
-    ShiftAssignmentDepartment
-)
-from src.shift.ShiftModel import (
-    vShiftDetail,
-    ShiftDetailModel,
-     vShiftDetailSchema,   
-    shiftListResponseSchema,
-    shiftSchema,
-    shiftListSchema,
-    ShiftDetailSchema,
-    ShiftModel, 
-    ShiftTypeModel,
-    ShiftTypeModelSchema)
+from src.shift.model import (ShiftAssignment, ShiftAssignmentDepartment,
+                             ShiftAssignmentDetail,
+                             ShiftAssignmentDetailSchema,
+                             ShiftAssignmentEmployee, ShiftAssignmentSchema,
+                             ShiftAssignmentType, Status, TargetType,
+                             vShiftAssignmentDetail)
+from src.shift.ShiftModel import (ShiftDetailModel, ShiftDetailSchema,
+                                  ShiftModel, ShiftTypeModel,
+                                  ShiftTypeModelSchema,
+                                  shiftListResponseSchema, shiftListSchema,
+                                  shiftSchema, vShiftDetail,
+                                  vShiftDetailSchema)
+from src.utils.extension import ProjectException, object_as_dict
 
 Shift = Blueprint("shift", __name__)
 
@@ -55,7 +44,8 @@ def GetShiftList():
             page = int(args["Page"])
         if "PageSize" in args:
             pageSize = int(args["PageSize"])
-        data = vShiftDetail.QueryMany(Page=page, PageSize=pageSize)
+        searchString = args["SearchString"] if "SearchString" in args else ""
+        data = vShiftDetail.QueryMany(Page=page, PageSize=pageSize, SearchString=searchString)
 
         app.logger.info(f"GetShiftList thành công.")
         return {
