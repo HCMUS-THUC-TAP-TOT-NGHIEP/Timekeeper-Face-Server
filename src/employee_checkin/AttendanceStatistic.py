@@ -97,7 +97,7 @@ class AttendanceStatisticV2(db.Model):
     DownloadUrl = Column(String())
 
     @staticmethod
-    def QueryMany(DateFrom, DateTo, MethodList: list(), Keyword=None, Page=None, PageSize=None):
+    def QueryMany(DateFrom, DateTo, MethodList: list() = [], Keyword=None, Page=None, PageSize=None):
         try:
             app.logger.info(f"AttendanceStatisticV2.QueryMany start")
             query = ""
