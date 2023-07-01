@@ -623,17 +623,18 @@ def getTimesheetDetails():
         requestData = request.args
         TimesheetId = (
             requestData["Id"] if "Id" in requestData else None)
+        searchString = (
+            str(requestData["SearchString"]).strip() if "SearchString" in requestData else "")
+
         #region validate
         if not TimesheetId:
             raise ProjectException("Yêu cầu không hợp lệ, do chưa cung cấp mã báo cáo.")
         #endregion
-        exist = db.session.execute(db.select(Timesheet).where(Timesheet.Id == int(TimesheetId))).scalars().first()
+        exist = Timesheet.query.filter_by(Id=int(TimesheetId)).first()
         if not exist:
             raise ProjectException(f"Không tìm thấy bảng phân ca mã {TimesheetId}.")
-        data = exist.QueryDetails()
-        detailList = TimesheetDetailSchema(many=True).dump(data)
-        # detailList = []
-        responseData = []
+        result = exist.QueryDetails(SearchString=searchString)
+        detailList = TimesheetDetailSchema(many=True).dump(result)
 
         app.logger.info(f"getTimesheetDetails thành công")
         return {

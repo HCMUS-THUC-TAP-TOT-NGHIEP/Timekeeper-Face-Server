@@ -1,31 +1,32 @@
-from datetime import date, datetime, time, timedelta
-from src.utils.helpers import daterange, subtractTime
-from flask import current_app as app, url_for
-from sqlalchemy import (ARRAY, BigInteger, Boolean, Column, Date, DateTime,
-                        Integer, Numeric, SmallInteger, String, Time, and_,
-                        between, func, delete)
-from src import marshmallow
-from marshmallow import fields, Schema
-from src.db import db
-from src.employee.model import EmployeeModel, vEmployeeModel
-from src.department.model import DepartmentModel
-from src.employee_checkin.AttendanceStatistic import AttendanceStatisticV2
-from src.utils.extension import ProjectException
-from src.shift.model import ShiftModel, vShiftAssignmentDetail
 import io
 import os
-from pandas import ExcelWriter, DataFrame, option_context, set_option
+import shutil
+import threading
+from datetime import date, datetime, time, timedelta
+from threading import Thread
+
 import numpy as np
+from flask import current_app as app
+from flask import url_for
+from marshmallow import fields
+from openpyxl.styles import (Alignment, Border, Color, Font, NamedStyle,
+                             PatternFill, Side)
+from pandas import DataFrame, ExcelWriter, option_context, set_option
+from sqlalchemy import (ARRAY, BigInteger, Boolean, Column, Date, DateTime,
+                        Integer, Numeric, SmallInteger, String, Time, and_, or_,
+                        between, delete, func)
 from werkzeug.datastructures import ImmutableMultiDict
 from werkzeug.utils import secure_filename
 from xlsxwriter import Workbook
 
-import shutil
+from src import marshmallow
+from src.db import db
+from src.department.model import DepartmentModel
+from src.employee.model import EmployeeModel, vEmployeeModel
+from src.employee_checkin.AttendanceStatistic import AttendanceStatisticV2
+from src.shift.model import ShiftModel, vShiftAssignmentDetail
 from src.utils.extension import ProjectException
-from src.utils.helpers import daterange, DeleteFile, GetDayOfWeek
-from threading import Thread
-import threading
-from openpyxl.styles import NamedStyle, Font, PatternFill, Color, Alignment, Border, Side, Color
+from src.utils.helpers import DeleteFile, GetDayOfWeek, daterange, subtractTime
 
 
 class Timesheet(db.Model):
@@ -36,12 +37,12 @@ class Timesheet(db.Model):
     Name = Column(String(), nullable=False)
     DateFrom = Column(Date(), nullable=False)
     DateTo = Column(Date(), nullable=False)
-    DepartmentList = Column(ARRAY(Integer()), nullable=False)
-    LockedStatus = Column(Boolean(), nullable=False, default=False)
+    DepartmentList = Column(ARRAY(Integer()), default=[])
+    LockedStatus = Column(Boolean(), default=False)
     CreatedBy = Column(Integer())
-    CreatedAt = Column(DateTime())
+    CreatedAt = Column(DateTime(), default=datetime.now())
     ModifiedBy = Column(Integer())
-    ModifiedAt = Column(DateTime())
+    ModifiedAt = Column(DateTime(), default=datetime.now())
 
     def __init__(self) -> None:
         super().__init__()
@@ -53,63 +54,6 @@ class Timesheet(db.Model):
         app.logger.info(f"Lock bảng công chi tiết mã {self.Id}")
         self.LockedStatus = True
         db.session.commit()
-
-    @staticmethod
-    def QueryMany(LockedStatus=None, Keyword=None, Page=None, PageSize=None):
-        try:
-            app.logger.info(f"Timesheet.QueryMany start. ")
-            condition = ""
-            if Keyword and Keyword.strip() != "":
-                Keyword = Keyword.strip().lower()
-                condition = func.lower(Timesheet.Name).like(f'%{Keyword}%')
-            if LockedStatus:
-                condition = and_(
-                    condition, Timesheet.LockedStatus == LockedStatus)
-            query = db.select(Timesheet)
-            if condition:
-                query = query.where(condition)
-            if not Page:
-                Page = 1
-            if not PageSize:
-                PageSize = 50
-            data = db.paginate(query, page=Page, per_page=PageSize)
-            return data
-        except Exception as ex:
-            app.logger.exception(
-                f"Timesheet.QueryMany failed. Exception[{ex}]")
-            raise Exception(
-                f"Timesheet.QueryMany failed. Exception[{ex}]")
-        finally:
-            app.logger.exception(f"Timesheet.QueryMany finish. ")
-
-    @staticmethod
-    def DeleteById(id: int = None) -> bool:
-        try:
-            if id is None:
-                raise ProjectException(
-                    "Yêu cầu không hợp lệ, do chưa cung cấp mã báo cáo.")
-            timesheet = Timesheet.query.filter_by(Id=id).first()
-            if not timesheet:
-                raise ProjectException(
-                    f"Yêu cầu không thành công, do không tìm thấy bảng chấm công mã {id}.")
-            db.session.execute(delete(TimesheetDetail).where(
-                TimesheetDetail.TimesheetId == id))
-            db.session.delete(timesheet)
-            db.session.commit()
-            return True
-        except ProjectException as pEx:
-            db.session.rollback()
-            app.logger.exception(
-                f"Timesheet.DeleteById thất bại. Có exception[{str(pEx)}]")
-            raise pEx
-        except Exception as ex:
-            db.session.rollback()
-            app.logger.exception(
-                f"Timesheet.DeleteById thất bại. Có exception[{str(ex)}]")
-            raise Exception(
-                f"Timesheet.DeleteById thất bại. Có exception[{str(ex)}]")
-        finally:
-            app.logger.info(f"Timesheet.DeleteById kết thúc")
 
     def InsertTimesheetDetail(self) -> None:
         try:
@@ -141,12 +85,12 @@ class Timesheet(db.Model):
                     counts = checkinRecords.__len__()
                     timeSheetDetail.EmployeeId = employee.Id
                     timeSheetDetail.Date = currentDate
-                    timeSheetDetail.CheckinTime = checkinRecords[0].Time.time(
-                    ) if counts > 0 else None
-                    timeSheetDetail.CheckoutTime = checkinRecords[1].Time.time(
-                    ) if counts > 1 else None
                     timeSheetDetail.TimesheetId = self.Id
                     if timeSheetDetail.IncludeAssignment():
+                        timeSheetDetail.CheckinTime = checkinRecords[0].Time.time(
+                        ) if counts > 0 else None
+                        timeSheetDetail.CheckoutTime = checkinRecords[1].Time.time(
+                        ) if counts > 1 else None
                         db.session.add(timeSheetDetail)
                     currentDate += delta
             # endregion
@@ -163,13 +107,21 @@ class Timesheet(db.Model):
         finally:
             app.logger.exception(f"Timesheet.InsertTimesheetDetail finish. ")
 
-    def QueryDetails(self, EmployeeId=None, DepartmentId=None, Date=None):
+    def QueryDetails(self, SearchString: str = "", DepartmentList: list() = [], EmployeeId=None,  Date=None):
         try:
             app.logger.info(f"Timesheet.QueryDetails start. ")
             query = db.select(vTimesheetDetail).where(
                 vTimesheetDetail.TimesheetId == self.Id)
+            if SearchString and SearchString.strip():
+                sqlStr = "%"+SearchString.strip().upper()+"%"
+                query = query.where(or_(func.cast(vTimesheetDetail.EmployeeId, String).like(
+                    sqlStr), func.upper(vTimesheetDetail.EmployeeName).like(sqlStr)))
+            if DepartmentList and len(DepartmentList):
+                query = query.where(
+                    vTimesheetDetail.Department.in_(DepartmentList))
+            query = query.order_by(
+                vTimesheetDetail.Department, vTimesheetDetail.EmployeeId)
             data = db.session.execute(query).scalars().all()
-            # return list(map(lambda x: x._asdict()["vTimesheetDetail"], data))
             return data
         except Exception as ex:
             app.logger.exception(
@@ -292,11 +244,71 @@ class Timesheet(db.Model):
             writer.close()
             app.logger.info(f"Timesheet.CreateTimesheetReport() finished.")
 
+    @staticmethod
+    def QueryMany(LockedStatus=None, Keyword=None, Page=None, PageSize=None):
+        try:
+            app.logger.info(f"Timesheet.QueryMany start. ")
+            condition = ""
+            if Keyword and Keyword.strip() != "":
+                Keyword = Keyword.strip().lower()
+                condition = func.lower(Timesheet.Name).like(f'%{Keyword}%')
+            if LockedStatus:
+                condition = and_(
+                    condition, Timesheet.LockedStatus == LockedStatus)
+            query = db.select(Timesheet)
+            if condition:
+                query = query.where(condition)
+            if not Page:
+                Page = 1
+            if not PageSize:
+                PageSize = 50
+            data = db.paginate(query, page=Page, per_page=PageSize)
+            return data
+        except Exception as ex:
+            app.logger.exception(
+                f"Timesheet.QueryMany failed. Exception[{ex}]")
+            raise Exception(
+                f"Timesheet.QueryMany failed. Exception[{ex}]")
+        finally:
+            app.logger.exception(f"Timesheet.QueryMany finish. ")
+
+    @staticmethod
+    def DeleteById(id: int = None) -> bool:
+        try:
+            if id is None:
+                raise ProjectException(
+                    "Yêu cầu không hợp lệ, do chưa cung cấp mã báo cáo.")
+            timesheet = Timesheet.query.filter_by(Id=id).first()
+            if not timesheet:
+                raise ProjectException(
+                    f"Yêu cầu không thành công, do không tìm thấy bảng chấm công mã {id}.")
+            db.session.execute(delete(TimesheetDetail).where(
+                TimesheetDetail.TimesheetId == id))
+            db.session.delete(timesheet)
+            db.session.commit()
+            return True
+        except ProjectException as pEx:
+            db.session.rollback()
+            app.logger.exception(
+                f"Timesheet.DeleteById thất bại. Có exception[{str(pEx)}]")
+            raise pEx
+        except Exception as ex:
+            db.session.rollback()
+            app.logger.exception(
+                f"Timesheet.DeleteById thất bại. Có exception[{str(ex)}]")
+            raise Exception(
+                f"Timesheet.DeleteById thất bại. Có exception[{str(ex)}]")
+        finally:
+            app.logger.info(f"Timesheet.DeleteById kết thúc")
+
 
 class TimesheetSchema(marshmallow.Schema):
-    class Meta:
-        fields = ("Id", "Name", "DateFrom", "DateTo",
-                  "DepartmentList", "LockedStatus")
+    Id = fields.Integer()
+    Name = fields.String()
+    DateFrom = fields.Date()
+    DateTo = fields.Date()
+    DepartmentList = fields.List(fields.Integer())
+    LockedStatus = fields.Boolean()
 
 
 class TimesheetDetail(db.Model):
@@ -409,7 +421,7 @@ class vTimesheetDetail(db.Model):
         super().__init__()
 
 
-class TimesheetDetailSchema(marshmallow.SQLAlchemyAutoSchema):
+class TimesheetDetailSchema(marshmallow.Schema):
     Id = fields.Integer()
     TimesheetId = fields.Integer()
     EmployeeId = fields.Integer()
@@ -431,6 +443,7 @@ class TimesheetDetailSchema(marshmallow.SQLAlchemyAutoSchema):
     EarlyMinutes = fields.Method("GetEarlyMinutes")
     Status = fields.Method("GetStatus")
     TotalHour = fields.Method("GetTotalHours")
+    RealWorkingHour = fields.Method("GetRealWorkingHours")
 
     def GetStatus(self, obj):
         try:
@@ -476,6 +489,39 @@ class TimesheetDetailSchema(marshmallow.SQLAlchemyAutoSchema):
             return delta / 60
         except:
             return None
+
+    def GetRealWorkingHours(self, obj) -> float:
+        try:
+            breakAt = obj.BreakAt
+            breakEnd = obj.BreakEnd
+            startTime = obj.StartTime
+            finishTime = obj.FinishTime
+            checkin = obj.CheckinTime
+            checkout = obj.CheckoutTime
+            if breakAt and breakEnd:
+                hour1 = subtractTime(startTime, breakAt)
+                if subtractTime(checkin, breakAt) < hour1:
+                    hour1 = subtractTime(checkin, breakAt)
+                if hour1 < 0:
+                    hour1 = 0
+
+                hour2 = subtractTime(breakEnd, checkout)
+                if subtractTime(breakEnd, finishTime) < hour2:
+                    hour2 = subtractTime(breakEnd, finishTime)
+                if hour2 < 0:
+                    hour2 = 0
+
+                return (hour2 + hour1)/60
+            if subtractTime(startTime, checkin) > 0:
+                startTime = checkin
+            if subtractTime(finishTime, checkout) < 0:
+                finishTime = checkout
+            return subtractTime(startTime, finishTime) / 60
+
+        except Exception as ex:
+            app.logger.exception(
+                f"GetRealWorkingHours() failed. Exception[{ex}]")
+            return 0
 
 
 timesheetSchema = TimesheetSchema()
