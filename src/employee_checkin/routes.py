@@ -762,8 +762,8 @@ def exportTimesheetReport():
         }, 200
     finally:
         app.logger.info(f"getTimesheetDetails kết thúc")
-        # t = threading.Thread(target=DeleteFile, args=(path, datetime.now() + timedelta(seconds=3)))
-        # t.start()
+        t = threading.Thread(target=DeleteFile, args=(path, datetime.now() + timedelta(seconds=3)))
+        t.start()
 
 # POST "api/checkin/report"
 @EmployeeCheckinRoute.route("/report", methods=["POST"])

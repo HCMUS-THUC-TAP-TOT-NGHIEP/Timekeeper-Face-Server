@@ -182,11 +182,15 @@ class Timesheet(db.Model):
             employeeList = db.session.execute(query).scalars().all()
             if employeeList:
                 for employee in employeeList:
+                    result = self.CalculateEarlyLate(EmployeeId=employee.Id)
+                    total_minute = result["CheckinLateMinute"] + \
+                        result["CheckoutEarlyMinute"]
+                    count_late_early = result["CountCheckoutEarly"] + \
+                        result["CountCheckinLate"]
+                    count_no_timekeeping = self.CalculateOff(
+                        EmployeeId=employee.Id)["Count"]
                     row = [stt, employee.Id, employee.FullName(), employee.DepartmentName,
-                           employee.Position, employee.JoinDate.strftime("%d/%m/%Y"), 0, 0, 0, 0, 0]
-                    total_minute = 0
-                    count_late_early = 0
-                    count_no_timekeeping = 0
+                           employee.Position, employee.JoinDate.strftime("%d/%m/%Y"), 0, 0, 0, count_no_timekeeping, 0]
                     details = []
                     for date in daterange(self.DateFrom, self.DateTo):
                         record = db.session.execute(db.select(vTimesheetDetail).where(and_(
@@ -195,23 +199,22 @@ class Timesheet(db.Model):
                         if not record:
                             continue
                         else:
-                            detail = TimesheetDetailSchema().dump(record)
-                            if not detail["CheckinTime"] and not detail["CheckoutTime"]:
-                                count_no_timekeeping += 1
-                            if detail["LateMinutes"] > 0:
-                                count_late_early += 1
-                                total_minute += round(detail["LateMinutes"], 2)
-                            if detail["EarlyMinutes"] > 0:
-                                count_late_early += 1
-                                total_minute += round(
-                                    detail["EarlyMinutes"], 2)
-                            shiftName = detail["ShiftName"] if detail["ShiftName"] else ""
-                            totalHour = round(detail["TotalHour"], 2).__str__(
-                            ) + " h" if detail["TotalHour"] else ""
-                            detailString = "\n".join([shiftName, totalHour])
+                            if record.isValid():
+                                totalHour = round(
+                                    record.GetRealWorkingHours(), 2)
+                                detailString = [
+                                    "X(" + str(totalHour) + ")"]  # So gio lam
+                                if not record.isEnoughHour():
+                                    detailString.append(
+                                        f"K({round(record.GetWorkingHour() - totalHour, 2)})")
+                                detailString = " ".join(detailString)
+                            elif not record.ShiftAssignmentId:
+                                detailString = ""
+                            else:
+                                detailString = None
                         details.append(detailString)
                     row.append(count_late_early)
-                    row.append(total_minute)
+                    row.append(round(total_minute/60, 2))
                     row.append(count_no_timekeeping)
                     row.extend(details)
                     data.append(row)
@@ -224,7 +227,7 @@ class Timesheet(db.Model):
                 vertical="center", wrap_text=True, shrink_to_fit=True)
             df = DataFrame(data=data)
             df.to_excel(writer,  sheet_name="Main", startcol=start_col, startrow=start_row,
-                        float_format="%.2f", index=False, header=False, na_rep="")
+                        float_format="%.2f", index=False, header=False, na_rep="#NA")
             for cells in worksheet.iter_rows(min_row=7, min_col=0):
                 for cell in cells:
                     cell.style = dataStyle
@@ -491,8 +494,11 @@ class TimesheetDetail(db.Model):
         return False
 
     def isValid(self) -> bool:
-        if subtractTime(self.CheckinTime, self.FinishTime) < 0:
+        if not self.ShiftAssignmentId:
             return False
+        if self.CheckinTime and self.FinishTime:
+            if subtractTime(self.CheckinTime, self.FinishTime) < 0:
+                return False
         return True
 
     def GetRealWorkingHours(self) -> float:
@@ -558,6 +564,19 @@ class vTimesheetDetail(db.Model):
     def __init__(self) -> None:
         super().__init__()
 
+    def GetWorkingHour(self) -> float:
+        try:
+            if self.WorkingHour:
+                return round(float(self.WorkingHour), 2)
+            delta = 0
+            if not self.BreakEnd or not self.BreakAt:
+                delta = subtractTime(self.BreakAt, self.BreakEnd)
+            delta = subtractTime(self.StartTime, self.FinishTime) - delta
+            return round(float(delta / 60), 2)
+        except Exception as ex:
+            app.logger.exception(f"GetWorkingHour failed. Exception[{ex}]")
+            return 0
+
     def GetLateMinutes(self) -> float:
         try:
             if self.StartTime and self.CheckinTime:
@@ -619,7 +638,20 @@ class vTimesheetDetail(db.Model):
             return 0
 
     def isEnoughHour(self) -> bool:
-        return self.GetRealWorkingHours >= self.WorkingHour
+        return self.GetRealWorkingHours() >= self.GetWorkingHour()
+
+    def isOff(self) -> bool:
+        if self.ShiftAssignmentId and not self.CheckinTime:
+            return True
+        return False
+
+    def isValid(self) -> bool:
+        if not self.ShiftAssignmentId:
+            return False
+        if self.CheckinTime and self.FinishTime:
+            if subtractTime(self.CheckinTime, self.FinishTime) < 0:
+                return False
+        return True
 
 
 class TimesheetDetailSchema(marshmallow.Schema):
