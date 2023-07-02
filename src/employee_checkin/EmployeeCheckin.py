@@ -6,11 +6,16 @@ from src.face_api.model import RecognitionData, RecognitionDataSchema
 import base64
 import uuid
 from flask import current_app as app
+from marshmallow import fields
+import random
+
 # MODELS
 
 
 class EmployeeCheckin(db.Model):
     __tablename__ = "EmployeeCheckin"
+    __table_args__ = {'extend_existing': True}
+
     Id = Column(Integer(), primary_key=True, autoincrement=True)
     EmployeeId = Column(Integer(), nullable=False)
     Method = Column(Integer())
@@ -52,7 +57,7 @@ class EmployeeCheckin(db.Model):
             raise ex
 
     @staticmethod
-    def insert_one(app, employee_id, method, method_text, time: datetime, image_data):
+    def InsertOne(app, employee_id, method, method_text, time: datetime, image_data):
         with app.app_context():
             try:
                 new_obj = EmployeeCheckin(
@@ -66,11 +71,76 @@ class EmployeeCheckin(db.Model):
                     f'EmployeeCheckin insertOne() has errors. Exception: {ex}')
                 raise ex
 
+    @staticmethod
+    def CountLateEarly(date: datetime) -> int:
+        try:
+            app.logger.info(f"EmployeeCheckin.CountLateEarly() start")
+            count = random.randint(0, 10)
+            return count
+        except Exception as ex:
+            app.logger.exception(
+                f'EmployeeCheckin CountLateEarly() has errors. Exception: {ex}')
+            return 0
+
+    @staticmethod
+    def CountOff(date: datetime) -> int:
+        try:
+            app.logger.info(f"EmployeeCheckin.CountLateEarly() start")
+            count = random.randint(0, 10)
+            return count
+        except Exception as ex:
+            app.logger.exception(
+                f'EmployeeCheckin CountLateEarly() has errors. Exception: {ex}')
+            return 0
+
 
 class EmployeeCheckinSchema(marshmallow.Schema):
-    class Meta:
-        fields = ("Id", "EmployeeId", "Method", "MethodText", "Time", "EvidenceId", "LogType",
-                  "CreatedBy", "CreatedAt", "ModifiedBy", "ModifiedAt")
+    Id = fields.Integer()
+    EmployeeId = fields.Integer()
+    Method = fields.Integer()
+    MethodText = fields.Method("GetCheckinMethod")
+    Time = fields.DateTime()
+    EvidenceId = fields.Integer()
+    CreatedBy = fields.Integer()
+    ModifiedBy = fields.Integer()
+    CreatedAt = fields.DateTime()
+    ModifiedAt = fields.DateTime()
+
+    def GetCheckinMethod(self, obj):
+        try:
+            if obj.Method:
+                result = CheckinMethodModel.query.filter_by(
+                    Id=obj.Method).first()
+                if result:
+                    return result.Description
+            return ""
+        except Exception as ex:
+            app.logger.exception(
+                f"GetCheckinMethod of {obj.Method} has exception[{ex}] ")
+            return ""
+
+
+class CheckinMethodModel(db.Model):
+    __tablename__ = "CheckinMethod"
+    __table_args__ = {'extend_existing': True}
+
+    Id = Column(Integer(), primary_key=True, autoincrement=True)
+    Description = Column(String(), nullable=False, unique=True)
+    Status = Column(Integer(), nullable=False, default=1)
+    CreatedAt = Column(DateTime(), nullable=False, default=datetime.now())
+    ModifiedAt = Column(DateTime(), nullable=False, default=datetime.now())
+    CreatedBy = Column(Integer(), nullable=False)
+    ModifiedBy = Column(Integer(), nullable=False)
+
+
+class CheckinMethodSchema(marshmallow.Schema):
+    Id = fields.Integer()
+    Description = fields.String()
+    Status = fields.Integer()
+    CreatedAt = fields.DateTime()
+    ModifiedAt = fields.DateTime()
+    CreatedBy = fields.Integer()
+    ModifiedBy = fields.Integer()
 
 
 employeeCheckinSchema = EmployeeCheckinSchema()

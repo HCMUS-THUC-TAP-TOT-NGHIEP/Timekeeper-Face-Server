@@ -19,6 +19,8 @@ from openpyxl.styles import NamedStyle, Font
 
 class AttendanceStatistic(db.Model):
     __tablename__ = "vAttendanceStatistic"
+    __table_args__ = {'extend_existing': True}
+
     Id = Column(Integer(), primary_key=True)
     EmployeeName = Column(String(), nullable=False)
     FirstCheckin = Column(DateTime(timezone=False))
@@ -32,14 +34,14 @@ class AttendanceStatistic(db.Model):
     def QueryMany(DateFrom, DateTo, Keyword=None):
         try:
             query = ""
+            query = select(AttendanceStatistic)\
+                .where(AttendanceStatistic.Date.between(DateFrom, DateTo))
+
             if Keyword and Keyword.strip() != "":
                 Keyword = Keyword.strip().lower()
-                query = select(AttendanceStatistic)\
-                    .where(and_(AttendanceStatistic.Date.between(DateFrom, DateTo),
-                                func.lower(AttendanceStatistic.EmployeeName).like(f'%{Keyword}%')))
-            else:
-                query = select(AttendanceStatistic)\
-                    .where(AttendanceStatistic.Date.between(DateFrom, DateTo))
+                query = query.where(func.lower(
+                    AttendanceStatistic.EmployeeName).like(f'%{Keyword}%'))
+
             data = db.session.execute(query).scalars()
             return data
         except Exception as ex:
@@ -80,6 +82,7 @@ class AttendanceStatisticSchema(marshmallow.Schema):
 
 class AttendanceStatisticV2(db.Model):
     __tablename__ = "vAttendanceStatisticV2"
+    __table_args__ = {'extend_existing': True}
 
     Id = Column(Integer(), primary_key=True)
     EmployeeName = Column(String())
@@ -88,31 +91,29 @@ class AttendanceStatisticV2(db.Model):
     Position = Column(String())
     Method = Column(Integer(), primary_key=True)
     MethodText = Column(String())
-    Time = Column(DateTime(), primary_key='True')
+    Time = Column(DateTime(), primary_key=True)
     Date = Column(Date())
     AccessUrl = Column(String())
     DownloadUrl = Column(String())
 
     @staticmethod
-    def QueryMany(DateFrom, DateTo, Keyword=None, Page=None, PageSize=None):
+    def QueryMany(DateFrom, DateTo, MethodList: list() = [], Keyword=None, Page=None, PageSize=None):
         try:
             app.logger.info(f"AttendanceStatisticV2.QueryMany start")
             query = ""
+            query = select(AttendanceStatisticV2).where(
+                AttendanceStatisticV2.Date.between(DateFrom, DateTo))
             if Keyword and Keyword.strip() != "":
                 Keyword = Keyword.strip().lower()
-                query = select(AttendanceStatisticV2)\
-                    .where(and_(
-                        AttendanceStatisticV2.Date.between(DateFrom, DateTo),
-                        func.lower(AttendanceStatisticV2.EmployeeName).like(f'%{Keyword}%')))\
-                    .distinct()\
-                    .order_by(AttendanceStatisticV2.Date, AttendanceStatisticV2.Id, AttendanceStatisticV2.Time)
+                query = query.where(func.lower(
+                    AttendanceStatisticV2.EmployeeName).like(f'%{Keyword}%'))
 
-            else:
-                query = select(AttendanceStatisticV2)\
-                    .where(and_(
-                        AttendanceStatisticV2.Date.between(DateFrom, DateTo)
-                    )).distinct()\
-                    .order_by(AttendanceStatisticV2.Date, AttendanceStatisticV2.Id, AttendanceStatisticV2.Time)
+            if MethodList and len(MethodList):
+                query = query.where(
+                    AttendanceStatisticV2.Method.in_(MethodList))
+
+            query = query.distinct().order_by(AttendanceStatisticV2.Date,
+                                              AttendanceStatisticV2.Id, AttendanceStatisticV2.Time)
             if Page and PageSize:
                 data = db.paginate(query, page=Page, per_page=PageSize)
                 return data

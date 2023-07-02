@@ -2,38 +2,213 @@ from src.db import db
 from flask import Blueprint, current_app as app, request
 from src.jwt import jwt_required, get_jwt_identity, get_jwt
 from src.middlewares.token_required import admin_required
-from sqlalchemy import select, or_, and_
+from sqlalchemy import select, or_, and_, func
 from src.authentication.model import UserModel
 from src.employee.model import EmployeeModel
 from src.utils.extension import ProjectException, object_as_dict
+from src.user.model import UserSchema, RoleSchema, RoleModel
 
 # from src import bcrypt
 from datetime import datetime
 
 User = Blueprint("user", __name__)
 
-
 # GET api/user
 @User.route("", methods=["GET"])
 @jwt_required()
-def authorization():
+def GetUserInfo():
     try:
+        claims = get_jwt()
+        user_id = claims["id"]
         identity = get_jwt_identity()
-        email = identity["email"]
         username = identity["username"]
+        current_user = UserModel.query.filter_by(Id=user_id).first()
+        if not current_user:
+            raise ProjectException(f"Người dùng {username} đã bị thay đổi hoặc xóa bởi người khác.")
         return {
             "Status": 1,
             "Description": None,
-            "ResponseData": {"Email": email, "Username": username},
+            "ResponseData": {
+                "User": UserSchema().dump(current_user)
+            }
         }
-    except Exception as ex:
-        app.logger.exception(ex)
+    except ProjectException as pEx:
+        app.logger.exception(f"GetUserInfo có lỗi. {pEx}")
         return {
             "Status": 0,
-            "Description": f"Failed to reset password.",
+            "Description": f"{pEx}",
             "ResponseData": None,
         }
+    except Exception as ex:
+        app.logger.exception(f"GetUserInfo có lỗi. {ex}")
+        return {
+            "Status": 0,
+            "Description": f"Xảy ra lỗi ở máy chủ. Hãy kiểm tra log.",
+            "ResponseData": None,
+        }
+    finally:
+        app.logger.info(f"GetUserInfo finish.")
 
+
+# GET api/user/authorization
+@User.route("authorization", methods=["GET"])
+@jwt_required()
+def get_authorization():
+    try:
+        app.logger.info(f"check_authorization start.")
+        identity = get_jwt_identity()
+        claim = get_jwt()
+        user_id = claim["id"]
+        username = identity["username"]
+        args = request.args
+        target = args["Target"] if "Target" in args else None
+        permission = args["Permission"] if "Permission" in args else None
+        current_user = UserModel.query.filter_by(Id=user_id).first()
+        if not current_user:
+            raise ProjectException(f"Người dùng {username} đã bị thay đổi hoặc xóa bởi người khác.")
+        role = RoleModel.query.filter_by(Id=current_user.Role).first()
+        if not role:
+            raise ProjectException(f"Phân quyền cho người dùng {username} đã bị thay đổi hoặc xóa bởi người khác.")
+        response = {
+                    "Status": 1,
+                    "Description": None,
+                    "ResponseData": {
+                        "Authorization": {}
+                    }
+        }
+        if target == "User":
+            if role.Id == 1:
+                response["ResponseData"]["Authorization"] = {
+                    "User": {
+                        "create": True,
+                        "read": True,
+                        "update": True,
+                        "delete": True,
+                    }
+                }
+            else:
+                response["ResponseData"]["Authorization"] = {
+                    "User": {
+                        "create": False,
+                        "read": True,
+                        "update": False,
+                        "delete": False,
+                    }
+                }
+        elif target == "Employee": 
+            if role.Id == 1 or role.Id == 2:
+                response["ResponseData"]["Authorization"] = {
+                    "Employee": {
+                        "create": True,
+                        "read": True,
+                        "update": True,
+                        "delete": True,
+                    }
+                }
+            else:
+                response["ResponseData"]["Authorization"] = {
+                    "Employee": {
+                        "create": False,
+                        "read": False,
+                        "update": False,
+                        "delete": False,
+                    }
+                }
+        elif target == "Department": 
+            if role.Id == 1 or role.Id == 2:
+                response["ResponseData"]["Authorization"] = {
+                    "Department": {
+                        "create": True,
+                        "read": True,
+                        "update": True,
+                        "delete": True,
+                    }
+                }
+            else:
+                response["ResponseData"]["Authorization"] = {
+                    "Department": {
+                        "create": False,
+                        "read": False,
+                        "update": False,
+                        "delete": False,
+                    }
+                }
+        elif target == "Shift": 
+            if role.Id == 1 or role.Id == 2:
+                response["ResponseData"]["Authorization"] = {
+                    "Shift": {
+                        "create": True,
+                        "read": True,
+                        "update": True,
+                        "delete": True,
+                    }
+                }
+            else:
+                response["ResponseData"]["Authorization"] = {
+                    "Shift": {
+                        "create": False,
+                        "read": False,
+                        "update": False,
+                        "delete": False,
+                    }
+                }
+        elif target == "ShiftAssignment": 
+            if role.Id == 1 or role.Id == 2:
+                response["ResponseData"]["Authorization"] = {
+                    "ShiftAssignment": {
+                        "create": True,
+                        "read": True,
+                        "update": True,
+                        "delete": True,
+                    }
+                }
+            else:
+                response["ResponseData"]["Authorization"] = {
+                    "ShiftAssignment": {
+                        "create": False,
+                        "read": False,
+                        "update": False,
+                        "delete": False,
+                    }
+                }
+        elif target == "Timesheet": 
+            if role.Id == 1 or role.Id == 2:
+                response["ResponseData"]["Authorization"] = {
+                    "Timesheet": {
+                        "create": True,
+                        "read": True,
+                        "update": True,
+                        "delete": True,
+                    }
+                }
+            else:
+                response["ResponseData"]["Authorization"] = {
+                    "Timesheet": {
+                        "create": False,
+                        "read": False,
+                        "update": False,
+                        "delete": False,
+                    }
+                }
+        else: pass
+
+        return response
+    except ProjectException as pEx:
+        app.logger.exception(f"check_authorization có lỗi. {pEx}")
+        return {
+            "Status": 0,
+            "Description": f"{pEx}",
+            "ResponseData": None,
+        }
+    except Exception as ex:
+        app.logger.exception(f"check_authorization có lỗi. {ex}")
+        return {
+            "Status": 0,
+            "Description": f"Xảy ra lỗi ở máy chủ. Hãy kiểm tra log.",
+            "ResponseData": None,
+        }
+    finally:
+        app.logger.info(f"check_authorization finish.")
 
 # GET api/user/list
 @User.route("/list", methods=["POST"])
@@ -46,39 +221,23 @@ def GetUserList():
         jsonRequestData = request.get_json()
         page = 1 if "Page" not in jsonRequestData else jsonRequestData["Page"]
         perPage = 10 if "PerPage" not in jsonRequestData else jsonRequestData["PerPage"]
-        accountIdList = db.paginate(
-            select(
-                UserModel.Id,
-            )
-            .join(EmployeeModel, EmployeeModel.Id == UserModel.EmployeeId, isouter=True)
-            .order_by(UserModel.Id),
-            page=page,
-            per_page=perPage,
-        )
-        accountList = db.session.execute(
-            select(
-                UserModel.Id,
-                UserModel.Username,
-                UserModel.EmailAddress,
-                UserModel.CreatedAt,
-                UserModel.Name,
-                UserModel.EmployeeId,
-                (EmployeeModel.FirstName + " " + EmployeeModel.LastName).label(
-                    "Employee"
-                ),
-            )
-            .join(EmployeeModel, EmployeeModel.Id == UserModel.EmployeeId, isouter=True)
-            .where(UserModel.Id.in_(list(map(lambda x: int(x), accountIdList.items))))
-            .order_by(UserModel.Id)
-        ).all()
+        searchString = "" if "SearchString" not in jsonRequestData else jsonRequestData["SearchString"]
+        
+        query = db.select(UserModel)
+        if searchString and searchString.strip():
+            sqlStr = "%" + searchString.upper() + "%"
+            query = query.where(or_(func.upper(UserModel.Username).like(sqlStr), func.upper(UserModel.EmailAddress).like(sqlStr)))
+        query = query.order_by(UserModel.CreatedAt)        
+
+        accountIdList = db.paginate(query, page=page, per_page=perPage)
         
         response = {
-            "AccountList": [r._asdict() for r in accountList],
+            "AccountList": UserSchema(many=True).dump(accountIdList.items),
             "Total": accountIdList.total,       
             "TotalPages": accountIdList.pages,
             "CurrentPage": accountIdList.page,
         }
-        app.logger.info(f"Truy vấn danh sách account thành công.")
+        app.logger.info(f"GetUserList successfully.")
         return {
             "Status": 1,
             "Description": None,
@@ -88,7 +247,7 @@ def GetUserList():
         app.logger.exception(ex)
         return {
             "Status": 0,
-            "Description": f"Không thể truy vấn danh sách các user/ account.",
+            "Description": f"Có lỗi ở máy chủ. Hãy kiểm tra log.",
             "ResponseData": None,
         }
 
@@ -100,8 +259,8 @@ def AddNewUser():
         # region declare
 
         claims = get_jwt()
-        adminUsername = claims["username"]
         id = claims["id"]
+
         jsonRequestData = request.get_json()
         username = (
             jsonRequestData["Username"] if "Username" in jsonRequestData else None
@@ -120,7 +279,7 @@ def AddNewUser():
             if "ConfirmPassword" in jsonRequestData
             else None
         )
-        # role = jsonRequestData['Role']
+        role = jsonRequestData["Role"] if "Role" in jsonRequestData else None
 
         # endregion
 
@@ -132,26 +291,26 @@ def AddNewUser():
             raise ProjectException("Chưa cung cấp mật khẩu.")
         if not email or not email.strip():
             raise ProjectException("Chưa cung cấp email.")
-        # if "Role" in jsonRequestData:
-        #     raise ProjectException("Chưa chọn phân quyền.")
+        if not role:
+            raise ProjectException("Chưa phân quyền cho tài khoản.")
         if not confirmPassword or not confirmPassword.strip():
             raise ProjectException("Chưa cung cấp mật khẩu xác thực.")
 
         # endregion
 
         adminUser = UserModel.query.filter(
-            and_(UserModel.Username == adminUsername, UserModel.Id == id)
+            and_(UserModel.Id == id)
         ).first()
         if not adminUser:
-            app.logger.error(f"Người dùng {adminUsername} đã bị thay đổi hoặc xóa.")
+            app.logger.error(f"Tài khoản của bạn không tồn tại, đã bị thay đổi hoặc xóa.")
             return {
                 "Status": 0,
-                "Description": f"Người dùng {adminUsername} đã bị thay đổi hoặc xóa.",
+                "Description": f"Tài khoản của bạn không tồn tại.",
                 "ResponseData": None,
             }, 500
         if not adminUser.verify_password(confirmPassword):
             raise ProjectException(
-                f"Xác thực không thành công! Vui lòng kiểm tra lại mật khẩu!"
+                f"Xác thực mật khẩu không đúng."
             )
 
         exist = db.session.execute(
@@ -168,6 +327,7 @@ def AddNewUser():
         newUser.EmailAddress = email
         newUser.password = password
         newUser.Name = name
+        newUser.Role = role
         newUser.CreatedAt = datetime.now()
         newUser.CreatedBy = id
         newUser.Status = "1"
@@ -309,7 +469,7 @@ def UpdateUser():
                 'Tài khoản "' + targetUser + '" đã bị thay đổi hoặc xóa bởi người khác'
             )
 
-        hasSomeChanges = False
+        # hasSomeChanges = False
         for key in jsonRequestData:
             if (
                 key != "ConfirmPassword"
@@ -317,10 +477,10 @@ def UpdateUser():
             ):
                 hasSomeChanges = True
                 setattr(target, key, jsonRequestData[key])
-        if not hasSomeChanges:
-            raise ProjectException(
-                f"Không có thông tin thay đổi trong người dùng [{targetUser}]"
-            )
+        # if not hasSomeChanges:
+        #     raise ProjectException(
+        #         f"Không có thông tin thay đổi trong người dùng [{targetUser}]"
+        #     )
         target.ModifiedAt = datetime.now()
         target.ModifiedBy = id
         db.session.commit()
@@ -328,7 +488,9 @@ def UpdateUser():
         return {
             "Status": 1,
             "Description": None,
-            "ResponseData": None,
+            "ResponseData": {
+                "User":  UserSchema().dump(target),
+            },
         }, 200
 
     except ProjectException as pEx:
@@ -345,5 +507,35 @@ def UpdateUser():
         return {
             "Status": 0,
             "Description": f"Xảy ra lỗi ở máy chủ. \nKhông thể thay đổi thông tin người dùng.",
+            "ResponseData": None,
+        }
+
+# GET: api/user/role
+@User.route("role", methods=["GET"])
+@jwt_required()
+def GetUserRoleList():
+    try: 
+        result = db.session.execute(db.select(RoleModel).order_by(RoleModel.Id)).scalars().all()
+        return {
+            "Status": 1,
+            "Description": None,
+            "ResponseData": {
+                "RoleList": RoleSchema(many=True).dump(result),
+                "Total": len(result)
+            },
+        }
+
+    except ProjectException as pEx:
+        app.logger.exception(f"GetUserRoleList có lỗi. {pEx}")
+        return {
+            "Status": 0,
+            "Description": f"{pEx}",
+            "ResponseData": None,
+        }
+    except Exception as ex:
+        app.logger.exception(f"GetUserRoleList có lỗi. {ex}")
+        return {
+            "Status": 0,
+            "Description": f"Xảy ra lỗi ở máy chủ. Vui lòng kiểm tra log.",
             "ResponseData": None,
         }

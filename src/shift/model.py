@@ -1,11 +1,15 @@
-from src.db import db
-from src import marshmallow
-from sqlalchemy import Column, Integer, String, DateTime, Time, ARRAY, Boolean, Numeric, Date, and_, insert, delete
-from enum import Enum
 from datetime import datetime
+from enum import Enum
+
 from flask import current_app as app
-from src.employee.model import EmployeeModel, EmployeeSchema
+from marshmallow import fields
+from sqlalchemy import (ARRAY, Boolean, Column, Date, DateTime, Integer,
+                        Numeric, String, Time, and_, delete, func, insert, or_, distinct)
+
+from src import marshmallow
+from src.db import db
 from src.department.model import DepartmentModel, DepartmentSchema
+from src.employee.model import EmployeeModel, EmployeeSchema
 from src.shift.ShiftModel import ShiftModel
 from src.utils.extension import ProjectException
 
@@ -14,6 +18,7 @@ from src.utils.extension import ProjectException
 
 class ShiftAssignment(db.Model):
     __tablename__ = "ShiftAssignment"
+    __table_args__ = {'extend_existing': True}
 
     Id = Column(Integer(), primary_key=True)
     ShiftId = Column(Integer(), nullable=False)
@@ -36,7 +41,7 @@ class ShiftAssignment(db.Model):
             departmentList = []
             total = 0
             if (self.TargetType == TargetType.Employee.value):
-                query = db.select(EmployeeModel.Id, EmployeeModel.FirstName, EmployeeModel.LastName, EmployeeModel.Position).where(and_(
+                query = db.select(EmployeeModel.Id, EmployeeModel.FirstName, EmployeeModel.LastName, EmployeeModel.Position, EmployeeModel.DepartmentId).where(and_(
                     ShiftAssignmentDetail.ShiftAssignmentId == self.Id, EmployeeModel.Id == ShiftAssignmentDetail.Target))
                 # query = db.select(EmployeeModel.Id, EmployeeModel.FirstName, EmployeeModel.LastName, EmployeeModel.Position).where(and_(
                 #     ShiftAssignmentEmployee.ShiftAssignmentId == self.Id, EmployeeModel.Id == ShiftAssignmentEmployee.EmployeeId))
@@ -62,37 +67,27 @@ class ShiftAssignment(db.Model):
                 f"ShiftAssignment.QueryDetails thất bại. Có exception[{str(ex)}]")
 
     @staticmethod
-    def QueryMany(Page: int = None, PerPage: int = None, condition: str = ''):
+    def QueryMany(Page: int = None, PerPage: int = None, SearchString: str = "", condition: str = ''):
         try:
-            query = db.select(ShiftAssignment.Id, ShiftAssignment.ShiftId, ShiftAssignment.ShiftDetailId, ShiftAssignment.StartDate, ShiftAssignment.EndDate,
-                              ShiftAssignment.TargetType, ShiftAssignment.Description, ShiftAssignment.Note, ShiftAssignment.DaysInWeek, ShiftModel.Description.label("ShiftName"))
+            query = db.select(ShiftAssignment)
+            if SearchString and SearchString.strip():
+                sqlString = "%" + SearchString.strip().upper() + "%"
+                query = query.where(or_(func.cast(ShiftAssignment.Id, String).like(
+                    sqlString), func.upper(ShiftAssignment.Description).like(sqlString)))
             if condition and condition != "":
-                query = query.where(
-                    and_(condition, ShiftAssignment.ShiftId == ShiftModel.Id))
-            else:
-                query = query.where(ShiftAssignment.ShiftId == ShiftModel.Id)
-
+                query = query.where(condition)
+            query = query.order_by(ShiftAssignment.Id)
             if not Page and not PerPage:
                 data = db.session.execute(query).all()
                 return {
-                    "Items": ShiftAssignmentSchema(many=True).dump(data),
+                    "Items": data,
                     "Total": len(data)
                 }
-            else:
-                query = db.select(ShiftAssignment)
-                if condition and condition != "":
-                    query = query.where(condition)
-                data = db.paginate(query, page=Page, per_page=PerPage)
-                items = []
-                for item in data.items:
-                    shift = ShiftModel.query.filter_by(Id=item.ShiftId).first()
-                    temp = ShiftAssignmentSchema().dump(item)
-                    temp["ShiftName"] = shift.Description
-                    items.append(temp)
-                return {
-                    "Items": items,
-                    "Total": data.total
-                }
+            data = db.paginate(query, page=Page, per_page=PerPage)
+            return {
+                "Items": data.items,
+                "Total": data.total
+            }
         except Exception as ex:
             app.logger.exception(
                 f"ShiftAssignment.QueryMany thất bại. Có exception[{str(ex)}]"
@@ -174,26 +169,67 @@ class ShiftAssignment(db.Model):
 
 
 class ShiftAssignmentSchema(marshmallow.Schema):
-    class Meta:
-        fields = (
-            "Id",
-            "ShiftId",
-            "ShiftDetailId",
-            "StartDate",
-            "EndDate",
-            "TargetType",
-            "Description",
-            "Note",
-            "Status",
-            "CreatedBy",
-            "CreatedAt",
-            "DaysInWeek",
-            "ShiftName"
-        )
+    Id = fields.Integer()
+    ShiftId = fields.Integer()
+    ShiftDetailId = fields.Integer()
+    StartDate = fields.Date()
+    EndDate = fields.Date()
+    TargetType = fields.Integer()
+    Description = fields.String()
+    Note = fields.String()
+    Status = fields.Integer()
+    CreatedBy = fields.Integer()
+    CreatedAt = fields.DateTime()
+    DaysInWeek = fields.List(fields.Integer())
+    ShiftName = fields.Method("get_shift_name")
+    EmployeeList = fields.Method("get_employee_list")
+    DepartmentList = fields.Method("get_department_list")
+
+    def get_shift_name(self, obj):
+        try:
+            if obj.ShiftId:
+                result = ShiftModel.query.filter_by(Id=obj.ShiftId).first()
+                if result:
+                    return result.Description
+            return ""
+        except Exception as ex:
+            app.logger.exception(
+                f"ShiftAssignmentSchema.get_shift_name() failed. Exception: {ex}")
+            return ""
+
+    def get_employee_list(self, obj):
+        try:
+            if obj.TargetType != TargetType.Employee.value:
+                return []
+            employeeList = db.session.execute(
+                db.select(vShiftAssignmentDetail.EmployeeName)
+                .where(and_(vShiftAssignmentDetail.Id == obj.Id, vShiftAssignmentDetail.TargetType == TargetType.Employee.value)).limit(5)
+            ).scalars().all()
+
+            return employeeList
+        except Exception as ex:
+            app.logger.exception(
+                f"ShiftAssignmentSchema.get_employee_list() failed. Exception: {ex}")
+            return []
+
+    def get_department_list(self, obj):
+        try:
+            if obj.TargetType != TargetType.Department.value:
+                return []
+            departmentList = db.session.execute(
+                db.select(distinct(vShiftAssignmentDetail.DepartmentName))
+                .where(and_(vShiftAssignmentDetail.Id == obj.Id, vShiftAssignmentDetail.TargetType == TargetType.Department.value)).limit(5)
+            ).scalars().all()
+            return departmentList
+        except Exception as ex:
+            app.logger.exception(
+                f"ShiftAssignmentSchema.get_department_list() failed. Exception: {ex}")
+            return []
 
 
 class ShiftAssignmentDetail(db.Model):
     __tablename__ = "ShiftAssignmentDetail"
+    __table_args__ = {'extend_existing': True}
 
     Id = Column(Integer(), autoincrement=True)
     ShiftAssignmentId = Column(Integer(), nullable=False,  primary_key=True)
@@ -258,6 +294,7 @@ class ShiftAssignmentDetail(db.Model):
 
 class vShiftAssignmentDetail(db.Model):
     __tablename__ = "vShiftAssignmentDetail"
+    __table_args__ = {'extend_existing': True}
 
     Id = Column(Integer(), primary_key=True)
     ShiftId = Column(Integer())
@@ -289,6 +326,8 @@ class vShiftAssignmentDetail(db.Model):
 
 class ShiftAssignmentEmployee(db.Model):
     __tablename__ = "ShiftAssignment_Employee"
+    __table_args__ = {'extend_existing': True}
+
     ShiftAssignmentId = Column(Integer(), primary_key=True)
     EmployeeId = Column(Integer(), primary_key=True)
     Status = Column(Integer(), default=1)
@@ -322,6 +361,8 @@ class ShiftAssignmentEmployee(db.Model):
 
 class ShiftAssignmentDepartment(db.Model):
     __tablename__ = "ShiftAssignment_Department"
+    __table_args__ = {'extend_existing': True}
+
     ShiftAssignmentId = Column(Integer(), primary_key=True)
     DepartmentId = Column(Integer(), primary_key=True)
     Status = Column(Integer(), default=1)
@@ -377,6 +418,8 @@ class ShiftAssignmentDetailSchema(marshmallow.Schema):
 
 class ShiftAssignmentType(db.Model):
     __tablename__ = "ShiftAssignmentType"
+    __table_args__ = {'extend_existing': True}
+
     Id = Column(Integer(), primary_key=True)
     Name = Column(String(), unique=True)
     Name2 = Column(String())

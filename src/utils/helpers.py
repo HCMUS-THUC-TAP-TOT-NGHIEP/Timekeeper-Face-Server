@@ -11,8 +11,12 @@ def daterange(start_date, end_date):
 
 
 def subtractTime(start_time, end_time) -> float:  # số phút
+    delta = 0
+    # if isinstance(start_time, datetime.time) and isinstance(end_time, datetime.time):
     delta = (datetime.combine(date.today(), end_time) -
              datetime.combine(date.today(), start_time)).total_seconds() / 60
+    # if isinstance(start_time, datetime) and isinstance(end_time, datetime):
+    #     delta = (end_time - start_time).total_seconds() / 60
     return delta
 
 

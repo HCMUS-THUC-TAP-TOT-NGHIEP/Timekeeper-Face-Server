@@ -4,16 +4,16 @@ from datetime import datetime
 from flask import Blueprint
 from flask import current_app as app
 from flask import request
-from sqlalchemy import func, select
+from sqlalchemy import String, func, or_
 
 from src.authentication.model import UserModel
 from src.db import db
-from src.department.model import DepartmentModel, departmentListSchema, departmentSchema, vDepartment
+from src.department.model import (DepartmentModel, departmentListSchema,
+                                  departmentSchema, vDepartment)
 from src.employee.model import EmployeeModel, employeeInfoListSchema
-from src.utils.extension import object_as_dict
-from src.jwt import get_jwt_identity, jwt_required
+from src.jwt import get_jwt, get_jwt_identity, jwt_required
 from src.middlewares.token_required import admin_required
-from src.utils.extension import ProjectException
+from src.utils.extension import ProjectException, object_as_dict
 
 Department = Blueprint("department", __name__)
 
@@ -24,14 +24,19 @@ Department = Blueprint("department", __name__)
 @admin_required()
 def GetDepartmentList():
     try:
-        args = request.args.to_dict()
+        args = request.args
         page = None
         perPage = None
         if "Page" in args:
             page = int(args["Page"])
         if "PerPage" in args:
             perPage = int(args["PerPage"])
-        query = select(vDepartment)
+        searchString = args["SearchString"] if "SearchString" in args else ""
+        query = db.select(vDepartment)
+        if searchString and searchString.strip():
+            sqlString = "%" + searchString.strip().upper() + "%"
+            query = query.where(or_(func.cast(vDepartment.Id, String).like(
+                sqlString), func.upper(vDepartment.Name).like(sqlString)))
         if page and perPage:
             data = db.paginate(query, page=page, per_page=perPage)
             departmentList = departmentListSchema.dump(data.items)
@@ -57,12 +62,21 @@ def GetDepartmentList():
             },
         }, 200
 
-    except Exception as ex:
-        app.logger.info(
-            f"GetDepartmentList thất bại. Có exception[{str(ex)}]")
+    except ProjectException as ex:
+        app.logger.error(
+            f"GetDepartmentList thất bại. Có exception[{ex}]")
         return {
             "Status": 0,
-            "Description": f"Xảy ra lỗi ở máy chủ.",
+            "Description": f"{ex}",
+            "ResponseData": None,
+        }, 200
+    except Exception as ex:
+        db.session.rollback()
+        app.logger.exception(
+            f"GetDepartmentList thất bại. Có exception[{ex}]")
+        return {
+            "Status": 0,
+            "Description": f"Có lỗi ở máy chủ.",
             "ResponseData": None,
         }, 200
 
@@ -72,17 +86,9 @@ def GetDepartmentList():
 def AddNewDepartment():
     try:
         jsonRequestData = request.get_json()
-
+        claims = get_jwt()
+        id = claims["id"]
         # region validate
-
-        identity = get_jwt_identity()
-        email = identity["email"]
-        username = identity["username"]
-        user = db.session.execute(
-            db.select(UserModel).filter_by(EmailAddress=email)
-        ).scalar_one_or_none()
-        if not user:
-            raise Exception(f"No account found for email address[{email}]")
 
         if "Name" not in jsonRequestData or not jsonRequestData["Name"]:
             raise Exception("Invalid Name. Name is not found.")
@@ -104,25 +110,43 @@ def AddNewDepartment():
         newDepartment.Name = departmentName
         newDepartment.ManagerId = managerId
         newDepartment.CreatedAt = datetime.now()
-        newDepartment.CreatedBy = user.Id
+        newDepartment.CreatedBy = id
         newDepartment.ModifiedAt = datetime.now()
-        newDepartment.ModifiedBy = user.Id
+        newDepartment.ModifiedBy = id
         newDepartment.Status = "1"
         db.session.add(newDepartment)
+        db.session.flush()
+        db.session.refresh(newDepartment)
+        jDepartment = departmentSchema.dump(newDepartment)
+        if managerId:
+            employee = EmployeeModel.query.filter_by(Id=managerId).first()
+            if not employee:
+                raise ProjectException(
+                    f"Không tìm thấy mã nhân viên {managerId} để làm quản lý.")
+            jDepartment["ManagerName"] = employee.FullName()
+            employee.DepartmentId = newDepartment.Id
         db.session.commit()
         app.logger.info(f"AddNewDepartment thành công.")
         return {
             "Status": 1,
             "Description": None,
-            "ResponseData": {"Id": newDepartment.Id},
+            "ResponseData": jDepartment
+        }, 200
+    except ProjectException as ex:
+        app.logger.error(
+            f"AddNewDepartment thất bại. Có exception[{ex}]")
+        return {
+            "Status": 0,
+            "Description": f"{ex}",
+            "ResponseData": None,
         }, 200
     except Exception as ex:
         db.session.rollback()
         app.logger.exception(
-            f"AddNewDepartment thất bại. Có exception[{str(ex)}]")
+            f"AddNewDepartment thất bại. Có exception[{ex}]")
         return {
             "Status": 0,
-            "Description": f"Thêm phòng ban mới không thành công. {str(ex)}",
+            "Description": f"Có lỗi ở máy chủ.",
             "ResponseData": None,
         }, 200
 
@@ -135,14 +159,9 @@ def UpdateDepartment():
 
         # region validate
 
-        identity = get_jwt_identity()
-        email = identity["email"]
-        username = identity["username"]
-        user = db.session.execute(
-            db.select(UserModel).filter_by(EmailAddress=email)
-        ).scalar_one_or_none()
-        if not user:
-            raise Exception(f"No account found for email address[{email}]")
+        claims = get_jwt()
+        userId = claims["id"]
+
         if ("Id" not in jsonRequestData) or (not jsonRequestData["Id"]):
             raise Exception("Department Id is empty or invalid.")
 
@@ -162,27 +181,38 @@ def UpdateDepartment():
         if employee:
             employee.DepartmentId = DepartmentId
         if managerId and managerId != department.ManagerId:
+            employee = EmployeeModel.query.filter_by(Id=managerId).first()
+            if not employee:
+                raise ProjectException(
+                    f"Không tìm thấy mã nhân viên {managerId} để làm quản lý.")
             department.ManagerId = managerId
-        if isinstance(status, int) and status != department.Status:
-            department.Status = status
-
+            employee.DepartmentId = department.Id
+        department.Status = str(status)
         department.ModifiedAt = datetime.now()
-        department.ModifiedBy = user.Id
+        department.ModifiedBy = userId
         db.session.commit()
         return {
             "Status": 1,
             "Description": None,
-            "ResponseData": None,
+            "ResponseData": departmentSchema.dump(department),
         }
+    except ProjectException as ex:
+        app.logger.error(
+            f"UpdateDepartment thất bại. Có exception[{ex}]")
+        return {
+            "Status": 0,
+            "Description": f"{ex}",
+            "ResponseData": None,
+        }, 200
     except Exception as ex:
         db.session.rollback()
         app.logger.exception(
-            f"UpdateDepartment thất bại. Có exception[{str(ex)}]")
+            f"UpdateDepartment thất bại. Có exception[{ex}]")
         return {
             "Status": 0,
-            "Description": f"Cập nhật phòng ban mới không thành công. {str(ex)}",
+            "Description": f"Có lỗi ở máy chủ.",
             "ResponseData": None,
-        }
+        }, 200
 
 
 @Department.route("/", methods=["DELETE"])
@@ -243,11 +273,20 @@ def DeleteOneDepartment():
             "Description": None,
             "ResponseData": None,
         }, 200
-    except Exception as ex:
-        db.session.rollback()
-        app.logger.error(f"DeleteOneDepartment thất bại. {ex}")
+    except ProjectException as ex:
+        app.logger.error(
+            f"DeleteOneDepartment thất bại. Có exception[{ex}]")
         return {
             "Status": 0,
-            "Description": f"Có lỗi ở server.",
+            "Description": f"{ex}",
             "ResponseData": None,
-        }, 400
+        }, 200
+    except Exception as ex:
+        db.session.rollback()
+        app.logger.exception(
+            f"DeleteOneDepartment thất bại. Có exception[{ex}]")
+        return {
+            "Status": 0,
+            "Description": f"Có lỗi ở máy chủ.",
+            "ResponseData": None,
+        }, 200

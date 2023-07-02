@@ -175,18 +175,20 @@ class DriveService:
                                                 fields='nextPageToken, '
                                                 'files(id, name)',
                                                 pageToken=page_token).execute()
-                for file in response.get('files', []):
-                    # Process change
-                    print(F'Found file: {file.get("name")}, {file.get("id")}')
+                # for file in response.get('files', []):
+                #     # Process change
+                #     print(F'Found file: {file.get("name")}, {file.get("id")}')
                 files.extend(response.get('files', []))
                 page_token = response.get('nextPageToken', None)
                 if page_token is None:
                     break
-
+            if len(files) == 0:
+                return None
+            print(F'Found file: {files[0].get("name")}, {files[0].get("id")}')
+            return files[0]
         except HttpError as error:
             print(F'An error occurred: {error}')
-            files = None
-        return files
+            return None
 
     def search_file(self, query: str):
         """Search file in drive location with query string
