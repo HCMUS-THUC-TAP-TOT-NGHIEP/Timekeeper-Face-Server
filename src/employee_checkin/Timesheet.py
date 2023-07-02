@@ -248,22 +248,25 @@ class Timesheet(db.Model):
     def QueryMany(LockedStatus=None, Keyword=None, Page=None, PageSize=None):
         try:
             app.logger.info(f"Timesheet.QueryMany start. ")
-            condition = ""
+            query = db.select(Timesheet)
             if Keyword and Keyword.strip() != "":
                 Keyword = Keyword.strip().lower()
-                condition = func.lower(Timesheet.Name).like(f'%{Keyword}%')
+                query = query.where(func.lower(
+                    Timesheet.Name).like(f'%{Keyword}%'))
             if LockedStatus:
-                condition = and_(
-                    condition, Timesheet.LockedStatus == LockedStatus)
-            query = db.select(Timesheet)
-            if condition:
-                query = query.where(condition)
-            if not Page:
-                Page = 1
-            if not PageSize:
-                PageSize = 50
-            data = db.paginate(query, page=Page, per_page=PageSize)
-            return data
+                query = query.where(Timesheet.LockedStatus == LockedStatus)
+            if Page and PageSize:
+                data = db.paginate(query, page=Page, per_page=PageSize)
+                return {
+                    "total": data.total,
+                    "items": data.items
+                }
+            else:
+                data = db.session.execute(query).scalars().all()
+                return {
+                    "total": len(data),
+                    "items": data
+                }
         except Exception as ex:
             app.logger.exception(
                 f"Timesheet.QueryMany failed. Exception[{ex}]")
@@ -301,6 +304,56 @@ class Timesheet(db.Model):
         finally:
             app.logger.info(f"Timesheet.DeleteById kết thúc")
 
+    def CalculateEarlyLate(self, EmployeeId: int):
+        try:
+            countCheckinLate = 0
+            countCheckoutEarly = 0
+            lateMinutes = 0
+            earlyMinutes = 0
+            records = db.session.execute(db.select(TimesheetDetail).where(and_(
+                TimesheetDetail.TimesheetId == self.Id, TimesheetDetail.EmployeeId == EmployeeId))).scalars().all()
+            for record in records:
+                if record.isCheckinLate():
+                    lateMinutes = lateMinutes + record.GetLateMinutes()
+                    countCheckinLate = countCheckinLate + 1
+                if record.isCheckoutEarly():
+                    earlyMinutes = earlyMinutes + record.GetEarlyMinutes()
+                    countCheckoutEarly = countCheckoutEarly + 1
+
+            return {
+                "CountCheckinLate": countCheckinLate,
+                "CountCheckoutEarly": countCheckoutEarly,
+                "CheckinLateMinute": lateMinutes,
+                "CheckoutEarlyMinute": earlyMinutes,
+            }
+        except Exception as ex:
+            app.logger.exception(
+                f"CalculateCheckoutEarly failed with exception[{ex}]")
+            return {
+                "CountCheckinLate": 0,
+                "CountCheckoutEarly": 0,
+                "CheckinLateMinute": 0,
+                "CheckoutEarlyMinute": 0,
+            }
+
+    def CalculateOff(self, EmployeeId: int):
+        try:
+            count = 0
+            records = db.session.execute(db.select(TimesheetDetail).where(and_(
+                TimesheetDetail.TimesheetId == self.Id, TimesheetDetail.EmployeeId == EmployeeId))).scalars().all()
+            for record in records:
+                if record.isOff():
+                    count = count + 1
+            return {
+                "Count": count,
+            }
+        except Exception as ex:
+            app.logger.exception(
+                f"CalculateCheckoutEarly failed with exception[{ex}]")
+            return {
+                "Count": 0,
+            }
+
 
 class TimesheetSchema(marshmallow.Schema):
     Id = fields.Integer()
@@ -309,6 +362,21 @@ class TimesheetSchema(marshmallow.Schema):
     DateTo = fields.Date()
     DepartmentList = fields.List(fields.Integer())
     LockedStatus = fields.Boolean()
+    DepartmentNameList = fields.Method("get_department_info")
+
+    def get_department_info(self, obj):
+        try:
+            if obj.DepartmentList and len(obj.DepartmentList):
+                departmentNameList = db.session.execute(db.select(DepartmentModel.Name).where(
+                    DepartmentModel.Id.in_(obj.DepartmentList))).scalars().all()
+                return departmentNameList
+            return []
+        except Exception as ex:
+            app.logger.exception(
+                f"TimesheetSchema.get_department_info failed. Exception[{ex}]")
+            print(
+                f"TimesheetSchema.get_department_info failed. Exception[{ex}]")
+            return []
 
 
 class TimesheetDetail(db.Model):
@@ -391,6 +459,76 @@ class TimesheetDetail(db.Model):
         finally:
             app.logger.exception(f"TimesheetDetail.IncludeAssignment finish. ")
 
+    def GetLateMinutes(self) -> float:
+        try:
+            if self.StartTime and self.CheckinTime:
+                result = subtractTime(self.StartTime, self.CheckinTime)
+                return result
+            else:
+                return 0
+        except:
+            return None
+
+    def GetEarlyMinutes(self) -> float:
+        try:
+            if self.FinishTime and self.CheckoutTime:
+                result = subtractTime(self.CheckoutTime, self.FinishTime)
+                return result
+            else:
+                return 0
+        except:
+            return None
+
+    def isCheckinLate(self) -> bool:
+        return self.GetLateMinutes() > 0
+
+    def isCheckoutEarly(self) -> bool:
+        return self.GetEarlyMinutes() > 0
+
+    def isOff(self) -> bool:
+        if self.ShiftAssignmentId and not self.CheckinTime:
+            return True
+        return False
+
+    def isValid(self) -> bool:
+        if subtractTime(self.CheckinTime, self.FinishTime) < 0:
+            return False
+        return True
+
+    def GetRealWorkingHours(self) -> float:
+        try:
+            breakAt = self.BreakAt
+            breakEnd = self.BreakEnd
+            startTime = self.StartTime
+            finishTime = self.FinishTime
+            checkin = self.CheckinTime
+            checkout = self.CheckoutTime
+            if subtractTime(checkin, finishTime) < 0:
+                return 0
+            if breakAt and breakEnd:
+                hour1 = subtractTime(startTime, breakAt)
+                if subtractTime(checkin, breakAt) < hour1:
+                    hour1 = subtractTime(checkin, breakAt)
+                if hour1 < 0:
+                    hour1 = 0
+
+                hour2 = subtractTime(breakEnd, checkout)
+                if subtractTime(breakEnd, finishTime) < hour2:
+                    hour2 = subtractTime(breakEnd, finishTime)
+                if hour2 < 0:
+                    hour2 = 0
+
+                return (hour2 + hour1)/60
+            if subtractTime(startTime, checkin) > 0:
+                startTime = checkin
+            if subtractTime(finishTime, checkout) < 0:
+                finishTime = checkout
+            return subtractTime(startTime, finishTime) / 60
+        except Exception as ex:
+            app.logger.exception(
+                f"GetRealWorkingHours() failed. Exception[{ex}]")
+            return 0
+
 
 class vTimesheetDetail(db.Model):
     __tablename__ = "vTimesheetDetail"
@@ -419,6 +557,69 @@ class vTimesheetDetail(db.Model):
 
     def __init__(self) -> None:
         super().__init__()
+
+    def GetLateMinutes(self) -> float:
+        try:
+            if self.StartTime and self.CheckinTime:
+                result = subtractTime(self.StartTime, self.CheckinTime)
+                return result
+            else:
+                return 0
+        except:
+            return None
+
+    def GetEarlyMinutes(self) -> float:
+        try:
+            if self.FinishTime and self.CheckoutTime:
+                result = subtractTime(self.CheckoutTime, self.FinishTime)
+                return result
+            else:
+                return 0
+        except:
+            return None
+
+    def isCheckinLate(self) -> bool:
+        return self.GetLateMinutes() > 0
+
+    def isCheckoutEarly(self) -> bool:
+        return self.GetEarlyMinutes() > 0
+
+    def GetRealWorkingHours(self) -> float:
+        try:
+            breakAt = self.BreakAt
+            breakEnd = self.BreakEnd
+            startTime = self.StartTime
+            finishTime = self.FinishTime
+            checkin = self.CheckinTime
+            checkout = self.CheckoutTime
+            if subtractTime(checkin, finishTime) < 0:
+                return 0
+            if breakAt and breakEnd:
+                hour1 = subtractTime(startTime, breakAt)
+                if subtractTime(checkin, breakAt) < hour1:
+                    hour1 = subtractTime(checkin, breakAt)
+                if hour1 < 0:
+                    hour1 = 0
+
+                hour2 = subtractTime(breakEnd, checkout)
+                if subtractTime(breakEnd, finishTime) < hour2:
+                    hour2 = subtractTime(breakEnd, finishTime)
+                if hour2 < 0:
+                    hour2 = 0
+
+                return (hour2 + hour1)/60
+            if subtractTime(startTime, checkin) > 0:
+                startTime = checkin
+            if subtractTime(finishTime, checkout) < 0:
+                finishTime = checkout
+            return subtractTime(startTime, finishTime) / 60
+        except Exception as ex:
+            app.logger.exception(
+                f"GetRealWorkingHours() failed. Exception[{ex}]")
+            return 0
+
+    def isEnoughHour(self) -> bool:
+        return self.GetRealWorkingHours >= self.WorkingHour
 
 
 class TimesheetDetailSchema(marshmallow.Schema):
@@ -498,6 +699,8 @@ class TimesheetDetailSchema(marshmallow.Schema):
             finishTime = obj.FinishTime
             checkin = obj.CheckinTime
             checkout = obj.CheckoutTime
+            if subtractTime(checkin, finishTime) < 0:
+                return 0
             if breakAt and breakEnd:
                 hour1 = subtractTime(startTime, breakAt)
                 if subtractTime(checkin, breakAt) < hour1:
@@ -517,7 +720,6 @@ class TimesheetDetailSchema(marshmallow.Schema):
             if subtractTime(finishTime, checkout) < 0:
                 finishTime = checkout
             return subtractTime(startTime, finishTime) / 60
-
         except Exception as ex:
             app.logger.exception(
                 f"GetRealWorkingHours() failed. Exception[{ex}]")

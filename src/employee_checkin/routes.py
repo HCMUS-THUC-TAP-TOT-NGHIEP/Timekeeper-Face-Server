@@ -7,7 +7,7 @@ from datetime import date, datetime, timedelta
 from flask import Blueprint, send_file
 from flask import current_app as app
 from flask import request, send_from_directory
-from sqlalchemy import (DateTime, and_, between, case, delete, func, insert,
+from sqlalchemy import (DateTime, and_, between, case, delete, func, insert, distinct,
                         or_, select)
 
 from src.authentication.model import UserModel
@@ -379,8 +379,8 @@ def getTimeSheetList():
         PageSize = int(requestData["PageSize"]
                   if "PageSize" in requestData else 50)
         result = Timesheet.QueryMany(Keyword=Keyword, Page=Page, PageSize=PageSize)
-        count = result.total
-        data = timesheetListSchema.dump(result.items)
+        count = result["total"]
+        data = timesheetListSchema.dump(result["items"])
         app.logger.info(f"getCheckinRecord v2 thành công")
         return {
             "Status": 1,
@@ -1016,6 +1016,57 @@ def CountLateEarly():
     finally:
         app.logger.info(f"CountLateEarly kết thúc")
 
+# GET api/checkin/late-early/count
+@EmployeeCheckinRoute.route("/late-early/count", methods=["GET"])
+@admin_required()
+def GetCountLateEarly():
+    try:
+        requestData = request.args
+        timesheetId = int(requestData["TimesheetId"]) if requestData["TimesheetId"] else None
+        if not timesheetId:
+            raise ProjectException("Chưa cung cấp mã báo cáo tổng hợp chấm công")
+        employeeIdList = db.session.execute(db.select(distinct(TimesheetDetail.EmployeeId)).where(TimesheetDetail.TimesheetId==timesheetId).order_by(TimesheetDetail.EmployeeId)).scalars().all()
+        timesheet = Timesheet.query.filter_by(Id=timesheetId).first()
+        if not timesheet:
+            raise ProjectException(f"Không tìm thấy báo cáo chấm công {timesheetId}")
+        responseList = []
+        for employeeId in employeeIdList:
+            employee = EmployeeModel.query.filter_by(Id=employeeId).first()
+            if not employee: continue
+            response = employeeInfoSchema.dump(employee)
+            result = timesheet.CalculateEarlyLate(EmployeeId=employeeId)
+            if result["CountCheckoutEarly"] + result["CountCheckinLate"] <= 0: continue
+            response["LateHour"] = round(result["CheckinLateMinute"]/60, 2)
+            response["EarlyHour"] = round(result["CheckoutEarlyMinute"]/60, 2)
+            response["Count"] = result["CountCheckoutEarly"] + result["CountCheckinLate"]
+            responseList.append(response)
+        return {
+            "Status": 1,
+            "Description": "",
+            "ResponseData": {
+                "List": responseList,
+                "Total": len(responseList)
+            },
+        }, 200
+    except ProjectException as pEx:
+        app.logger.exception(
+            f"GetCountLateEarly thất bại. Có exception[{str(pEx)}]")
+        return {
+            "Status": 0,
+            "Description": f"{str(pEx)}",
+            "ResponseData": None,
+        }, 200
+    except Exception as ex:
+        app.logger.exception(
+            f"GetCountLateEarly thất bại. Có exception[{str(ex)}]")
+        return {
+            "Status": 0,
+            "Description": f"Xảy ra lỗi ở máy chủ.",
+            "ResponseData": None,
+        }, 200
+    finally:
+        app.logger.info(f"GetCountLateEarly kết thúc")
+
 # POST api/checkin/off/count
 @EmployeeCheckinRoute.route("/off/count", methods=["POST"])
 @admin_required()
@@ -1064,3 +1115,53 @@ def CountOff():
         }, 200
     finally:
         app.logger.info(f"CountOff kết thúc")
+
+
+@EmployeeCheckinRoute.route("/off/statistics", methods=["GET"])
+@admin_required()
+def GetCountOff():
+    try: 
+        requestData = request.args
+        timesheetId = int(requestData["TimesheetId"]) if requestData["TimesheetId"] else None
+        if not timesheetId:
+            raise ProjectException("Chưa cung cấp mã báo cáo tổng hợp chấm công")
+        employeeIdList = db.session.execute(db.select(distinct(TimesheetDetail.EmployeeId)).where(TimesheetDetail.TimesheetId==timesheetId).order_by(TimesheetDetail.EmployeeId)).scalars().all()
+        timesheet = Timesheet.query.filter_by(Id=timesheetId).first()
+        if not timesheet:
+            raise ProjectException(f"Không tìm thấy báo cáo chấm công {timesheetId}")
+        responseList = []
+        for employeeId in employeeIdList:
+            employee = EmployeeModel.query.filter_by(Id=employeeId).first()
+            if not employee: continue
+            response = employeeInfoSchema.dump(employee)
+            result = timesheet.CalculateOff(EmployeeId=employeeId)
+            if result["Count"] <= 0: continue
+            response["Count"] = result["Count"]
+            responseList.append(response)
+        return {
+            "Status": 1,
+            "Description": "",
+            "ResponseData": {
+                "List": responseList,
+                "Total": len(responseList)
+            },
+        }, 200
+
+    except ProjectException as pEx:
+        app.logger.exception(
+            f"GetCountOff thất bại. Có exception[{str(pEx)}]")
+        return {
+            "Status": 0,
+            "Description": f"{str(pEx)}",
+            "ResponseData": None,
+        }, 200
+    except Exception as ex:
+        app.logger.exception(
+            f"GetCountOff thất bại. Có exception[{str(ex)}]")
+        return {
+            "Status": 0,
+            "Description": f"Xảy ra lỗi ở máy chủ.",
+            "ResponseData": None,
+        }, 200
+    finally:
+        app.logger.info(f"GetCountOff kết thúc")
