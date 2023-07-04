@@ -5,7 +5,6 @@ load_dotenv()
 
 
 class Config:
-    FLASK_DEBUG = bool(os.environ.get("DEBUG"))
     SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URI")
     MAIL_SERVER = os.getenv("MAIL_SERVER")
     MAIL_PORT = int(os.getenv("MAIL_PORT"))
