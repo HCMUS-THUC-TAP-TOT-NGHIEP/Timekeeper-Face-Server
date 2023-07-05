@@ -75,7 +75,7 @@ class EmployeeCheckin(db.Model):
     def CountLateEarly(date: datetime) -> int:
         try:
             app.logger.info(f"EmployeeCheckin.CountLateEarly() start")
-            count = random.randint(0, 10)
+            count = random.randint(0, 7)
             return count
         except Exception as ex:
             app.logger.exception(
@@ -86,7 +86,7 @@ class EmployeeCheckin(db.Model):
     def CountOff(date: datetime) -> int:
         try:
             app.logger.info(f"EmployeeCheckin.CountLateEarly() start")
-            count = random.randint(0, 10)
+            count = random.randint(0, 7)
             return count
         except Exception as ex:
             app.logger.exception(
