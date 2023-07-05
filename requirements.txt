@@ -19,6 +19,7 @@ xlsxwriter
 openpyxl
 xlrd
 
+dlib
 opencv-python
 Tensorflow
 numpy
