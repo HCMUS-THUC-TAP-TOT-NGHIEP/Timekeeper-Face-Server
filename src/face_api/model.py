@@ -9,7 +9,6 @@ import base64
 import uuid
 import os
 import pickle
-import face_recognition
 from flask import current_app as app
 
 class RecognitionData(db.Model):
@@ -77,117 +76,117 @@ class RecognitionData(db.Model):
 known_encodings = []
 known_names = []
 
-def openCVToBase64(img):
-    try:
-        # img_path = os.path.join(Config.RAW_PATH, Id, "0.png")
-        # img = cv2.imread(img_path)
-        string = base64.b64encode(cv2.imencode('.png', img)[1]).decode()
-        return string
-    except Exception as ex:
-        raise Exception(f"openCV2base64 failed. [exception{ex}]")
+# def openCVToBase64(img):
+#     try:
+#         # img_path = os.path.join(Config.RAW_PATH, Id, "0.png")
+#         # img = cv2.imread(img_path)
+#         string = base64.b64encode(cv2.imencode('.png', img)[1]).decode()
+#         return string
+#     except Exception as ex:
+#         raise Exception(f"openCV2base64 failed. [exception{ex}]")
     
-def base64ToOpenCV(str_img):
-    try:
-        image_data = bytes(str_img.split(",")[1], encoding="utf-8")
-        np_data = np.frombuffer(base64.decodebytes(image_data), np.uint8)
-        img = cv2.imdecode(np_data, cv2.IMREAD_ANYCOLOR)
-        return img
-    except Exception as ex:
-        raise Exception(f"base64ToOpenCV failed. [exception{ex}]")
+# def base64ToOpenCV(str_img):
+#     try:
+#         image_data = bytes(str_img.split(",")[1], encoding="utf-8")
+#         np_data = np.frombuffer(base64.decodebytes(image_data), np.uint8)
+#         img = cv2.imdecode(np_data, cv2.IMREAD_ANYCOLOR)
+#         return img
+#     except Exception as ex:
+#         raise Exception(f"base64ToOpenCV failed. [exception{ex}]")
 
-# lưu ảnh dạng png với đầu vào là mảng ảnh, id và tên vào datasets/raw/...
-def save_images(images, id, name):
-    try:
-        path = os.path.join(os.getcwd(), "public", "datasets","raw",  f"{id}")
-        if not os.path.isdir(path):
-            os.makedirs(path)
+# # lưu ảnh dạng png với đầu vào là mảng ảnh, id và tên vào datasets/raw/...
+# def save_images(images, id, name):
+#     try:
+#         path = os.path.join(os.getcwd(), "public", "datasets","raw",  f"{id}")
+#         if not os.path.isdir(path):
+#             os.makedirs(path)
 
-        flag = []
+#         flag = []
 
-        for i in range(len(images)):
-            # print(images)
-            img_path = os.path.join(path, f"{i}.png")
+#         for i in range(len(images)):
+#             # print(images)
+#             img_path = os.path.join(path, f"{i}.png")
             
-            # region Convert base64 image to OpenCV image
-            # image_data = bytes(images[i].split(",")[1], encoding="utf-8")
-            # np_data = np.frombuffer(base64.decodebytes(image_data), np.uint8)
-            # img = cv2.imdecode(np_data, cv2.IMREAD_ANYCOLOR)
-            img = base64ToOpenCV(images[i])
+#             # region Convert base64 image to OpenCV image
+#             # image_data = bytes(images[i].split(",")[1], encoding="utf-8")
+#             # np_data = np.frombuffer(base64.decodebytes(image_data), np.uint8)
+#             # img = cv2.imdecode(np_data, cv2.IMREAD_ANYCOLOR)
+#             img = base64ToOpenCV(images[i])
 
-            # endregion
-            result = cv2.imwrite(img_path, img)
-            flag.append(result)
-        print(flag)
-        return True
+#             # endregion
+#             result = cv2.imwrite(img_path, img)
+#             flag.append(result)
+#         print(flag)
+#         return True
 
-    except Exception as ex:
-        raise Exception(f"save_images failed. [exception{ex}]")
+#     except Exception as ex:
+#         raise Exception(f"save_images failed. [exception{ex}]")
 
 
-# train ảnh khuôn mặt
-def train_model_face(path_train):
-    try:
-        app.logger.info(f"train_model_face start {path_train}")
-        for Id in os.listdir(path_train):
-            Id_path = os.path.join(path_train, Id)
+# # train ảnh khuôn mặt
+# def train_model_face(path_train):
+#     try:
+#         app.logger.info(f"train_model_face start {path_train}")
+#         for Id in os.listdir(path_train):
+#             Id_path = os.path.join(path_train, Id)
             
-            # Loop through each image in the folder
-            for file_path in os.listdir(Id_path):
-                image_path = os.path.join(Id_path, file_path)
-                image = face_recognition.load_image_file(image_path)
+#             # Loop through each image in the folder
+#             for file_path in os.listdir(Id_path):
+#                 image_path = os.path.join(Id_path, file_path)
+#                 image = face_recognition.load_image_file(image_path)
                 
-                # print(len(image))
-                # Encode the face features
-                encoding = face_recognition.face_encodings(image)
-                if encoding == []:
-                    continue
-                encoding = encoding[0]
-                print(image_path)
-                # return 
+#                 # print(len(image))
+#                 # Encode the face features
+#                 encoding = face_recognition.face_encodings(image)
+#                 if encoding == []:
+#                     continue
+#                 encoding = encoding[0]
+#                 print(image_path)
+#                 # return 
 
-                # Add the encoding and name to the lists
-                known_encodings.append(encoding)
-                known_names.append(Id)
-                # Save the face encodings and names to a file
-        with open("encodings.pickle", "wb") as f:
-            pickle.dump({"encodings": known_encodings, "names": known_names}, f)
-        app.logger.info("train_model_face OK")
-        return known_encodings, known_names
+#                 # Add the encoding and name to the lists
+#                 known_encodings.append(encoding)
+#                 known_names.append(Id)
+#                 # Save the face encodings and names to a file
+#         with open("encodings.pickle", "wb") as f:
+#             pickle.dump({"encodings": known_encodings, "names": known_names}, f)
+#         app.logger.info("train_model_face OK")
+#         return known_encodings, known_names
 
-    except Exception as ex:
-        app.logger.exception(f"train_model_face failed, exception[{ex}]")
-        raise Exception(f"train_model failed. [exception{ex}]")
-    finally:
-        app.logger.info(f"train_model_face finish {path_train}")
-
-
-# nhận dạng khuôn mặt từ 1 ảnh
-def get_id_from_img_face(img):
-    try:
-        # Load the face encodings and names from the file
-        with open("encodings.pickle", "rb") as f:
-            data = pickle.load(f)
-            known_encodings = data["encodings"]
-            known_names = data["names"]
-
-        # Find face locations and encode the face features
-        face_locations = face_recognition.face_locations(img)
-        face_encodings = face_recognition.face_encodings(img, face_locations)
+#     except Exception as ex:
+#         app.logger.exception(f"train_model_face failed, exception[{ex}]")
+#         raise Exception(f"train_model failed. [exception{ex}]")
+#     finally:
+#         app.logger.info(f"train_model_face finish {path_train}")
 
 
-        for face_encoding, face_location in zip(face_encodings, face_locations):
+# # nhận dạng khuôn mặt từ 1 ảnh
+# def get_id_from_img_face(img):
+#     try:
+#         # Load the face encodings and names from the file
+#         with open("encodings.pickle", "rb") as f:
+#             data = pickle.load(f)
+#             known_encodings = data["encodings"]
+#             known_names = data["names"]
 
-            # Compare the face encoding with the known encodings
-            matches = face_recognition.compare_faces(known_encodings, face_encoding)
+#         # Find face locations and encode the face features
+#         face_locations = face_recognition.face_locations(img)
+#         face_encodings = face_recognition.face_encodings(img, face_locations)
+
+
+#         for face_encoding, face_location in zip(face_encodings, face_locations):
+
+#             # Compare the face encoding with the known encodings
+#             matches = face_recognition.compare_faces(known_encodings, face_encoding)
             
-            # Find the index of the matched face
-            match_index = matches.index(True) if True in matches else None
-            print("start fine Id")
-            # Get the name of the matched person: chỉ lấy khuôn mặt đầu tiên
-            Id = known_names[match_index] if match_index is not None else "Unknown"
-            return Id
-    except Exception as ex:
-        raise Exception(f"get_id_from_img failed. [exception{ex}]")
+#             # Find the index of the matched face
+#             match_index = matches.index(True) if True in matches else None
+#             print("start fine Id")
+#             # Get the name of the matched person: chỉ lấy khuôn mặt đầu tiên
+#             Id = known_names[match_index] if match_index is not None else "Unknown"
+#             return Id
+#     except Exception as ex:
+#         raise Exception(f"get_id_from_img failed. [exception{ex}]")
 
 # # đếm số ảnh
 # def counter_img(path):

@@ -26,7 +26,6 @@ numpy
 scikit-learn
 scipy
 keras_facenet
-face_recognition
 
 #google drive api
 google-api-python-client

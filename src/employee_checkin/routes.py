@@ -741,6 +741,8 @@ def exportTimesheetReport():
         path = exist.CreateTimesheetReport()      
         response = send_file(path, as_attachment=True)
         app.logger.info(f"exportTimesheetReport thành công")
+        t = threading.Thread(target=DeleteFile, args=(path, datetime.now() + timedelta(seconds=60)))
+        t.start()
         return response
     except ProjectException as pEx:
         db.session.rollback()
@@ -762,8 +764,6 @@ def exportTimesheetReport():
         }, 200
     finally:
         app.logger.info(f"getTimesheetDetails kết thúc")
-        t = threading.Thread(target=DeleteFile, args=(path, datetime.now() + timedelta(seconds=3)))
-        t.start()
 
 # POST "api/checkin/report"
 @EmployeeCheckinRoute.route("/report", methods=["POST"])
@@ -812,7 +812,7 @@ def ExportCheckinReport():
         }, 200
     finally:
         app.logger.info(f"ExportCheckinReport kết thúc")
-        t = threading.Thread(target=DeleteFile, args=(path, datetime.now() + timedelta(seconds=3)))
+        t = threading.Thread(target=DeleteFile, args=(path, datetime.now() + timedelta(seconds=60)))
         t.start()
 
 
