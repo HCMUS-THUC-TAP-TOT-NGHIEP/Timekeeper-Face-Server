@@ -20,7 +20,6 @@ openpyxl
 xlrd
 
 opencv-python-headless
-opencv-python
 Tensorflow
 numpy
 scikit-learn
