@@ -19,7 +19,8 @@ xlsxwriter
 openpyxl
 xlrd
 
-opencv-python-headless
+# opencv-python
+opencv-contrib-python-headless
 Tensorflow
 numpy
 scikit-learn
