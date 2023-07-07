@@ -24,8 +24,8 @@ from src.face_api.face_recog import get_ID
 
 FaceApi = Blueprint("face", __name__)
 
-embedder = FaceNet()
-encoder = LabelEncoder()
+# embedder = FaceNet()
+# encoder = LabelEncoder()
 
 # Luôn luôn viết try ... except...
 # Ghi log:
@@ -55,7 +55,8 @@ def register():
         if not EmployeeId:
             raise ProjectException("Không nhận được mã nhân viên")
 
-        employee = EmployeeModel.query.filter(EmployeeModel.Id == EmployeeId).first()
+        employee = EmployeeModel.query.filter(
+            EmployeeModel.Id == EmployeeId).first()
         if not employee:
             raise ProjectException(f"không tồn tại nhân viên [{EmployeeId}]")
 
@@ -67,11 +68,13 @@ def register():
             raise Exception("Không lưu được ảnh")
         app.logger.info("save_images successfully. Lưu ảnh thành công")
 
-        
-
         # quá trình trích xuất khuôn mặt và train ảnh
-        # train_facenet(embedder, encoder, Config.LOCAL_STORAGE, Config.PATH_ENCODE, Config.PATH_MODEL)        
-        t = threading.Thread(target=train_facenet, args=(embedder, encoder, Config.LOCAL_STORAGE,Config.PATH_ENCODE, Config.PATH_MODEL ))
+        # train_facenet(embedder, encoder, Config.LOCAL_STORAGE, Config.PATH_ENCODE, Config.PATH_MODEL)
+        embedder = FaceNet()
+        encoder = LabelEncoder()
+
+        t = threading.Thread(target=train_facenet, args=(
+            embedder, encoder, Config.LOCAL_STORAGE, Config.PATH_ENCODE, Config.PATH_MODEL))
         t.start()
 
         return {
@@ -80,7 +83,8 @@ def register():
             "ResponseData": None,
         }
     except ProjectException as pEx:
-        app.logger.error(f"Đăng ký khuôn mặt thất bại. Có exception[{str(pEx)}]")
+        app.logger.error(
+            f"Đăng ký khuôn mặt thất bại. Có exception[{str(pEx)}]")
         return {
             "Status": 0,
             "Description": f"2. Đăng ký khuôn mặt không thành công. {pEx}",
@@ -110,22 +114,28 @@ def recognition():
             jsonRequestData["Picture"] if "Picture" in jsonRequestData else None
         )
         AttendanceTime = (
-            datetime.fromisoformat(jsonRequestData["AttendanceTime"]).astimezone(tz.tzlocal()).isoformat() if "AttendanceTime" in jsonRequestData else datetime.now()
+            datetime.fromisoformat(jsonRequestData["AttendanceTime"]).astimezone(
+                tz.tzlocal()).isoformat() if "AttendanceTime" in jsonRequestData else datetime.now()
         )
 
-        #endregion
-        
-        #region validation
+        # endregion
+
+        # region validation
         if not Picture or len(Picture) == 0:
-            raise ProjectException("Yêu cầu không hợp lệ do không cung cấp hình ảnh.")        
-        if not AttendanceTime :
-            raise ProjectException("Yêu cầu không hợp lệ do thời gian nhận diện không có hoặc không hợp lệ.")
+            raise ProjectException(
+                "Yêu cầu không hợp lệ do không cung cấp hình ảnh.")
+        if not AttendanceTime:
+            raise ProjectException(
+                "Yêu cầu không hợp lệ do thời gian nhận diện không có hoặc không hợp lệ.")
         # AttendanceTime = datetime.fromisoformat(AttendanceTime)
-        #endregion
+        # endregion
 
         RecognitionMethod = 1
         img = base64ToOpenCV(Picture)
-        Id = get_ID(embedder, encoder, Config.PATH_ENCODE, Config.PATH_MODEL, img)
+        embedder = FaceNet()
+        encoder = LabelEncoder()
+        Id = get_ID(embedder, encoder, Config.PATH_ENCODE,
+                    Config.PATH_MODEL, img)
 
         if Id == -1:
             app.logger.error(f"recognition unknown")
@@ -135,11 +145,11 @@ def recognition():
                 "ResponseData": None,
             }, 200
 
-        
         employee = EmployeeModel.query.filter(EmployeeModel.Id == Id).first()
         if not employee:
             # raise ValueError(f"Không tìm thấy nhân viên mã {Id}")
-            app.logger.error(f"recognition exception. Không tìm thấy nhân viên mã {Id}")
+            app.logger.error(
+                f"recognition exception. Không tìm thấy nhân viên mã {Id}")
             return {
                 "Status": 2,
                 "Description": f"Không xác định được nhân viên. Vui lòng kiểm tra log.",
@@ -148,9 +158,10 @@ def recognition():
 
         name = f"{employee.LastName} {employee.FirstName}"
 
-        t = threading.Thread(target=EmployeeCheckin.InsertOne, args=(app._get_current_object(), Id, RecognitionMethod, "Khuôn mặt", AttendanceTime,  Picture.split(",")[1] , ) )
+        t = threading.Thread(target=EmployeeCheckin.InsertOne, args=(app._get_current_object(
+        ), Id, RecognitionMethod, "Khuôn mặt", AttendanceTime,  Picture.split(",")[1], ))
         t.start()
-                
+
         app.logger.info("EmployeeID:" + str(Id))
 
         list_img = os.listdir(os.path.join(Config.LOCAL_STORAGE, str(Id)))
@@ -170,7 +181,8 @@ def recognition():
         }
     except ProjectException as pEx:
         db.session.rollback()
-        app.logger.error(f"Nhận diện khuôn mặt thất bại. Có exception[{str(pEx)}]")
+        app.logger.error(
+            f"Nhận diện khuôn mặt thất bại. Có exception[{str(pEx)}]")
         return {
             "Status": 0,
             "Description": f"{pEx}",
