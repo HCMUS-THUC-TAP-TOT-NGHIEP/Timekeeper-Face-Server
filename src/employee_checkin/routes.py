@@ -40,6 +40,7 @@ EmployeeCheckinRoute = Blueprint("/checkin", __name__)
 
 ALLOWED_EXTENSIONS = {'xlsx', 'xls', 'csv'}
 
+
 def CheckIfFileAllowed(filename):
     if ('.' not in filename):
         return False
@@ -48,38 +49,49 @@ def CheckIfFileAllowed(filename):
         return False
     return True
 
+
 def GetFileExtensionFromFileNam(filename):
     return filename.rsplit('.', 1)[1].lower() if '.' in filename else None
 
 # POST "api/checkin"
+
+
 @EmployeeCheckinRoute.route("/new", methods=["POST"])
 def createCheckinRecord():
     try:
         app.logger.info(f"createCheckinRecord bắt đầu")
         jsonRequest = request.form
-        Image = jsonRequest["Image"] if "Image" in jsonRequest else ""  #base64 encoded
-        Method = int(jsonRequest["Method"]) if "Method" in jsonRequest else None
-        EmployeeId = int(jsonRequest["EmployeeId"]) if "EmployeeId" in jsonRequest else None
+        # base64 encoded
+        Image = jsonRequest["Image"] if "Image" in jsonRequest else ""
+        Method = int(jsonRequest["Method"]
+                     ) if "Method" in jsonRequest else None
+        EmployeeId = int(jsonRequest["EmployeeId"]
+                         ) if "EmployeeId" in jsonRequest else None
         AttendanceTime = jsonRequest["AttendanceTime"] if "AttendanceTime" in jsonRequest else None
 
-        #region validation
+        # region validation
 
         if not Image:
-            raise ProjectException("Không ghi nhận chấm công do thiếu hình ảnh.")
+            raise ProjectException(
+                "Không ghi nhận chấm công do thiếu hình ảnh.")
         if not Method:
-            raise ProjectException("Không ghi nhận chấm công do thiếu thông tin hình thức chấm công.")
+            raise ProjectException(
+                "Không ghi nhận chấm công do thiếu thông tin hình thức chấm công.")
         if not EmployeeId:
-            raise ProjectException("Không ghi nhận chấm công do thiếu thông tin nhân viên.")
+            raise ProjectException(
+                "Không ghi nhận chấm công do thiếu thông tin nhân viên.")
         exist = EmployeeModel.query.filter_by(Id=EmployeeId).first()
         if not exist:
-            raise ProjectException(f"Không tìm thấy nhân viên có mã {EmployeeId}.")
+            raise ProjectException(
+                f"Không tìm thấy nhân viên có mã {EmployeeId}.")
         if not AttendanceTime:
             raise ProjectException(f"Chưa cung cấp thông tin giờ.")
         AttendanceTime = datetime.fromisoformat(AttendanceTime)
 
-        #endregion
+        # endregion
 
-        EmployeeCheckin.InsertOne(app=app._get_current_object(),employee_id=EmployeeId, method=Method, method_text="", time=AttendanceTime, image_data=Image.split(",")[-1])
+        EmployeeCheckin.InsertOne(app=app._get_current_object(), employee_id=EmployeeId,
+                                  method=Method, method_text="", time=AttendanceTime, image_data=Image.split(",")[-1])
         db.session.commit()
         app.logger.info(f"createCheckinRecord thành công.")
         return {
@@ -110,9 +122,11 @@ def createCheckinRecord():
         app.logger.info(f"createCheckinRecord kết thúc")
 
 # GET api/checkin/method
+
+
 @EmployeeCheckinRoute.route("/method", methods=["GET"])
 def GetAllCheckinMethods():
-    try: 
+    try:
         app.logger.info(f"GetAllCheckinMethods bắt đầu")
         result = CheckinMethodModel.query.all()
         app.logger.info(f"GetAllCheckinMethods thành công")
@@ -146,6 +160,8 @@ def GetAllCheckinMethods():
         app.logger.info(f"GetAllCheckinMethods kết thúc")
 
 # GET "api/checkin/list"
+
+
 @EmployeeCheckinRoute.route("/list", methods=["POST"])
 @jwt_required()
 def getCheckinRecord():
@@ -208,6 +224,8 @@ def getCheckinRecord():
         app.logger.info(f"getCheckinRecord kết thúc")
 
 # GET "api/checkin/list/v2"
+
+
 @EmployeeCheckinRoute.route("/list/v2", methods=["POST"])
 @jwt_required()
 def getCheckinRecordV2():
@@ -223,11 +241,11 @@ def getCheckinRecordV2():
         DateTo = (jsonRequestData["DateTo"]
                   if "DateTo" in jsonRequestData else None)
         MethodList = (jsonRequestData["MethodList"]
-                  if "MethodList" in jsonRequestData else [])
+                      if "MethodList" in jsonRequestData else [])
         Page = (jsonRequestData["Page"]
-                  if "Page" in jsonRequestData else 1)
+                if "Page" in jsonRequestData else 1)
         PageSize = (jsonRequestData["PageSize"]
-                  if "PageSize" in jsonRequestData else 50)
+                    if "PageSize" in jsonRequestData else 50)
         result = AttendanceStatisticV2.QueryMany(
             DateFrom=DateFrom, DateTo=DateTo, Keyword=Keyword, Page=Page, PageSize=PageSize, MethodList=MethodList)
         count = result.total
@@ -263,6 +281,8 @@ def getCheckinRecordV2():
         app.logger.info(f"getCheckinRecord v2 kết thúc")
 
 # PUT  "api/checkin/summary"
+
+
 @EmployeeCheckinRoute.route("/summary", methods=["POST"])
 @jwt_required()
 def summary():
@@ -270,7 +290,7 @@ def summary():
     try:
         jsonRequestData = request.get_json()
         Keyword = (
-        jsonRequestData["Keyword"] if "Keyword" in jsonRequestData else None)
+            jsonRequestData["Keyword"] if "Keyword" in jsonRequestData else None)
         DateFrom = (jsonRequestData["DateFrom"]
                     if "DateFrom" in jsonRequestData else None)
         DateTo = (jsonRequestData["DateTo"]
@@ -284,14 +304,15 @@ def summary():
         #     DateFrom, DateTo), between(DateFrom, ShiftDetailModel.StartDate, ShiftDetailModel.EndDate), between(DateTo, ShiftDetailModel.StartDate, ShiftDetailModel.EndDate)))).where(ShiftModel.Status == 1)
         query = select(vShiftDetail).where(
             or_(vShiftDetail.StartDate.between(DateFrom, DateTo), vShiftDetail.EndDate.between(
-            DateFrom, DateTo), between(DateFrom, vShiftDetail.StartDate, vShiftDetail.EndDate), between(DateTo, vShiftDetail.StartDate, vShiftDetail.EndDate))
+                DateFrom, DateTo), between(DateFrom, vShiftDetail.StartDate, vShiftDetail.EndDate), between(DateTo, vShiftDetail.StartDate, vShiftDetail.EndDate))
         )
 
-        #endregion
+        # endregion
 
         vShiftDetailList = db.session.execute(query).scalars().all()
 
-        checkinList = AttendanceStatistic.QueryMany(DateFrom=DateFrom, DateTo=DateTo, Keyword=Keyword)
+        checkinList = AttendanceStatistic.QueryMany(
+            DateFrom=DateFrom, DateTo=DateTo, Keyword=Keyword)
 
         shiftDetailList = ShiftDetailModel.query.filter_by(Status=1).all()
         app.logger.info(f"summary thành công")
@@ -324,7 +345,9 @@ def summary():
     finally:
         app.logger.info(f"summary kết thúc")
 
-#GET api/checkin/import/templates
+# GET api/checkin/import/templates
+
+
 @EmployeeCheckinRoute.route("/timekeeper/templates", methods=["GET", "POST"])
 @admin_required()
 def GetTemplate():
@@ -364,6 +387,8 @@ def GetTemplate():
         app.logger.info("GetTemplate timekeeper kết thúc")
 
 # GET api/checkin/timesheet
+
+
 @EmployeeCheckinRoute.route("/timesheet", methods=["GET"])
 @admin_required()
 def getTimeSheetList():
@@ -375,10 +400,11 @@ def getTimeSheetList():
         Keyword = (
             requestData["Keyword"] if "Keyword" in requestData else None)
         Page = int(requestData["Page"]
-                  if "Page" in requestData else 1)
+                   if "Page" in requestData else 1)
         PageSize = int(requestData["PageSize"]
-                  if "PageSize" in requestData else 50)
-        result = Timesheet.QueryMany(Keyword=Keyword, Page=Page, PageSize=PageSize)
+                       if "PageSize" in requestData else 50)
+        result = Timesheet.QueryMany(
+            Keyword=Keyword, Page=Page, PageSize=PageSize)
         count = result["total"]
         data = timesheetListSchema.dump(result["items"])
         app.logger.info(f"getCheckinRecord v2 thành công")
@@ -412,10 +438,12 @@ def getTimeSheetList():
         app.logger.info(f"getTimeSheetList kết thúc")
 
 # POST api/checkin/timesheet/detail
+
+
 @EmployeeCheckinRoute.route("/timesheet/detail", methods=["PUT"])
 @admin_required()
 def modifyTimesheetDetail():
-    try: 
+    try:
         jsonRequestData = request.get_json()
         if "Id" not in jsonRequestData:
             raise ProjectException("Yêu cầu không hợp lệ, do không có Id")
@@ -461,22 +489,25 @@ def createTimeSheet():
         Name = (
             jsonRequestData["Name"] if "Name" in jsonRequestData else None)
         DateFrom = (jsonRequestData["DateFrom"]
-                  if "DateFrom" in jsonRequestData else None)
+                    if "DateFrom" in jsonRequestData else None)
         DateTo = (jsonRequestData["DateTo"]
                   if "DateTo" in jsonRequestData else None)
         DepartmentList = (jsonRequestData["DepartmentList"]
-                  if "DepartmentList" in jsonRequestData else [])
-                  
-        #region validate
+                          if "DepartmentList" in jsonRequestData else [])
+
+        # region validate
 
         if not Name or not Name.strip():
-            raise ProjectException("Yêu cầu không hợp lệ, do chưa cung cấp tên báo cáo.")
+            raise ProjectException(
+                "Yêu cầu không hợp lệ, do chưa cung cấp tên báo cáo.")
         if not DateFrom:
-            raise ProjectException("Yêu cầu không hợp lệ, do chưa cung cấp ngày bắt đầu báo cáo.")
+            raise ProjectException(
+                "Yêu cầu không hợp lệ, do chưa cung cấp ngày bắt đầu báo cáo.")
         if not DateTo:
-            raise ProjectException("Yêu cầu không hợp lệ, do chưa cung cấp ngày kết thúc báo cáo.")
+            raise ProjectException(
+                "Yêu cầu không hợp lệ, do chưa cung cấp ngày kết thúc báo cáo.")
 
-        #endregion
+        # endregion
 
         newTimeSheet = Timesheet()
         newTimeSheet.Name = Name
@@ -498,7 +529,7 @@ def createTimeSheet():
         return {
             "Status": 1,
             "Description": f"",
-            "ResponseData": { "Id": newTimeSheet.Id },
+            "ResponseData": {"Id": newTimeSheet.Id},
         }, 200
     except ProjectException as pEx:
         db.session.rollback()
@@ -522,6 +553,8 @@ def createTimeSheet():
         app.logger.info(f"getTimeSheetList kết thúc")
 
 # DELETE api/checkin/timesheet
+
+
 @EmployeeCheckinRoute.route("/timesheet", methods=["DELETE"])
 @admin_required()
 def DeleteTimesheet():
@@ -529,7 +562,8 @@ def DeleteTimesheet():
         app.logger.info("DeleteTimesheet bắt đầu")
         jsonRequestData = request.get_json()
         if "Id" not in jsonRequestData:
-            raise ProjectException("Yêu cầu không hợp lệ, do chưa cung cấp mã báo cáo.")
+            raise ProjectException(
+                "Yêu cầu không hợp lệ, do chưa cung cấp mã báo cáo.")
         TimesheetId = jsonRequestData["Id"]
         Timesheet.DeleteById(id=TimesheetId)
         app.logger.info(f"DeleteTimesheet Id[{TimesheetId}] thành công.")
@@ -559,7 +593,7 @@ def DeleteTimesheet():
         }, 200
     finally:
         app.logger.info(f"DeleteTimesheet kết thúc")
-    
+
 
 # PUT api/checkin/timesheet
 @EmployeeCheckinRoute.route("/timesheet", methods=["PUT"])
@@ -567,18 +601,21 @@ def DeleteTimesheet():
 def UpdateTimesheet():
     try:
         app.logger.info(f"UpdateTimesheet bắt đầu.")
-        
+
         jsonRequestData = request.get_json()
         if "Id" not in jsonRequestData:
-            raise ProjectException("Yêu cầu không hợp lệ do chưa cung cấp định danh bảng phân ca.")
+            raise ProjectException(
+                "Yêu cầu không hợp lệ do chưa cung cấp định danh bảng phân ca.")
 
         timesheetId = int(jsonRequestData["Id"])
         # region validate
         exist = Timesheet.query.filter_by(Id=timesheetId).first()
         if not exist:
-            raise ProjectException(f"Không tìm thấy bảng phân ca có mã định dang {timesheetId}")
+            raise ProjectException(
+                f"Không tìm thấy bảng phân ca có mã định dang {timesheetId}")
         if exist.LockedStatus:
-            raise ProjectException(f"Bảng chấm công mã {self.Id} - {self.Name} không thể chỉnh sửa vì đã khóa. ")
+            raise ProjectException(
+                f"Bảng chấm công mã {self.Id} - {self.Name} không thể chỉnh sửa vì đã khóa. ")
         exist.InsertTimesheetDetail()
         db.session.commit()
         app.logger.info(f"UpdateTimesheet thành công. ")
@@ -588,7 +625,7 @@ def UpdateTimesheet():
             "ResponseData": None,
         }, 200
 
-        #endregion
+        # endregion
         pass
     except ProjectException as pEx:
         db.session.rollback()
@@ -626,13 +663,15 @@ def getTimesheetDetails():
         searchString = (
             str(requestData["SearchString"]).strip() if "SearchString" in requestData else "")
 
-        #region validate
+        # region validate
         if not TimesheetId:
-            raise ProjectException("Yêu cầu không hợp lệ, do chưa cung cấp mã báo cáo.")
-        #endregion
+            raise ProjectException(
+                "Yêu cầu không hợp lệ, do chưa cung cấp mã báo cáo.")
+        # endregion
         exist = Timesheet.query.filter_by(Id=int(TimesheetId)).first()
         if not exist:
-            raise ProjectException(f"Không tìm thấy bảng phân ca mã {TimesheetId}.")
+            raise ProjectException(
+                f"Không tìm thấy bảng phân ca mã {TimesheetId}.")
         result = exist.QueryDetails(SearchString=searchString)
         detailList = TimesheetDetailSchema(many=True).dump(result)
 
@@ -668,6 +707,8 @@ def getTimesheetDetails():
         app.logger.info(f"getTimesheetDetails kết thúc")
 
 # POST api/checkin/timesheet/detail/report
+
+
 @EmployeeCheckinRoute.route("/timesheet/detail/report", methods=["POST"])
 @admin_required()
 def exportTimesheetDetailReport():
@@ -678,13 +719,16 @@ def exportTimesheetDetailReport():
         requestData = request.args
         TimesheetId = (
             requestData["Id"] if "Id" in requestData else None)
-        #region validate
+        # region validate
         if not TimesheetId:
-            raise ProjectException("Yêu cầu không hợp lệ, do chưa cung cấp mã báo cáo.")
-        #endregion
-        exist = db.session.execute(db.select(Timesheet).where(Timesheet.Id == int(TimesheetId))).scalars().first()
+            raise ProjectException(
+                "Yêu cầu không hợp lệ, do chưa cung cấp mã báo cáo.")
+        # endregion
+        exist = db.session.execute(db.select(Timesheet).where(
+            Timesheet.Id == int(TimesheetId))).scalars().first()
         if not exist:
-            raise ProjectException(f"Không tìm thấy bảng phân ca mã {TimesheetId}.")
+            raise ProjectException(
+                f"Không tìm thấy bảng phân ca mã {TimesheetId}.")
         data = exist.QueryDetails()
         detailList = TimesheetDetailSchema(many=True).dump(data)
         app.logger.info(f"exportTimesheetDetailReport thành công")
@@ -719,10 +763,12 @@ def exportTimesheetDetailReport():
         app.logger.info(f"exportTimesheetDetailReport kết thúc")
 
 # POST api/checkin/timesheet/report
+
+
 @EmployeeCheckinRoute.route("/timesheet/report", methods=["POST"])
 @admin_required()
 def exportTimesheetReport():
-    path=""
+    path = ""
     try:
         app.logger.info(f"exportTimesheetReport bắt đầu")
         claims = get_jwt()
@@ -730,18 +776,22 @@ def exportTimesheetReport():
         requestData = request.get_json()
         TimesheetId = (
             requestData["Id"] if "Id" in requestData else None)
-        #region validate
+        # region validate
         if not TimesheetId:
-            raise ProjectException("Yêu cầu không hợp lệ, do chưa cung cấp mã báo cáo.")
-        #endregion
-        exist = db.session.execute(db.select(Timesheet).where(Timesheet.Id == int(TimesheetId))).scalars().first()
+            raise ProjectException(
+                "Yêu cầu không hợp lệ, do chưa cung cấp mã báo cáo.")
+        # endregion
+        exist = db.session.execute(db.select(Timesheet).where(
+            Timesheet.Id == int(TimesheetId))).scalars().first()
         if not exist:
-            raise ProjectException(f"Không tìm thấy bảng phân ca mã {TimesheetId}.")
+            raise ProjectException(
+                f"Không tìm thấy bảng phân ca mã {TimesheetId}.")
 
-        path = exist.CreateTimesheetReport()      
+        path = exist.CreateTimesheetReport()
         response = send_file(path, as_attachment=True)
         app.logger.info(f"exportTimesheetReport thành công")
-        t = threading.Thread(target=DeleteFile, args=(path, datetime.now() + timedelta(seconds=60)))
+        t = threading.Thread(target=DeleteFile, args=(
+            path, datetime.now() + timedelta(seconds=60)))
         t.start()
         return response
     except ProjectException as pEx:
@@ -766,10 +816,12 @@ def exportTimesheetReport():
         app.logger.info(f"getTimesheetDetails kết thúc")
 
 # POST "api/checkin/report"
+
+
 @EmployeeCheckinRoute.route("/report", methods=["POST"])
 @admin_required()
 def ExportCheckinReport():
-    path=""
+    path = ""
     try:
         app.logger.info(f"ExportCheckinReport bắt đầu")
         claims = get_jwt()
@@ -779,16 +831,18 @@ def ExportCheckinReport():
         DateTo = jRequestData["DateTo"] if "DateTo" in jRequestData else None
         Keyword = jRequestData["Keyword"] if "Keyword" in jRequestData else None
 
-
-        #region validate
+        # region validate
         if not DateFrom:
-            raise ProjectException("Yêu cầu không hợp lệ, do chưa cung cấp ngày bắt đầu.")
+            raise ProjectException(
+                "Yêu cầu không hợp lệ, do chưa cung cấp ngày bắt đầu.")
         if not DateTo:
-            raise ProjectException("Yêu cầu không hợp lệ, do chưa cung cấp ngày kết thúc.")
+            raise ProjectException(
+                "Yêu cầu không hợp lệ, do chưa cung cấp ngày kết thúc.")
 
-        #endregion
-        
-        path = AttendanceStatisticV2.ExportReport(DateFrom=parse(DateFrom).date(), DateTo=parse(DateTo).date(), Keyword=Keyword)       
+        # endregion
+
+        path = AttendanceStatisticV2.ExportReport(DateFrom=parse(
+            DateFrom).date(), DateTo=parse(DateTo).date(), Keyword=Keyword)
         response = send_file(path, as_attachment=True)
         app.logger.info(f"ExportCheckinReport thành công")
         return response
@@ -812,7 +866,8 @@ def ExportCheckinReport():
         }, 200
     finally:
         app.logger.info(f"ExportCheckinReport kết thúc")
-        t = threading.Thread(target=DeleteFile, args=(path, datetime.now() + timedelta(seconds=60)))
+        t = threading.Thread(target=DeleteFile, args=(
+            path, datetime.now() + timedelta(seconds=60)))
         t.start()
 
 
@@ -826,16 +881,18 @@ def UpdateBulkTimesheetDetailByImport():
         id = claims["id"]
         fileRequest = request.files["ImportData"]
         timesheetId = request.form.get("TimesheetId")
-        
+
         # region validate
 
         if not fileRequest:
             raise ProjectException("Không tìm thấy tệp tin")
         if not timesheetId:
-            raise ProjectException("Yêu cầu không hợp lệ do không cung cấp mã timesheet")
+            raise ProjectException(
+                "Yêu cầu không hợp lệ do không cung cấp mã timesheet")
         exist = Timesheet().query.filter_by(Id=timesheetId).first()
         if not exist:
-            raise ProjectException(f"Yêu cầu không hợp lệ do không tìm thấy timesheet có mã {timesheetId}")
+            raise ProjectException(
+                f"Yêu cầu không hợp lệ do không tìm thấy timesheet có mã {timesheetId}")
         if not CheckIfFileAllowed(fileRequest.filename):
             raise ProjectException(
                 f"Tập tin {fileRequest.filename} có định dạng không phù hợp (cần phải là {string.join(ALLOWED_EXTENSIONS)}) ")
@@ -863,16 +920,19 @@ def UpdateBulkTimesheetDetailByImport():
                     raise ProjectException(
                         f"Ô A{i + 1} bị trống, chưa có mã nhân viên.")
 
-                employee = EmployeeModel.query.filter_by(Id=employeeCode).first()
+                employee = EmployeeModel.query.filter_by(
+                    Id=employeeCode).first()
                 if not employee:
-                    raise ProjectException(f"Không tìm thấy nhân viên có mã {employeeCode}")
+                    raise ProjectException(
+                        f"Không tìm thấy nhân viên có mã {employeeCode}")
                 if not date:
                     raise ProjectException(
                         f"Ô D{i + 1} bị trống, chưa có ngày.")
                 try:
                     date = datetime.strptime(date, "%d/%m/%Y")
                 except:
-                    raise ProjectException(f"Ô D{i + 1} không đúng địng dạng DD/MM/YYYY")
+                    raise ProjectException(
+                        f"Ô D{i + 1} không đúng địng dạng DD/MM/YYYY")
                 if not shiftId:
                     raise ProjectException(
                         f"Ô E{i + 1} bị trống, chưa mã ca.")
@@ -889,33 +949,33 @@ def UpdateBulkTimesheetDetailByImport():
                     raise ProjectException(
                         f"Ô H{i + 3 + 1} bị trống, chưa có sô giờ.")
 
-
                 detail = db.session.execute(db.select(TimesheetDetail).where(
-                    and_(TimesheetDetail.TimesheetId==timesheetId, TimesheetDetail.EmployeeId==employeeCode
-                        , TimesheetDetail.Date == date, TimesheetDetail.ShiftId == shiftId
-                        )
+                    and_(TimesheetDetail.TimesheetId == timesheetId, TimesheetDetail.EmployeeId == employeeCode, TimesheetDetail.Date == date, TimesheetDetail.ShiftId == shiftId
+                         )
                 )).scalars().first()
                 if not detail:
-                    shift = ShiftDetailModel.query.filter_by(ShiftId=shiftId).first()
+                    shift = ShiftDetailModel.query.filter_by(
+                        ShiftId=shiftId).first()
                     detail = db.session.execute(db.select(TimesheetDetail).where(
-                        and_(TimesheetDetail.TimesheetId==timesheetId, TimesheetDetail.EmployeeId==employeeCode
-                            , TimesheetDetail.Date == date, TimesheetDetail.ShiftId == None
-                            )
-                        )).scalars().first()
-                    if not detail: continue
+                        and_(TimesheetDetail.TimesheetId == timesheetId, TimesheetDetail.EmployeeId == employeeCode, TimesheetDetail.Date == date, TimesheetDetail.ShiftId == None
+                             )
+                    )).scalars().first()
+                    if not detail:
+                        continue
                     detail.ShiftId = shiftId
                     detail.StartTime = shift.StartTime
                     detail.FinishTime = shift.FinishTime
                     detail.BreakAt = shift.BreakAt
                     detail.BreakEnd = shift.BreakEnd
-                
+
                 detail.CheckinTime = checkinTime
-                detail.CheckoutTime = checkoutTime              
-                detail.WorkingHour = workingHour      
+                detail.CheckoutTime = checkoutTime
+                detail.WorkingHour = workingHour
 
         elif fileExtension == 'csv':
             csv_data = pandas.read_csv(fileRequest, header=0)
-            raise ProjectException(f"Không hỗ trợ file có phần mở rộng .{fileExtension}")
+            raise ProjectException(
+                f"Không hỗ trợ file có phần mở rộng .{fileExtension}")
         db.session.commit()
         app.logger.info(f"UpdateBulkTimesheetDetailByImport thành công")
         return {
@@ -943,6 +1003,8 @@ def UpdateBulkTimesheetDetailByImport():
         app.logger.info(f"UpdateBulkTimesheetDetailByImport kết thúc")
 
 # POST api/checkin
+
+
 @EmployeeCheckinRoute.route("/", methods=["POST"])
 def CreateCheckinRecord():
     try:
@@ -968,19 +1030,23 @@ def CreateCheckinRecord():
         app.logger.info(f"CreateCheckinRecord kết thúc")
 
 # POST api/checkin/late-early/count
+
+
 @EmployeeCheckinRoute.route("/late-early/count", methods=["POST"])
 @admin_required()
 def CountLateEarly():
     try:
         app.logger.info(f"CountLateEarly bắt đầu.")
         jsonRequestData = request.get_json()
-        DateFrom = datetime.fromisoformat(jsonRequestData["DateFrom"]) if "DateFrom" in jsonRequestData and jsonRequestData["DateFrom"] else None
+        DateFrom = datetime.fromisoformat(jsonRequestData["DateFrom"].replace(
+            "Z", "")) if "DateFrom" in jsonRequestData and jsonRequestData["DateFrom"] else None
         if DateFrom is None:
             raise Exception("Ngày không hợp lệ")
-        DateTo = datetime.fromisoformat(jsonRequestData["DateTo"]) if "DateTo" in jsonRequestData and jsonRequestData["DateTo"] else None
+        DateTo = datetime.fromisoformat(jsonRequestData["DateTo"].replace(
+            "Z", "")) if "DateTo" in jsonRequestData and jsonRequestData["DateTo"] else None
         countList = []
         dayList = []
-        if DateTo is None: 
+        if DateTo is None:
             result = EmployeeCheckin.CountLateEarly(DateFrom)
             countList.append(result)
             dayList.append(DateFrom.day)
@@ -1017,28 +1083,37 @@ def CountLateEarly():
         app.logger.info(f"CountLateEarly kết thúc")
 
 # GET api/checkin/late-early/count
+
+
 @EmployeeCheckinRoute.route("/late-early/count", methods=["GET"])
 @admin_required()
 def GetCountLateEarly():
     try:
         requestData = request.args
-        timesheetId = int(requestData["TimesheetId"]) if requestData["TimesheetId"] else None
+        timesheetId = int(requestData["TimesheetId"]
+                          ) if requestData["TimesheetId"] else None
         if not timesheetId:
-            raise ProjectException("Chưa cung cấp mã báo cáo tổng hợp chấm công")
-        employeeIdList = db.session.execute(db.select(distinct(TimesheetDetail.EmployeeId)).where(TimesheetDetail.TimesheetId==timesheetId).order_by(TimesheetDetail.EmployeeId)).scalars().all()
+            raise ProjectException(
+                "Chưa cung cấp mã báo cáo tổng hợp chấm công")
+        employeeIdList = db.session.execute(db.select(distinct(TimesheetDetail.EmployeeId)).where(
+            TimesheetDetail.TimesheetId == timesheetId).order_by(TimesheetDetail.EmployeeId)).scalars().all()
         timesheet = Timesheet.query.filter_by(Id=timesheetId).first()
         if not timesheet:
-            raise ProjectException(f"Không tìm thấy báo cáo chấm công {timesheetId}")
+            raise ProjectException(
+                f"Không tìm thấy báo cáo chấm công {timesheetId}")
         responseList = []
         for employeeId in employeeIdList:
             employee = EmployeeModel.query.filter_by(Id=employeeId).first()
-            if not employee: continue
+            if not employee:
+                continue
             response = employeeInfoSchema.dump(employee)
             result = timesheet.CalculateEarlyLate(EmployeeId=employeeId)
-            if result["CountCheckoutEarly"] + result["CountCheckinLate"] <= 0: continue
+            if result["CountCheckoutEarly"] + result["CountCheckinLate"] <= 0:
+                continue
             response["LateHour"] = round(result["CheckinLateMinute"]/60, 2)
             response["EarlyHour"] = round(result["CheckoutEarlyMinute"]/60, 2)
-            response["Count"] = result["CountCheckoutEarly"] + result["CountCheckinLate"]
+            response["Count"] = result["CountCheckoutEarly"] + \
+                result["CountCheckinLate"]
             responseList.append(response)
         return {
             "Status": 1,
@@ -1068,19 +1143,23 @@ def GetCountLateEarly():
         app.logger.info(f"GetCountLateEarly kết thúc")
 
 # POST api/checkin/off/count
+
+
 @EmployeeCheckinRoute.route("/off/count", methods=["POST"])
 @admin_required()
 def CountOff():
     try:
         app.logger.info(f"CountOff bắt đầu.")
         jsonRequestData = request.get_json()
-        DateFrom = datetime.fromisoformat(jsonRequestData["DateFrom"]) if "DateFrom" in jsonRequestData and jsonRequestData["DateFrom"] else None
+        DateFrom = datetime.fromisoformat(jsonRequestData["DateFrom"].replace(
+            "Z", "")) if "DateFrom" in jsonRequestData and jsonRequestData["DateFrom"] else None
         if DateFrom is None:
             raise Exception("Ngày không hợp lệ")
-        DateTo = datetime.fromisoformat(jsonRequestData["DateTo"]) if "DateTo" in jsonRequestData and jsonRequestData["DateTo"] else None
+        DateTo = datetime.fromisoformat(jsonRequestData["DateTo"].replace(
+            "Z", "")) if "DateTo" in jsonRequestData and jsonRequestData["DateTo"] else None
         countList = []
         dayList = []
-        if DateTo is None: 
+        if DateTo is None:
             result = EmployeeCheckin.CountOff(DateFrom)
             countList.append(result)
             dayList.append(DateFrom.day)
@@ -1120,22 +1199,28 @@ def CountOff():
 @EmployeeCheckinRoute.route("/off/statistics", methods=["GET"])
 @admin_required()
 def GetCountOff():
-    try: 
+    try:
         requestData = request.args
-        timesheetId = int(requestData["TimesheetId"]) if requestData["TimesheetId"] else None
+        timesheetId = int(requestData["TimesheetId"]
+                          ) if requestData["TimesheetId"] else None
         if not timesheetId:
-            raise ProjectException("Chưa cung cấp mã báo cáo tổng hợp chấm công")
-        employeeIdList = db.session.execute(db.select(distinct(TimesheetDetail.EmployeeId)).where(TimesheetDetail.TimesheetId==timesheetId).order_by(TimesheetDetail.EmployeeId)).scalars().all()
+            raise ProjectException(
+                "Chưa cung cấp mã báo cáo tổng hợp chấm công")
+        employeeIdList = db.session.execute(db.select(distinct(TimesheetDetail.EmployeeId)).where(
+            TimesheetDetail.TimesheetId == timesheetId).order_by(TimesheetDetail.EmployeeId)).scalars().all()
         timesheet = Timesheet.query.filter_by(Id=timesheetId).first()
         if not timesheet:
-            raise ProjectException(f"Không tìm thấy báo cáo chấm công {timesheetId}")
+            raise ProjectException(
+                f"Không tìm thấy báo cáo chấm công {timesheetId}")
         responseList = []
         for employeeId in employeeIdList:
             employee = EmployeeModel.query.filter_by(Id=employeeId).first()
-            if not employee: continue
+            if not employee:
+                continue
             response = employeeInfoSchema.dump(employee)
             result = timesheet.CalculateOff(EmployeeId=employeeId)
-            if result["Count"] <= 0: continue
+            if result["Count"] <= 0:
+                continue
             response["Count"] = result["Count"]
             responseList.append(response)
         return {
