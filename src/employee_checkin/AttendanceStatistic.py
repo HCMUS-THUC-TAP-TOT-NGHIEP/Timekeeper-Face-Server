@@ -134,7 +134,10 @@ class AttendanceStatisticV2(db.Model):
             app.logger.info(f"AttendanceStatisticV2.ExportReport() start.")
             templatePath = os.path.join(
                 os.pardir, app.static_folder, "templates", "Excel", f'CheckinData.xlsx')
-            path = os.path.join(os.pardir, app.static_folder, "export",
+            exportFolder = os.path.join(os.pardir, app.static_folder, "export")
+            if not os.path.exists(exportFolder):
+                os.makedirs(exportFolder)
+            path = os.path.join(exportFolder,
                                 f'Dữ liệu chấm công_{datetime.now().strftime("%Y%m%d%H%M%S")}.xlsx')
             shutil.copyfile(templatePath, path)
             writer = ExcelWriter(path, engine="openpyxl",
