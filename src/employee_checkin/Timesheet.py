@@ -136,7 +136,10 @@ class Timesheet(db.Model):
             app.logger.info(f"Timesheet.CreateTimesheetReport() start.")
             templatePath = os.path.join(
                 os.pardir, app.static_folder, "templates", "Excel", f'SummaryReport.xlsx')
-            path = os.path.join(os.pardir, app.static_folder, "export",
+            exportFolder = os.path.join(os.pardir, app.static_folder, "export")
+            if not os.path.exists(exportFolder):
+                os.makedirs(exportFolder)
+            path = os.path.join(exportFolder,
                                 f'Bảng chấm công tổng hợp_{datetime.now().strftime("%Y%m%d%H%M%S")}.xlsx')
             shutil.copyfile(templatePath, path)
             writer = ExcelWriter(path, engine="openpyxl",
@@ -233,6 +236,7 @@ class Timesheet(db.Model):
                     cell.style = dataStyle
 
             # endregion
+            writer.close()
 
             return path
         except ProjectException as pEx:
@@ -244,7 +248,7 @@ class Timesheet(db.Model):
                 f"Timesheet.CreateTimesheetReport() exception[{ex}]")
             raise ex
         finally:
-            writer.close()
+            # writer.close()
             app.logger.info(f"Timesheet.CreateTimesheetReport() finished.")
 
     @staticmethod
