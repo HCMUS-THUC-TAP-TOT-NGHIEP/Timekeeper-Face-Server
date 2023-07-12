@@ -7,13 +7,15 @@ import numpy as np
 from src.config import Config
 import base64
 
+
 def openCVToBase64(img):
     try:
         string = base64.b64encode(cv2.imencode('.png', img)[1]).decode()
         return string
     except Exception as ex:
         raise Exception(f"openCV2base64 failed. [exception{ex}]")
-    
+
+
 def base64ToOpenCV(str_img):
     try:
         image_data = bytes(str_img.split(",")[1], encoding="utf-8")
@@ -24,11 +26,19 @@ def base64ToOpenCV(str_img):
         raise Exception(f"base64ToOpenCV failed. [exception{ex}]")
 
 # lưu ảnh dạng png với đầu vào là mảng ảnh, id và tên vào datasets/raw/...
+
+
 def save_images(images, id, name):
     try:
-        path = os.path.join(os.getcwd(), "public", "datasets",  f"{id}")
-        if not os.path.isdir(path):
-            os.makedirs(path)
+        # path = os.path.join(os.getcwd(), "public", "datasets",  f"{id}")
+        # if not os.path.isdir(path):
+        #     os.makedirs(path)
+        datasetPath = os.path.join(os.getcwd(), "public", "datasets")
+        if not os.path.exists(datasetPath):
+            os.mkdir()
+        path = os.path.join(datasetPath,  f"{id}")
+        if not os.path.exists(path):
+            os.mkdir(path)
         for i in range(len(images)):
             img_path = os.path.join(path, f"{i}.png")
             # region Convert base64 image to OpenCV image
@@ -62,7 +72,7 @@ def counter_img(path):
 #         # đọc các id đã có
 #         for ID in os.listdir(path_raw):
 #             # path_raw_id = path_raw + "/" + ID
-#             path_raw_id = os.path.join(path_raw, ID) 
+#             path_raw_id = os.path.join(path_raw, ID)
 #             path_processed_id = path_raw_id.replace("raw", "processed")
 #             # kiểm tra tồn tại của folder id
 #             if not os.path.isdir(path_processed_id):
@@ -95,7 +105,8 @@ def getImagesAndLabels(path):
         for folder in os.listdir(path):
             # get the path of all the files in the folder
             folder_path = os.path.join(path, folder)
-            imagePaths = [os.path.join(folder_path, f) for f in os.listdir(folder_path)]
+            imagePaths = [os.path.join(folder_path, f)
+                          for f in os.listdir(folder_path)]
             # list_names.append(folder)
             # now looping through all the image paths and loading the Ids and the images
             for imagePath in imagePaths:
@@ -143,7 +154,7 @@ def get_id_from_img(img):
         features = detector.detectMultiScale(gray_image, 1.1, 10)
 
         for x, y, w, h in features:
-            id, pred = clf.predict(gray_image[y : y + h, x : x + w])
+            id, pred = clf.predict(gray_image[y: y + h, x: x + w])
             confidence = int(100 * (1 - pred / 300))
             if confidence > 70:
                 return id
@@ -151,6 +162,7 @@ def get_id_from_img(img):
                 return None
     except Exception as ex:
         raise Exception(f"get_id_from_img failed. [exception{ex}]")
+
 
 def take_image(path="./public/datasets/raw"):
     try:
