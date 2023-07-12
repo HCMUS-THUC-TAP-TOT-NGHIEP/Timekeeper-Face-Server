@@ -7,7 +7,7 @@ from flask import request
 
 from src.db import db
 from src.jwt import get_jwt_identity, jwt_required
-from src.middlewares.token_required import admin_required
+from src.middlewares.token_required import admin_hrm_required
 from src.utils.extension import ProjectException
 from src.face_api.actions import *
 from src.employee.model import EmployeeModel, employeeInfoSchema
@@ -37,7 +37,7 @@ FaceApi = Blueprint("face", __name__)
 
 # POST api/face/register
 @FaceApi.route("/register", methods=["POST"])
-@admin_required()
+@admin_hrm_required()
 def register():
     try:
         app.logger.info("register bắt đầu.")
@@ -84,7 +84,7 @@ def register():
         }
     except ProjectException as pEx:
         app.logger.error(
-            f"Đăng ký khuôn mặt thất bại. Có exception[{str(pEx)}]")
+            f"Đăng ký khuôn mặt thất bại. Có ProjectException[{str(pEx)}]")
         return {
             "Status": 0,
             "Description": f"2. Đăng ký khuôn mặt không thành công. {pEx}",
@@ -138,7 +138,7 @@ def recognition():
                     Config.PATH_MODEL, img)
 
         if Id == -1:
-            app.logger.error(f"recognition unknown")
+            app.logger.error(f"recognition unknown.Không xác định")
             return {
                 "Status": 2,
                 "Description": f"Không xác định. Vui lòng đăng ký khuôn mặt.",
@@ -156,33 +156,31 @@ def recognition():
                 "ResponseData": None,
             }, 200
 
-        name = f"{employee.LastName} {employee.FirstName}"
-
         t = threading.Thread(target=EmployeeCheckin.InsertOne, args=(app._get_current_object(
         ), Id, RecognitionMethod, "Khuôn mặt", AttendanceTime,  Picture.split(",")[1], ))
         t.start()
 
         app.logger.info("EmployeeID:" + str(Id))
 
-        list_img = os.listdir(os.path.join(Config.LOCAL_STORAGE, str(Id)))
-        img_path = os.path.join(Config.LOCAL_STORAGE, str(Id), list_img[0])
+        # list_img = os.listdir(os.path.join(Config.LOCAL_STORAGE, str(Id)))
+        # img_path = os.path.join(Config.LOCAL_STORAGE, str(Id), list_img[0])
 
-        img = cv2.imread(img_path)
-        str_img = openCVToBase64(img)
+        # img = cv2.imread(img_path)
+        # str_img = openCVToBase64(img)
         app.logger.info(f"Recognition thành công nhân viên Id[{Id}]")
         return {
             "Status": 1,
             "Description": "Nhận diện thành công.",
             "ResponseData": {
                 "Id": Id,
-                "Name": name,
-                "Img": str_img
+                "Name": employee.FullName()
+                # "Img": str_img
             },
         }
     except ProjectException as pEx:
         db.session.rollback()
         app.logger.error(
-            f"Nhận diện khuôn mặt thất bại. Có exception[{str(pEx)}]")
+            f"Nhận diện khuôn mặt thất bại. Có ProjectException[{str(pEx)}]")
         return {
             "Status": 0,
             "Description": f"{pEx}",

@@ -131,11 +131,9 @@ dmypy.json
 .pyre/
 /*.log*
 /*.env*
-public/datasets/*
-public/static/*.yml
-public/static/*.pkl
+
+# public/static/*.yml
+# public/static/*.pkl
 public/export
 
 .vscode
-
-public/static/*.yml
