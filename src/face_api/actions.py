@@ -35,7 +35,7 @@ def save_images(images, id, name):
         #     os.makedirs(path)
         datasetPath = os.path.join(os.getcwd(), "public", "datasets")
         if not os.path.exists(datasetPath):
-            os.mkdir()
+            os.mkdir(datasetPath)
         path = os.path.join(datasetPath,  f"{id}")
         if not os.path.exists(path):
             os.mkdir(path)
