@@ -57,7 +57,7 @@ class EmployeeCheckin(db.Model):
             raise ex
 
     @staticmethod
-    def InsertOne(app, employee_id, method, method_text, time: datetime, image_data):
+    def InsertOne(app, employee_id, method, method_text, time, image_data):
         with app.app_context():
             try:
                 new_obj = EmployeeCheckin(

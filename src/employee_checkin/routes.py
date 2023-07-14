@@ -1,14 +1,17 @@
-import pandas
-from werkzeug.utils import secure_filename
 import os
-from threading import Thread
 import threading
 from datetime import date, datetime, timedelta
-from flask import Blueprint, send_file
+from threading import Thread
+
+import pandas
+from dateutil import tz
+from dateutil.parser import parse
+from flask import Blueprint
 from flask import current_app as app
-from flask import request, send_from_directory
-from sqlalchemy import (DateTime, and_, between, case, delete, func, insert, distinct,
-                        or_, select)
+from flask import request, send_file, send_from_directory
+from sqlalchemy import (DateTime, and_, between, case, delete, distinct, func,
+                        insert, or_, select)
+from werkzeug.utils import secure_filename
 
 from src.authentication.model import UserModel
 from src.config import Config
@@ -17,15 +20,16 @@ from src.employee.model import (EmployeeModel, employeeInfoListSchema,
                                 employeeInfoSchema)
 from src.employee_checkin.AttendanceStatistic import (
     AttendanceStatistic, AttendanceStatisticSchema, AttendanceStatisticV2)
-from src.employee_checkin.EmployeeCheckin import (EmployeeCheckin,
-                                                  employeeCheckinListSchema, CheckinMethodModel, CheckinMethodSchema)
+from src.employee_checkin.EmployeeCheckin import (CheckinMethodModel,
+                                                  CheckinMethodSchema,
+                                                  EmployeeCheckin,
+                                                  employeeCheckinListSchema)
 from src.employee_checkin.Timesheet import (Timesheet, TimesheetDetail,
                                             TimesheetDetailSchema,
                                             timesheetDetailListSchema,
                                             timesheetDetailSchema,
                                             timesheetListSchema,
                                             timesheetSchema)
-from src.utils.extension import ProjectException
 from src.jwt import get_jwt, get_jwt_identity, jwt_required
 from src.middlewares.token_required import admin_required
 from src.shift.model import (DayInWeekEnum, ShiftAssignment,
@@ -33,8 +37,8 @@ from src.shift.model import (DayInWeekEnum, ShiftAssignment,
                              TargetType)
 from src.shift.ShiftModel import (ShiftDetailModel, ShiftDetailSchema,
                                   ShiftModel, vShiftDetail, vShiftDetailSchema)
+from src.utils.extension import ProjectException
 from src.utils.helpers import DeleteFile, daterange
-from dateutil.parser import parse
 
 EmployeeCheckinRoute = Blueprint("/checkin", __name__)
 
@@ -86,7 +90,8 @@ def createCheckinRecord():
                 f"Không tìm thấy nhân viên có mã {EmployeeId}.")
         if not AttendanceTime:
             raise ProjectException(f"Chưa cung cấp thông tin giờ.")
-        AttendanceTime = datetime.fromisoformat(AttendanceTime)
+        AttendanceTime = datetime.fromisoformat(
+            AttendanceTime).astimezone(tz.tzlocal()).isoformat()
 
         # endregion
 
