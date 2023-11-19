@@ -17,3 +17,6 @@ Timekeeper Face Server
 2. Kích hoạt môi trường ảo bằng command line: venv\Scripts\activate
 3. Cài đặt packages cần thiết bằng command: pip install -r requirements.txt
 4. Chạy chương trình: flask run
+
+# Demo
+Google Drive: https://drive.google.com/drive/folders/1KHb0UDgfCdybOrRCjc3augEwzSyjGtuN?usp=sharing
